@@ -1,0 +1,265 @@
+import type { Account, Hafiza, Journal } from "./store";
+import { fmt } from "./format";
+import { buildMonthlyStatementRows } from "./exportImport";
+
+const norm = (s: string) => (s || "").replace(/\s+/g, " ").trim();
+
+// Build a printable HTML window — simplest reliable Arabic PDF route.
+export function exportToPdf(opts: {
+  title: string;
+  columns: string[];
+  rows: (string | number)[][];
+  orientation?: "portrait" | "landscape";
+}) {
+  const w = window.open("", "_blank", "width=900,height=700");
+  if (!w) return;
+  const orient = opts.orientation || (opts.columns.length > 6 ? "landscape" : "portrait");
+  const fontSize = opts.columns.length > 12 ? 9 : opts.columns.length > 8 ? 10 : 11;
+  const head = `<meta charset="utf-8"><title>${opts.title}</title>
+  <style>
+    @page { size: A4 ${orient}; margin: 8mm; }
+    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#0f172a; }
+    h1 { text-align:center; font-size:18px; margin: 0 0 12px; }
+    table { width:100%; border-collapse: collapse; font-size:${fontSize}px; table-layout: fixed; }
+    th, td { border:1px solid #94a3b8; padding:4px 5px; text-align:center; word-wrap:break-word; overflow-wrap:anywhere; }
+    thead { background:#0f766e; color:white; }
+    tr:nth-child(even) td { background:#f1f5f9; }
+    .meta { font-size:11px; color:#475569; margin-bottom:8px; text-align:center; }
+  </style>`;
+  const body = `<h1>${opts.title}</h1>
+  <div class="meta">المجلس اليمني للاختصاصات الطبية — ${new Date().toLocaleDateString("ar-EG-u-nu-latn")}</div>
+  <table>
+    <thead><tr>${opts.columns.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
+    <tbody>${opts.rows
+      .map(
+        (r) =>
+          `<tr>${r.map((c) => `<td>${c === undefined || c === null ? "" : c}</td>`).join("")}</tr>`
+      )
+      .join("")}</tbody>
+  </table>
+  <script>window.onload=()=>{setTimeout(()=>window.print(),300)}</script>`;
+  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>${body}</body></html>`);
+  w.document.close();
+}
+
+export const hafizaPdf = (h: Hafiza[]) =>
+  exportToPdf({
+    title: "حوافظ التوريد واشعارات التوريد",
+    columns: ["م", "الاسم", "الدفعة", "التخصص", "التاريخ", "رقم الحافظة", "البيان", "مبلغ الحافظة", "تاريخ التوريد", "رقم الاشعار", "مبلغ التوريد"],
+    rows: h.map((x, i) => [i + 1, x.name, x.batch, x.specialty, x.date, x.hafizaNo, x.description, fmt(x.hafizaAmount), x.notifyDate || "", x.notifyNo || "", fmt(x.notifyAmount)]),
+  });
+
+export const accountsPdf = (a: Account[], opening: number) => {
+  let bal = opening;
+  const rows: (string | number)[][] = [[1, "", "", "", "", "", "", "رصيد افتتاحي", "", "", "", fmt(opening), "", fmt(bal)]];
+  a.forEach((x, i) => {
+    bal = bal + (x.income || 0) - (x.expense || 0);
+    rows.push([
+      i + 2, x.date, x.hafizaNo, x.notifyNo, x.notifyDate, x.checkNo, x.checkDate,
+      x.description, x.specialty, x.name, fmt(x.hafizaAmount), fmt(x.income), fmt(x.expense), fmt(bal),
+    ]);
+  });
+  exportToPdf({
+    title: "حساب المجلس اليمني للاختصاصات الطبية - صعدة",
+    columns: ["م", "التاريخ", "رقم الحافظة", "رقم الاشعار", "تاريخ التوريد", "رقم الشيك", "تاريخه", "البيان", "التخصص", "الاسم", "مبلغ الحافظة", "الإيرادات", "المصروفات", "الرصيد"],
+    rows,
+  });
+};
+
+export const journalPdf = (j: Journal[]) =>
+  exportToPdf({
+    title: "دفتر اليومية العامة",
+    columns: ["م", "رقم الاستمارة", "كشف التسوية", "التاريخ", "البيان", "ح/ مدين", "ح/ دائن", "مدين", "دائن"],
+    rows: j.map((x, i) => [i + 1, x.formNo, x.settlement, x.date, x.description, x.debitAccount || x.account, x.creditAccount || "", fmt(x.debit), fmt(x.credit)]),
+  });
+
+const MONTH_NAMES_PDF = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+
+export function monthlyStatementPdf(opts: {
+  journal: Journal[];
+  year: number;
+  startMonth: number;
+  endMonth: number;
+  mode: "month" | "quarter";
+  quarter?: number;
+}) {
+  const { journal, year, startMonth, endMonth, mode, quarter } = opts;
+  const { map, groups, title, office, gov } = buildMonthlyStatementRows(journal, year, startMonth, endMonth);
+  const qNames = ["الأول","الثاني","الثالث","الرابع"];
+  const lastDay = new Date(year, endMonth, 0).getDate();
+  const periodLabel =
+    mode === "month"
+      ? `شهر ${MONTH_NAMES_PDF[startMonth - 1]} ${year}م`
+      : `حساب المدة - الربع ${qNames[(quarter || 1) - 1]} (${MONTH_NAMES_PDF[startMonth - 1]} - ${MONTH_NAMES_PDF[endMonth - 1]}) ${year}م`;
+  const colCurLabel = mode === "month" ? `عمليات شهر ${MONTH_NAMES_PDF[startMonth - 1]}` : `حساب المدة الربع ${qNames[(quarter || 1) - 1]}`;
+
+  const w = window.open("", "_blank", "width=1100,height=800");
+  if (!w) return;
+
+  const fmtCell = (n: number) => (n ? fmt(n) : "-");
+
+  let body = "";
+  body += `<h1>${title}</h1>`;
+  body += `<div class="meta">${office} — ${gov}</div>`;
+  body += `<div class="meta period">${periodLabel}</div>`;
+  body += `<table><thead>
+    <tr>
+      <th rowspan="2">بيان أنواع الحسابات الوسيطة</th>
+      <th colspan="2">الرصيد في ${year}/${startMonth}/1</th>
+      <th colspan="2">${colCurLabel}</th>
+      <th colspan="2">الجملــة</th>
+      <th colspan="2">الرصيد في ${year}/${endMonth}/${lastDay}</th>
+    </tr>
+    <tr>
+      <th>مدين</th><th>دائن</th>
+      <th>مدين</th><th>دائن</th>
+      <th>مدين</th><th>دائن</th>
+      <th>مدين</th><th>دائن</th>
+    </tr>
+  </thead><tbody>`;
+
+  let GPD = 0, GPC = 0, GCD = 0, GCC = 0;
+  for (const g of groups) {
+    body += `<tr class="grp"><td colspan="9">${g.title}</td></tr>`;
+    let gPD = 0, gPC = 0, gCD = 0, gCC = 0;
+    for (const a of g.accounts) {
+      const r = map[norm(a)] || { prevD: 0, prevC: 0, curD: 0, curC: 0 };
+      const totD = r.prevD + r.curD, totC = r.prevC + r.curC;
+      const balD = Math.max(0, totD - totC), balC = Math.max(0, totC - totD);
+      gPD += r.prevD; gPC += r.prevC; gCD += r.curD; gCC += r.curC;
+      body += `<tr><td class="acc">${a}</td><td>${fmtCell(r.prevD)}</td><td>${fmtCell(r.prevC)}</td><td>${fmtCell(r.curD)}</td><td>${fmtCell(r.curC)}</td><td>${fmtCell(totD)}</td><td>${fmtCell(totC)}</td><td>${fmtCell(balD)}</td><td>${fmtCell(balC)}</td></tr>`;
+    }
+    GPD += gPD; GPC += gPC; GCD += gCD; GCC += gCC;
+    body += `<tr class="sub"><td>جملة ${g.title}</td><td>${fmt(gPD)}</td><td>${fmt(gPC)}</td><td>${fmt(gCD)}</td><td>${fmt(gCC)}</td><td>${fmt(gPD+gCD)}</td><td>${fmt(gPC+gCC)}</td><td>${fmt(Math.max(0,gPD+gCD-gPC-gCC))}</td><td>${fmt(Math.max(0,gPC+gCC-gPD-gCD))}</td></tr>`;
+  }
+  body += `<tr class="tot"><td>الإجمالي العام</td><td>${fmt(GPD)}</td><td>${fmt(GPC)}</td><td>${fmt(GCD)}</td><td>${fmt(GCC)}</td><td>${fmt(GPD+GCD)}</td><td>${fmt(GPC+GCC)}</td><td>${fmt(Math.max(0,GPD+GCD-GPC-GCC))}</td><td>${fmt(Math.max(0,GPC+GCC-GPD-GCD))}</td></tr>`;
+  body += `</tbody></table>`;
+
+  const head = `<meta charset="utf-8"><title>${title} - ${periodLabel}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap">
+  <style>
+    @page { size: A4 landscape; margin: 8mm; }
+    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#0f172a; margin:0; padding:8px; }
+    h1 { text-align:center; font-size:18px; margin: 0 0 4px; color:#0f766e; }
+    .meta { text-align:center; font-size:11px; color:#475569; }
+    .period { font-weight:700; color:#0f172a; margin: 4px 0 8px; }
+    table { width:100%; border-collapse: collapse; font-size:10px; table-layout:fixed; }
+    th, td { border:1px solid #475569; padding:3px 4px; text-align:center; word-wrap:break-word; }
+    thead th { background:#0f766e; color:white; font-weight:700; }
+    td.acc { text-align:right; font-weight:600; }
+    tr.grp td { background:#fef3c7; color:#0f766e; font-weight:800; text-align:right; }
+    tr.sub td { background:#e2e8f0; font-weight:700; }
+    tr.tot td { background:#0f766e; color:white; font-weight:800; }
+    @media print { button { display:none; } }
+  </style>`;
+  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>${body}<script>window.onload=()=>{setTimeout(()=>window.print(),400)}</script></body></html>`);
+  w.document.close();
+}
+
+import revSchema from "@/data/revenueTemplate.json";
+
+type RType = { no: number; title: string };
+type RItem = { no: number; title: string; types: RType[] };
+type RSection = { no: number; title: string; items: RItem[] };
+type RChapter = { no: number; title: string; longTitle?: string; sections: RSection[] };
+const REV_SCHEMA = revSchema as { title: string; office: string; chapters: RChapter[] };
+const MONTHS_PDF = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const ORDER_AR = ["اﻷول","الثاني","الثالث","الرابع","الخامس"];
+
+export function revenuePdf(revenue: Record<string, number>, year: number, month: number) {
+  const get = (m: number, key: string) => revenue[`${year}-${m}-${key}`] || 0;
+  const sumPrev = (key: string) => { let s = 0; for (let m = 1; m < month; m++) s += get(m, key); return s; };
+
+  const types: Record<string, { cur: number; prev: number }> = {};
+  const itemsAgg: Record<string, { cur: number; prev: number }> = {};
+  const sectionsAgg: Record<string, { cur: number; prev: number }> = {};
+  const chaptersAgg: Record<string, { cur: number; prev: number }> = {};
+  let gCur = 0, gPrev = 0;
+  REV_SCHEMA.chapters.forEach((ch) => {
+    let cCur = 0, cPrev = 0;
+    ch.sections.forEach((sec) => {
+      let sCur = 0, sPrev = 0;
+      sec.items.forEach((it) => {
+        let iCur = 0, iPrev = 0;
+        it.types.forEach((t) => {
+          const k = `${ch.no}-${sec.no}-${it.no}-${t.no}`;
+          const cur = get(month, k), prev = sumPrev(k);
+          types[k] = { cur, prev };
+          iCur += cur; iPrev += prev;
+        });
+        itemsAgg[`${ch.no}-${sec.no}-${it.no}`] = { cur: iCur, prev: iPrev };
+        sCur += iCur; sPrev += iPrev;
+      });
+      sectionsAgg[`${ch.no}-${sec.no}`] = { cur: sCur, prev: sPrev };
+      cCur += sCur; cPrev += sPrev;
+    });
+    chaptersAgg[`${ch.no}`] = { cur: cCur, prev: cPrev };
+    gCur += cCur; gPrev += cPrev;
+  });
+
+  const w = window.open("", "_blank", "width=1100,height=800");
+  if (!w) return;
+  const fc = (n: number) => (n ? fmt(n) : "-");
+
+  let body = `<h1>${REV_SCHEMA.title}</h1>`;
+  body += `<div class="meta">${REV_SCHEMA.office}</div>`;
+  body += `<div class="meta period">عن شهر ${MONTHS_PDF[month - 1]} من العام المالي ${year}م</div>`;
+  body += `<table><thead>
+    <tr>
+      <th rowspan="2">بيان مفردات الموارد</th>
+      <th rowspan="2">الباب</th><th rowspan="2">الفصل</th><th rowspan="2">البند</th><th rowspan="2">النوع</th>
+      <th>الشهر الجاري</th><th>الأشهر السابقة</th><th>الجملة</th>
+    </tr>
+    <tr><th>ريال</th><th>ريال</th><th>ريال</th></tr>
+  </thead><tbody>`;
+
+  body += `<tr class="tot"><td class="acc">إجمالي الموارد</td><td colspan="4"></td><td>${fc(gCur)}</td><td>${fc(gPrev)}</td><td>${fc(gCur+gPrev)}</td></tr>`;
+
+  REV_SCHEMA.chapters.forEach((ch) => {
+    if (ch.sections.length === 0) return;
+    const a = chaptersAgg[ch.no];
+    body += `<tr class="grp"><td class="acc">${ch.longTitle || ch.title}</td><td>${ch.no}</td><td colspan="3"></td><td>${fc(a.cur)}</td><td>${fc(a.prev)}</td><td>${fc(a.cur+a.prev)}</td></tr>`;
+    ch.sections.forEach((sec) => {
+      const sa = sectionsAgg[`${ch.no}-${sec.no}`];
+      body += `<tr class="sub"><td class="acc">&nbsp;&nbsp;${sec.title}</td><td></td><td>${sec.no}</td><td colspan="2"></td><td>${fc(sa.cur)}</td><td>${fc(sa.prev)}</td><td>${fc(sa.cur+sa.prev)}</td></tr>`;
+      sec.items.forEach((it) => {
+        const ia = itemsAgg[`${ch.no}-${sec.no}-${it.no}`];
+        body += `<tr class="sub2"><td class="acc">&nbsp;&nbsp;&nbsp;&nbsp;${it.title}</td><td colspan="2"></td><td>${it.no}</td><td></td><td>${fc(ia.cur)}</td><td>${fc(ia.prev)}</td><td>${fc(ia.cur+ia.prev)}</td></tr>`;
+        it.types.forEach((t) => {
+          const v = types[`${ch.no}-${sec.no}-${it.no}-${t.no}`];
+          body += `<tr><td class="acc">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${t.title}</td><td colspan="3"></td><td>${t.no}</td><td>${fc(v.cur)}</td><td>${fc(v.prev)}</td><td>${fc(v.cur+v.prev)}</td></tr>`;
+        });
+      });
+    });
+  });
+
+  REV_SCHEMA.chapters.forEach((ch) => {
+    const a = chaptersAgg[ch.no] || { cur: 0, prev: 0 };
+    body += `<tr class="sub"><td colspan="5" class="acc">جملة الباب ${ORDER_AR[ch.no - 1]} : ${ch.title}</td><td>${fc(a.cur)}</td><td>${fc(a.prev)}</td><td>${fc(a.cur+a.prev)}</td></tr>`;
+  });
+  body += `<tr class="tot"><td colspan="5" class="acc">اجمالي عام الموارد</td><td>${fc(gCur)}</td><td>${fc(gPrev)}</td><td>${fc(gCur+gPrev)}</td></tr>`;
+  body += `</tbody></table>`;
+
+  const head = `<meta charset="utf-8"><title>${REV_SCHEMA.title} - ${MONTHS_PDF[month-1]} ${year}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap">
+  <style>
+    @page { size: A4 landscape; margin: 10mm; }
+    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#0f172a; margin:0; padding:8px; }
+    h1 { text-align:center; font-size:18px; margin: 0 0 4px; color:#0f766e; }
+    .meta { text-align:center; font-size:11px; color:#475569; }
+    .period { font-weight:700; color:#0f172a; margin: 4px 0 8px; }
+    table { width:100%; border-collapse: collapse; font-size:11px; }
+    th, td { border:1px solid #475569; padding:4px 6px; text-align:center; }
+    thead th { background:#0f766e; color:white; font-weight:700; }
+    td.acc { text-align:right; font-weight:600; }
+    tr.grp td { background:#fef3c7; color:#0f766e; font-weight:800; }
+    tr.sub td { background:#e2e8f0; font-weight:700; }
+    tr.sub2 td { background:#f1f5f9; }
+    tr.tot td { background:#0f766e; color:white; font-weight:800; }
+    @media print { button { display:none; } }
+  </style>`;
+  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>${body}<script>window.onload=()=>{setTimeout(()=>window.print(),400)}</script></body></html>`);
+  w.document.close();
+}
