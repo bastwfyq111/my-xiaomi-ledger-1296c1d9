@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import EditModal, { type EditField } from "./EditModal";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 
-// الأشهر لعام 2025 المستخرجة من ملفك
+// الأشهر المحددة لعام 2025 في ملفك المرفوع
 const MONTHS_2025 = [
   "يونيو 2024", "يوليو 2024", "أغسطس 2024", 
   "مارس 2025", "ابريل 2025", "مايو 2025", 
@@ -16,7 +16,12 @@ const MONTHS_2025 = [
   "سبتمبر 2025", "أكتوبر 2025", "نوفمبر2025", "ديسمبر2025"
 ];
 
-// الأعمدة الأساسية المشتركة
+// شهور عام 2026 كما هي مكتوبة تماماً وبأدق تفاصيلها في ملفك
+const MONTHS_2026_CLEAN = [
+  "يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", 
+  "يوليو", "اغسطس", "سبتمبر", "اكتوبر ", "نوفمبر", "ديسمبر"
+];
+
 const BASE_COLS = [
   { key: "name", label: "الاسم" },
   { key: "batch", label: "الدفعة" },
@@ -30,48 +35,102 @@ const BASE_COLS = [
 
 export default function InstallmentsTab() {
   const { 
-    installments,       // أقساط 2026
-    installments2025,   // أقساط 2025 
-    updateInstallment, 
-    updateInstallment2025 
+    installments,       
+    installments2025,   
   } = useStore() as any;
 
   const [editingRow, setEditingRow] = useState<{ row: any; year: 2025 | 2026 } | null>(null);
+  const [paymentModal, setPaymentModal] = useState<{ row: any; year: 2025 | 2026 } | null>(null);
+  
+  const [payAmount, setPayAmount] = useState<string>("");
+  const [payMonth, setPayMonth] = useState<string>("");
 
-  // إعداد أدوات التحكم والتصفية والجداول
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining", "notes", "phone"]);
   const controls2025 = useTableControls(installments2025 || [], BASE_COLS.map(c => c.key));
 
-  // دالة مساعدة لتنظيف الأرقام وحذف فواصل الآلاف (تمنع مشكلة الأصفار)
-  const parseCleanNumber = (val: any): number => {
+  // دالة تطهير فائقة القوة تحذف الفواصل، الفراغات العربية، الأجنبية، والرموز المخفية تماماً
+  const superCleanNumber = (val: any): number => {
     if (val === undefined || val === null) return 0;
-    // حذف الفواصل والنصوص الغريبة وتحويلها لرقم نقي
-    const cleanStr = String(val).replace(/,/g, "").trim();
-    return Number(cleanStr) || 0;
+    let str = String(val);
+    // حذف فواصل الآلاف، الفراغات العادية، والفراغات المشفرة الخاصة بملفات الـ CSV
+    str = str.replace(/,/g, "")
+             .replace(/\s+/g, "")
+             .replace(/[\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "")
+             .trim();
+    return Number(str) || 0;
   };
 
-  // حساب الإجماليات المالية لعام 2025
   const totals2025 = useMemo(() => {
     const list = controls2025.rows || [];
     return {
-      fees: list.reduce((s, r) => s + parseCleanNumber(r.fees), 0),
-      paid: list.reduce((s, r) => s + parseCleanNumber(r.totalPaid), 0),
-      remaining: list.reduce((s, r) => s + parseCleanNumber(r.remaining), 0),
+      fees: list.reduce((s, r) => s + superCleanNumber(r.fees), 0),
+      paid: list.reduce((s, r) => s + superCleanNumber(r.totalPaid), 0),
+      remaining: list.reduce((s, r) => s + superCleanNumber(r.remaining), 0),
     };
   }, [controls2025.rows]);
 
-  // حساب الإجماليات المالية لعام 2026
   const totals2026 = useMemo(() => {
     const list = controls2026.rows || [];
     return {
-      fees: list.reduce((s, r) => s + parseCleanNumber(r.fees), 0),
-      prevDue: list.reduce((s, r) => s + parseCleanNumber(r.prevDue), 0),
-      paid: list.reduce((s, r) => s + parseCleanNumber(r.totalPaid), 0),
-      remaining: list.reduce((s, r) => s + parseCleanNumber(r.remaining), 0),
+      fees: list.reduce((s, r) => s + superCleanNumber(r.fees), 0),
+      prevDue: list.reduce((s, r) => s + superCleanNumber(r.prevDue), 0),
+      paid: list.reduce((s, r) => s + superCleanNumber(r.totalPaid), 0),
+      remaining: list.reduce((s, r) => s + superCleanNumber(r.remaining), 0),
     };
   }, [controls2026.rows]);
 
-  // دالة استيراد ملف إكسل لعام 2025
+  const handleAddManualPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentModal || !payAmount || !payMonth) {
+      toast.error("يرجى إدخال مبلغ القسط واختيار الشهر");
+      return;
+    }
+
+    const amountNum = Number(payAmount) || 0;
+    const is2025 = paymentModal.year === 2025;
+    const currentList = is2025 ? (installments2025 || []) : (installments || []);
+
+    const updatedList = currentList.map((student: any) => {
+      if (student.name === paymentModal.row.name) {
+        const updatedPayments = { ...student.payments };
+        updatedPayments[payMonth] = (Number(updatedPayments[payMonth]) || 0) + amountNum;
+
+        let newTotalPaid = 0;
+        const targetMonths = is2025 ? MONTHS_2025 : MONTHS_2026_CLEAN;
+        targetMonths.forEach(m => {
+          newTotalPaid += Number(updatedPayments[m]) || 0;
+        });
+
+        let newRemaining = 0;
+        if (is2025) {
+          newRemaining = superCleanNumber(student.fees) - newTotalPaid;
+        } else {
+          newRemaining = (superCleanNumber(student.fees) + superCleanNumber(student.prevDue)) - newTotalPaid;
+        }
+
+        return {
+          ...student,
+          payments: updatedPayments,
+          totalPaid: newTotalPaid,
+          remaining: newRemaining < 0 ? 0 : newRemaining
+        };
+      }
+      return student;
+    });
+
+    if (is2025) {
+      useStore.setState({ installments2025: updatedList });
+    } else {
+      useStore.setState({ installments: updatedList });
+    }
+
+    toast.success(`تم تسجيل قسط بقيمة ${fmt(amountNum)} لشهر (${payMonth}) بنجاح`);
+    setPaymentModal(null);
+    setPayAmount("");
+    setPayMonth("");
+  };
+
+  // استيراد عام 2025
   const handleImport2025 = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -81,39 +140,45 @@ export default function InstallmentsTab() {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[];
         
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[];
-        const headerIndex = rows.findIndex(row => row && row.some((cell: any) => String(cell).includes("متدرب") || String(cell).includes("الاسم")));
+        const headerIndex = rows.findIndex(row => row && row.some((cell: any) => {
+          const cStr = String(cell);
+          return cStr.includes("متدرب") || cStr.includes("الاسم");
+        }));
         
         if (headerIndex === -1) {
-          toast.error("لم يتم العثور على عمود العناوين في ملف 2025");
+          toast.error("لم يتم العثور على سطر العناوين (اسم المتدرب)");
           return;
         }
 
-        // تنظيف أسماء الأعمدة من أي مسافات زائدة
-        const headers = rows[headerIndex].map((h: any) => String(h).trim());
+        const headers = rows[headerIndex].map((h: any) => String(h || "").trim());
         const dataRows = rows.slice(headerIndex + 1);
 
         const cleanJson = dataRows
           .map(row => {
             const rowData: any = {};
-            headers.forEach((header, index) => {
-              if (header) rowData[header] = row[index];
-            });
+            headers.forEach((header, index) => { if (header) rowData[header] = row[index]; });
             return rowData;
           })
-          .filter(row => row["اسم المتدرب"] && String(row["اسم المتدرب"]).trim() !== "الإجمالي")
+          .filter(row => row["اسم المتدرب"] && String(row["اسم المتدرب"]).trim() !== "" && String(row["اسم المتدرب"]).trim() !== "الإجمالي")
           .map(row => {
+            const payments = MONTHS_2025.reduce((acc, m) => ({ ...acc, [m]: superCleanNumber(row[m]) }), {} as any);
+            let totalPaid = superCleanNumber(row["الإجمالي"]);
+            if (!totalPaid) {
+              MONTHS_2025.forEach(m => { totalPaid += payments[m]; });
+            }
+
             return {
               name: String(row["اسم المتدرب"] || "").trim(),
               batch: String(row["رقم الدفعة"] || "").trim(),
               specialty: String(row["المساق"] || "").trim(),
-              fees: parseCleanNumber(row["مبلغ الرسوم"]),
-              totalPaid: parseCleanNumber(row["الإجمالي"]),
-              remaining: parseCleanNumber(row["المتبقي"]),
+              fees: superCleanNumber(row["مبلغ الرسوم"]),
+              totalPaid: totalPaid,
+              remaining: superCleanNumber(row["المتبقي"]),
               notes: String(row["ملاحظات"] || "").trim(),
               phone: String(row["رقم الهاتف"] || "").trim(),
-              payments: MONTHS_2025.reduce((acc, m) => ({ ...acc, [m]: parseCleanNumber(row[m]) }), {})
+              payments: payments
             };
           });
 
@@ -127,7 +192,7 @@ export default function InstallmentsTab() {
     e.target.value = "";
   };
 
-  // دالة استيراد ملف إكسل لعام 2026
+  // استيراد عام 2026 الفائق والمطابق تماماً لملفك المرفوع
   const handleImport2026 = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -137,56 +202,57 @@ export default function InstallmentsTab() {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[];
         
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[];
-        const headerIndex = rows.findIndex(row => row && row.some((cell: any) => String(cell).includes("متدرب") || String(cell).includes("الاسم")));
+        const headerIndex = rows.findIndex(row => row && row.some((cell: any) => {
+          const cStr = String(cell);
+          return cStr.includes("متدرب") || cStr.includes("الاسم");
+        }));
         
         if (headerIndex === -1) {
-          toast.error("لم يتم العثور على عمود العناوين في ملف 2026");
+          toast.error("لم يتم العثور على سطر العناوين في ملف 2026");
           return;
         }
 
-        // تنظيف ومطابقة الأعمدة ديناميكياً لتفادي مسافات الإكسل
-        const headers = rows[headerIndex].map((h: any) => String(h).trim());
+        // قراءة العناوين مع تنظيف الفراغات
+        const headers = rows[headerIndex].map((h: any) => String(h || "").trim());
         const dataRows = rows.slice(headerIndex + 1);
 
         const cleanJson = dataRows
           .map(row => {
             const rowData: any = {};
-            headers.forEach((header, index) => {
-              if (header) rowData[header] = row[index];
-            });
+            headers.forEach((header, index) => { if (header) rowData[header] = row[index]; });
             return rowData;
           })
-          .filter(row => row["اسم المتدرب"] || row["الاسم"])
           .filter(row => {
             const nameVal = String(row["اسم المتدرب"] || row["الاسم"] || "").trim();
-            return nameVal !== "" && nameVal !== "الإجمالي";
+            return nameVal !== "" && nameVal !== "الإجمالي" && !nameVal.includes("كشف تفصيلي");
           })
           .map(row => {
-            // البحث عن المتبقي السابق والحالي بأسماء مرنة تطابق ملفك المرفوع
-            const fees = parseCleanNumber(row["مبلغ الرسوم"] || row["رسوم الدراسة"]);
-            const prevDue = parseCleanNumber(row["المتبقي عليهم من العام 2025"] || row["متبقي 2025"]);
-            const totalPaid = parseCleanNumber(row["الإجمالي"] || row["المسدد"]);
-            const remaining = parseCleanNumber(row["المتبقي"] || row["المتبقي "]);
+            // البحث المرن عن المسميات داخل ملف الـ CSV التابع لك
+            const name = String(row["اسم المتدرب"] || row["الاسم"] || "").trim();
+            const batch = String(row["رقم الدفعة"] || row["الدفعة"] || "").trim();
+            const specialty = String(row["المساق"] || "").trim();
+            
+            const fees = superCleanNumber(row["مبلغ الرسوم"] || row["رسوم الدراسة"]);
+            const prevDue = superCleanNumber(row["المتبقي عليهم من العام 2025"]);
+            const totalPaid = superCleanNumber(row["الإجمالي"] || row["المسدد"]);
+            const remaining = superCleanNumber(row["المتبقي"] || row["المتبقي "]);
+
+            const payments = MONTHS_2026_CLEAN.reduce((acc, m) => ({ ...acc, [m]: superCleanNumber(row[m]) }), {} as any);
 
             return {
-              name: String(row["اسم المتدرب"] || row["الاسم"] || "").trim(),
-              batch: String(row["رقم الدفعة"] || row["الدفعة"] || "").trim(),
-              specialty: String(row["المساق"] || "").trim(),
-              fees: fees,
-              prevDue: prevDue,
-              totalPaid: totalPaid,
-              remaining: remaining,
+              name, batch, specialty, fees, prevDue, totalPaid, remaining,
               notes: String(row["ملاحظات"] || "").trim(),
               phone: String(row["رقم الهاتف"] || "").trim(),
-              payments: INSTALLMENT_MONTHS.reduce((acc, m) => ({ ...acc, [m]: parseCleanNumber(row[m]) }), {})
+              payments
             };
           });
 
         useStore.setState({ installments: cleanJson });
         toast.success(`تم استيراد ${cleanJson.length} سجل بنجاح لعام 2026م`);
       } catch (error) {
+        console.error(error);
         toast.error("حدث خطأ أثناء معالجة ملف 2026");
       }
     };
@@ -194,7 +260,6 @@ export default function InstallmentsTab() {
     e.target.value = "";
   };
 
-  // دالة طباعة كشف حساب موحد وتفصيلي للعامين معاً
   const printComprehensiveStatement = (studentName: string) => {
     const r2025 = (installments2025 || []).find((i: any) => i.name === studentName);
     const r2026 = (installments || []).find((i: any) => i.name === studentName);
@@ -247,18 +312,18 @@ export default function InstallmentsTab() {
     }
 
     pdf.save(`كشف_حساب_موحد_${studentName}.pdf`);
-    toast.success("تم استخراج وتحميل التقرير بنجاح");
+    toast.success("تم استخراج التقرير بنجاح");
   };
 
   return (
     <div className="space-y-8" dir="rtl">
       
-      {/* ================== أولاً: قِسم عام 2025م ================== */}
+      {/* ================== عام 2025م ================== */}
       <div className="bg-card rounded-xl shadow-sm border p-5 bg-white text-right">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3 mb-4">
           <div>
             <h2 className="text-base font-bold text-teal-800">أقساط ورسوم عام 2025م</h2>
-            <p className="text-xxs text-slate-500">عرض الأرشيف والبيانات المستوردة لعام 2025 (بدون عمود متبقي 2025)</p>
+            <p className="text-xxs text-slate-500">الأرشيف المستورد والمعدّل لعام 2025</p>
           </div>
           <label className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-emerald-700 shadow-sm transition">
             <span>📥 استيراد ملف إكسل 2025</span>
@@ -282,7 +347,7 @@ export default function InstallmentsTab() {
                     {c.label} {sortIndicator(controls2025.sortKey === c.key, controls2025.sortDir)}
                   </th>
                 ))}
-                <th className="p-2 text-center w-32">الإجراءات</th>
+                <th className="p-2 text-center w-48">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -297,9 +362,10 @@ export default function InstallmentsTab() {
                   <td className="p-2 font-mono text-rose-600 font-bold">{fmt(r.remaining)}</td>
                   <td className="p-2 text-slate-500 truncate max-w-xs">{r.notes || "—"}</td>
                   <td className="p-2 text-slate-600 font-mono">{r.phone || "—"}</td>
-                  <td className="p-2 text-center whitespace-nowrap">
-                    <button onClick={() => setEditingRow({ row: r, year: 2025 })} className="text-blue-600 hover:underline font-bold ml-2">تعديل</button>
-                    <button onClick={() => printComprehensiveStatement(r.name)} className="px-2 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
+                  <td className="p-2 text-center space-x-1 space-x-reverse whitespace-nowrap">
+                    <button onClick={() => setPaymentModal({ row: r, year: 2025 })} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold hover:bg-emerald-600 hover:text-white transition">💵 دفعة</button>
+                    <button onClick={() => setEditingRow({ row: r, year: 2025 })} className="text-blue-600 hover:underline font-bold px-1">تعديل</button>
+                    <button onClick={() => printComprehensiveStatement(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
                   </td>
                 </tr>
               ))}
@@ -308,12 +374,12 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* ================== ثانياً: قِسم عام 2026م ================== */}
+      {/* ================== عام 2026م ================== */}
       <div className="bg-card rounded-xl shadow-sm border p-5 bg-white text-right">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3 mb-4">
           <div>
             <h2 className="text-base font-bold text-teal-800">أقساط ورسوم عام 2026م (العام الحالي)</h2>
-            <p className="text-xxs text-slate-500">يحتوي هذا الكشف على عمود الربط والمطابقة "متبقي 2025"</p>
+            <p className="text-xxs text-slate-500">يتضمن الربط المباشر مع متبقيات 2025 وعمليات الدفع المباشرة</p>
           </div>
           <label className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-800 shadow-sm transition">
             <span>📥 استيراد ملف إكسل 2026</span>
@@ -341,7 +407,7 @@ export default function InstallmentsTab() {
                 <th className="p-2 text-right">المسدد 2026</th>
                 <th className="p-2 text-right">المتبقي الحالي</th>
                 <th className="p-2">ملاحظات</th>
-                <th className="p-2 text-center w-32">الإجراءات</th>
+                <th className="p-2 text-center w-48">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -356,9 +422,10 @@ export default function InstallmentsTab() {
                   <td className="p-2 font-mono text-emerald-600 font-bold">{fmt(r.totalPaid)}</td>
                   <td className="p-2 font-mono text-rose-600 font-bold">{fmt(r.remaining)}</td>
                   <td className="p-2 text-slate-500 truncate max-w-xs">{r.notes || "—"}</td>
-                  <td className="p-2 text-center whitespace-nowrap">
-                    <button onClick={() => setEditingRow({ row: r, year: 2026 })} className="text-blue-600 hover:underline font-bold ml-2">تعديل</button>
-                    <button onClick={() => printComprehensiveStatement(r.name)} className="px-2 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
+                  <td className="p-2 text-center space-x-1 space-x-reverse whitespace-nowrap">
+                    <button onClick={() => setPaymentModal({ row: r, year: 2026 })} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold hover:bg-emerald-600 hover:text-white transition">💵 دفعة</button>
+                    <button onClick={() => setEditingRow({ row: r, year: 2026 })} className="text-blue-600 hover:underline font-bold px-1">تعديل</button>
+                    <button onClick={() => printComprehensiveStatement(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
                   </td>
                 </tr>
               ))}
@@ -367,7 +434,63 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* ================== ثالثاً: مودال التعديل الفوري ================== */}
+      {/* ================== نافذة تسجيل قسط يدوي (Payment Modal) ================== */}
+      {paymentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl border p-6 max-w-md w-full text-right" dir="rtl">
+            <h3 className="text-md font-bold text-slate-900 border-b pb-2 mb-4">
+              ➕ تسجيل دفعة/قسط يدوياً لعام {paymentModal.year}
+            </h3>
+            <p className="text-xs text-slate-600 mb-4">
+              المتدرب: <span className="font-bold text-slate-800">{paymentModal.row.name}</span>
+            </p>
+
+            <form onSubmit={handleAddManualPayment} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">مبلغ القسط (ريال)</label>
+                <input 
+                  type="number" 
+                  required
+                  placeholder="مثال: 30000"
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 text-left font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">الشهر المستهدف بالسداد</label>
+                <select 
+                  required
+                  value={payMonth}
+                  onChange={(e) => setPayMonth(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50"
+                >
+                  <option value="">-- اختر الشهر المالي --</option>
+                  {(paymentModal.year === 2025 ? MONTHS_2025 : MONTHS_2026_CLEAN).map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                <button 
+                  type="button" 
+                  onClick={() => { setPaymentModal(null); setPayAmount(""); setPayMonth(""); }}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold"
+                >
+                  إلغاء
+                </button>
+                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-sm">
+                  حفظ القسط وتحديث الحساب
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================== مودال التعديل الشامل والكامل ================== */}
       {editingRow && (() => {
         const is2025 = editingRow.year === 2025;
         const fields: EditField[] = [
@@ -384,14 +507,14 @@ export default function InstallmentsTab() {
 
         return (
           <EditModal 
-            title={`تعديل القيد المالي لعام ${editingRow.year} — الطبيب: ${editingRow.row.name}`}
+            title={`تعديل القيد لعام ${editingRow.year} — المتدرب: ${editingRow.row.name}`}
             fields={fields}
             values={editingRow.row}
             onClose={() => setEditingRow(null)}
             onSave={(updated) => {
               const cleaned = { ...updated };
               ["fees", "prevDue", "totalPaid", "remaining"].forEach(k => {
-                if (cleaned[k] !== undefined) cleaned[k] = parseCleanNumber(cleaned[k]);
+                if (cleaned[k] !== undefined) cleaned[k] = superCleanNumber(cleaned[k]);
               });
 
               if (is2025) {
@@ -401,7 +524,7 @@ export default function InstallmentsTab() {
                 const list = (installments || []).map((item: any) => item.name === editingRow.row.name ? cleaned : item);
                 useStore.setState({ installments: list });
               }
-              toast.success("تم الحفظ وتحديث البيانات اللحظية بنجاح");
+              toast.success("تم التحديث الحركي للمخزن بنجاح");
               setEditingRow(null);
             }}
           />
