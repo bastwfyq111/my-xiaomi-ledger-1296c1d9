@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import EditModal, { type EditField } from "./EditModal";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 
-// الأشهر التاريخية المستخرجة من ملف إكسل 2025
+// الأشهر لعام 2025 المستخرجة من ملفك
 const MONTHS_2025 = [
   "يونيو 2024", "يوليو 2024", "أغسطس 2024", 
   "مارس 2025", "ابريل 2025", "مايو 2025", 
@@ -16,7 +16,7 @@ const MONTHS_2025 = [
   "سبتمبر 2025", "أكتوبر 2025", "نوفمبر2025", "ديسمبر2025"
 ];
 
-// الأعمدة الأساسية المشتركة بين الجدولين
+// الأعمدة الأساسية المشتركة
 const BASE_COLS = [
   { key: "name", label: "الاسم" },
   { key: "batch", label: "الدفعة" },
@@ -38,17 +38,25 @@ export default function InstallmentsTab() {
 
   const [editingRow, setEditingRow] = useState<{ row: any; year: 2025 | 2026 } | null>(null);
 
-  // إعداد أدوات التحكم والتصفية والترتيب للجداول
+  // إعداد أدوات التحكم والتصفية والجداول
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining", "notes", "phone"]);
   const controls2025 = useTableControls(installments2025 || [], BASE_COLS.map(c => c.key));
+
+  // دالة مساعدة لتنظيف الأرقام وحذف فواصل الآلاف (تمنع مشكلة الأصفار)
+  const parseCleanNumber = (val: any): number => {
+    if (val === undefined || val === null) return 0;
+    // حذف الفواصل والنصوص الغريبة وتحويلها لرقم نقي
+    const cleanStr = String(val).replace(/,/g, "").trim();
+    return Number(cleanStr) || 0;
+  };
 
   // حساب الإجماليات المالية لعام 2025
   const totals2025 = useMemo(() => {
     const list = controls2025.rows || [];
     return {
-      fees: list.reduce((s, r) => s + (Number(r.fees) || 0), 0),
-      paid: list.reduce((s, r) => s + (Number(r.totalPaid) || 0), 0),
-      remaining: list.reduce((s, r) => s + (Number(r.remaining) || 0), 0),
+      fees: list.reduce((s, r) => s + parseCleanNumber(r.fees), 0),
+      paid: list.reduce((s, r) => s + parseCleanNumber(r.totalPaid), 0),
+      remaining: list.reduce((s, r) => s + parseCleanNumber(r.remaining), 0),
     };
   }, [controls2025.rows]);
 
@@ -56,10 +64,10 @@ export default function InstallmentsTab() {
   const totals2026 = useMemo(() => {
     const list = controls2026.rows || [];
     return {
-      fees: list.reduce((s, r) => s + (Number(r.fees) || 0), 0),
-      prevDue: list.reduce((s, r) => s + (Number(r.prevDue) || 0), 0),
-      paid: list.reduce((s, r) => s + (Number(r.totalPaid) || 0), 0),
-      remaining: list.reduce((s, r) => s + (Number(r.remaining) || 0), 0),
+      fees: list.reduce((s, r) => s + parseCleanNumber(r.fees), 0),
+      prevDue: list.reduce((s, r) => s + parseCleanNumber(r.prevDue), 0),
+      paid: list.reduce((s, r) => s + parseCleanNumber(r.totalPaid), 0),
+      remaining: list.reduce((s, r) => s + parseCleanNumber(r.remaining), 0),
     };
   }, [controls2026.rows]);
 
@@ -73,32 +81,46 @@ export default function InstallmentsTab() {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet) as any[];
+        
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[];
+        const headerIndex = rows.findIndex(row => row && row.some((cell: any) => String(cell).includes("متدرب") || String(cell).includes("الاسم")));
+        
+        if (headerIndex === -1) {
+          toast.error("لم يتم العثور على عمود العناوين في ملف 2025");
+          return;
+        }
 
-        const cleanJson = json
-          .filter(row => row["اسم المتدرب"] && row["اسم المتدرب"] !== "الإجمالي")
+        // تنظيف أسماء الأعمدة من أي مسافات زائدة
+        const headers = rows[headerIndex].map((h: any) => String(h).trim());
+        const dataRows = rows.slice(headerIndex + 1);
+
+        const cleanJson = dataRows
           .map(row => {
-            let calculatedPaid = Number(row["الإجمالي"]) || 0;
-            if (!calculatedPaid) {
-              MONTHS_2025.forEach(m => { calculatedPaid += Number(row[m]) || 0; });
-            }
+            const rowData: any = {};
+            headers.forEach((header, index) => {
+              if (header) rowData[header] = row[index];
+            });
+            return rowData;
+          })
+          .filter(row => row["اسم المتدرب"] && String(row["اسم المتدرب"]).trim() !== "الإجمالي")
+          .map(row => {
             return {
-              name: row["اسم المتدرب"] || row["name"],
-              batch: row["رقم الدفعة"] || row["batch"],
-              specialty: row["المساق"] || row["specialty"],
-              fees: Number(row["مبلغ الرسوم"]) || Number(row["fees"]) || 0,
-              totalPaid: calculatedPaid,
-              remaining: Number(row["المتبقي"]) || Number(row["remaining"]) || 0,
-              notes: row["ملاحظات"] || row["notes"] || "",
-              phone: row["رقم الهاتف"] || row["phone"] || "",
-              payments: MONTHS_2025.reduce((acc, m) => ({ ...acc, [m]: Number(row[m]) || 0 }), {})
+              name: String(row["اسم المتدرب"] || "").trim(),
+              batch: String(row["رقم الدفعة"] || "").trim(),
+              specialty: String(row["المساق"] || "").trim(),
+              fees: parseCleanNumber(row["مبلغ الرسوم"]),
+              totalPaid: parseCleanNumber(row["الإجمالي"]),
+              remaining: parseCleanNumber(row["المتبقي"]),
+              notes: String(row["ملاحظات"] || "").trim(),
+              phone: String(row["رقم الهاتف"] || "").trim(),
+              payments: MONTHS_2025.reduce((acc, m) => ({ ...acc, [m]: parseCleanNumber(row[m]) }), {})
             };
           });
 
         useStore.setState({ installments2025: cleanJson });
         toast.success(`تم استيراد ${cleanJson.length} سجل بنجاح لعام 2025م`);
       } catch (error) {
-        toast.error("حدث خطأ في قراءة ملف 2025");
+        toast.error("حدث خطأ أثناء معالجة ملف 2025");
       }
     };
     reader.readAsArrayBuffer(file);
@@ -115,30 +137,57 @@ export default function InstallmentsTab() {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet) as any[];
+        
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[];
+        const headerIndex = rows.findIndex(row => row && row.some((cell: any) => String(cell).includes("متدرب") || String(cell).includes("الاسم")));
+        
+        if (headerIndex === -1) {
+          toast.error("لم يتم العثور على عمود العناوين في ملف 2026");
+          return;
+        }
 
-        const cleanJson = json
-          .filter(row => row["الاسم"] || row["اسم المتدرب"])
-          .filter(row => row["الاسم"] !== "الإجمالي" && row["اسم المتدرب"] !== "الإجمالي")
+        // تنظيف ومطابقة الأعمدة ديناميكياً لتفادي مسافات الإكسل
+        const headers = rows[headerIndex].map((h: any) => String(h).trim());
+        const dataRows = rows.slice(headerIndex + 1);
+
+        const cleanJson = dataRows
           .map(row => {
+            const rowData: any = {};
+            headers.forEach((header, index) => {
+              if (header) rowData[header] = row[index];
+            });
+            return rowData;
+          })
+          .filter(row => row["اسم المتدرب"] || row["الاسم"])
+          .filter(row => {
+            const nameVal = String(row["اسم المتدرب"] || row["الاسم"] || "").trim();
+            return nameVal !== "" && nameVal !== "الإجمالي";
+          })
+          .map(row => {
+            // البحث عن المتبقي السابق والحالي بأسماء مرنة تطابق ملفك المرفوع
+            const fees = parseCleanNumber(row["مبلغ الرسوم"] || row["رسوم الدراسة"]);
+            const prevDue = parseCleanNumber(row["المتبقي عليهم من العام 2025"] || row["متبقي 2025"]);
+            const totalPaid = parseCleanNumber(row["الإجمالي"] || row["المسدد"]);
+            const remaining = parseCleanNumber(row["المتبقي"] || row["المتبقي "]);
+
             return {
-              name: row["الاسم"] || row["اسم المتدرب"] || row["name"],
-              batch: row["الدفعة"] || row["رقم الدفعة"] || row["batch"],
-              specialty: row["المساق"] || row["specialty"],
-              fees: Number(row["رسوم الدراسة"]) || Number(row["مبلغ الرسوم"]) || Number(row["fees"]) || 0,
-              prevDue: Number(row["متبقي 2025"]) || Number(row["prevDue"]) || 0,
-              totalPaid: Number(row["المسدد"]) || Number(row["الإجمالي"]) || Number(row["totalPaid"]) || 0,
-              remaining: Number(row["المتبقي"]) || Number(row["remaining"]) || 0,
-              notes: row["ملاحظات"] || row["notes"] || "",
-              phone: row["رقم الهاتف"] || row["phone"] || "",
-              payments: INSTALLMENT_MONTHS.reduce((acc, m) => ({ ...acc, [m]: Number(row[m]) || 0 }), {})
+              name: String(row["اسم المتدرب"] || row["الاسم"] || "").trim(),
+              batch: String(row["رقم الدفعة"] || row["الدفعة"] || "").trim(),
+              specialty: String(row["المساق"] || "").trim(),
+              fees: fees,
+              prevDue: prevDue,
+              totalPaid: totalPaid,
+              remaining: remaining,
+              notes: String(row["ملاحظات"] || "").trim(),
+              phone: String(row["رقم الهاتف"] || "").trim(),
+              payments: INSTALLMENT_MONTHS.reduce((acc, m) => ({ ...acc, [m]: parseCleanNumber(row[m]) }), {})
             };
           });
 
         useStore.setState({ installments: cleanJson });
         toast.success(`تم استيراد ${cleanJson.length} سجل بنجاح لعام 2026م`);
       } catch (error) {
-        toast.error("حدث خطأ في قراءة ملف 2026");
+        toast.error("حدث خطأ أثناء معالجة ملف 2026");
       }
     };
     reader.readAsArrayBuffer(file);
@@ -164,7 +213,6 @@ export default function InstallmentsTab() {
 
     let currentY = 30;
 
-    // جدول تفاصيل عام 2025م
     if (r2025) {
       pdf.setFontSize(11);
       pdf.text(`■ بيان الأقساط والرسوم لعام 2025م:`, 280, currentY, { align: "right" });
@@ -182,7 +230,6 @@ export default function InstallmentsTab() {
       currentY = (pdf as any).lastAutoTable.finalY + 10;
     }
 
-    // جدول تفاصيل عام 2026م
     if (r2026) {
       pdf.setFontSize(11);
       pdf.text(`■ بيان الأقساط والرسوم لعام 2026م:`, 280, currentY, { align: "right" });
@@ -320,7 +367,7 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* ================== ثالثاً: مودال التعديل الفوري الفعّال ================== */}
+      {/* ================== ثالثاً: مودال التعديل الفوري ================== */}
       {editingRow && (() => {
         const is2025 = editingRow.year === 2025;
         const fields: EditField[] = [
@@ -344,7 +391,7 @@ export default function InstallmentsTab() {
             onSave={(updated) => {
               const cleaned = { ...updated };
               ["fees", "prevDue", "totalPaid", "remaining"].forEach(k => {
-                if (cleaned[k] !== undefined) cleaned[k] = Number(cleaned[k]) || 0;
+                if (cleaned[k] !== undefined) cleaned[k] = parseCleanNumber(cleaned[k]);
               });
 
               if (is2025) {
