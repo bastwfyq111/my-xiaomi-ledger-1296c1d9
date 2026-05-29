@@ -8,47 +8,55 @@ import { toast } from "sonner";
 import EditModal, { type EditField } from "./EditModal";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 
-// ========== إعداد الخط العربي للـ PDF ==========
-const ARABIC_FONT_URL = '/fonts/Cairo-Regular.ttf'; // تأكد من وجود الملف في public/fonts
+// ========== إعداد معالجة اللغة العربية للـ PDF ==========
+import reshape from "arabic-reshaper";
+import { Bidi } from "bidi-js";
 
-let arabicFontBase64: string | null = null;
-let arabicFontLoaded = false;
+const bidi = new Bidi();
 
-const loadArabicFont = async (): Promise<string | null> => {
-  if (arabicFontLoaded && arabicFontBase64) return arabicFontBase64;
-  try {
-    const response = await fetch(ARABIC_FONT_URL);
-    if (!response.ok) throw new Error("فشل تحميل الخط");
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        arabicFontBase64 = (reader.result as string).split(',')[1];
-        arabicFontLoaded = true;
-        resolve(arabicFontBase64);
-      };
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.warn("سيتم استخدام خط احتياطي للـ PDF، يفضل توفير خط عربي في /public/fonts/Cairo-Regular.ttf");
-    return null;
-  }
+// دالة سحرية لإصلاح الحروف المقطعة وتصحيح اتجاه النص العربي
+const fixArabic = (text: any): string => {
+  if (text === null || text === undefined) return "";
+  const str = String(text).trim();
+  if (!str) return "";
+  
+  // إذا كان النص عبارة عن أرقام فقط أو علامات، لا داعي لمعالجته
+  if (/^[0-9.,\-\s/]+$/.test(str)) return str;
+
+  const reshaped = reshape(str);
+  return bidi.getOrderedLines(reshaped)[0]?.text || reshaped;
 };
 
-// إنشاء كائن PDF جاهز للغة العربية
+const ARABIC_FONT_URL = '/fonts/Cairo-Regular.ttf'; // يجب أن يكون الملف متواجد في public/fonts/
+let arabicFontBase64: string | null = null;
+
 const createArabicPDF = async (orientation: "portrait" | "landscape" = "landscape") => {
   const pdf = new jsPDF({ orientation, unit: "mm", format: "a4" });
-  const fontBase64 = await loadArabicFont();
-  if (fontBase64) {
-    pdf.addFileToVFS("Cairo-Regular.ttf", fontBase64);
+  
+  if (!arabicFontBase64) {
+    try {
+      const response = await fetch(ARABIC_FONT_URL);
+      if (!response.ok) throw new Error();
+      const blob = await response.blob();
+      arabicFontBase64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.warn("فشل تحميل خط القاهرة المخصص، سيتم استخدام الخط الافتراضي.");
+    }
+  }
+
+  if (arabicFontBase64) {
+    pdf.addFileToVFS("Cairo-Regular.ttf", arabicFontBase64);
     pdf.addFont("Cairo-Regular.ttf", "Cairo", "normal");
     pdf.setFont("Cairo");
-    pdf.setR2L(true);
   } else {
-    // بدون خط عربي، نستخدم الخط الافتراضي مع التنبيه
     pdf.setFont("Helvetica");
   }
+  
+  pdf.setR2L(true); // توجيه المستند الافتراضي من اليمين إلى اليسار
   return pdf;
 };
 
@@ -122,7 +130,7 @@ export default function InstallmentsTab() {
     };
   }, [controls2026.rows]);
 
-  // ========== دوال الاستيراد ==========
+  // ========== دوال الاستيراد Excel ==========
   const findHeaderIndex = (rows: any[], keywords: string[]): number => {
     return rows.findIndex(row =>
       row && row.some((cell: any) => {
@@ -296,7 +304,7 @@ export default function InstallmentsTab() {
     setPayMonth("");
   };
 
-  // ========== طباعة كشف فردي ==========
+  // ========== طباعة كشف فردي موحد (يدعم العربية) ==========
   const printComprehensiveStatement = async (studentName: string) => {
     const r2025 = (installments2025 || []).find((i: any) => i.name === studentName);
     const r2026 = (installments || []).find((i: any) => i.name === studentName);
@@ -307,45 +315,51 @@ export default function InstallmentsTab() {
     try {
       const pdf = await createArabicPDF("landscape");
       pdf.setFontSize(18);
-      pdf.text("المجلس اليمني للاختصاصات الطبية", 148, 15, { align: "center" });
+      pdf.text(fixArabic("المجلس اليمني للاختصاصات الطبية"), 148, 15, { align: "center" });
       pdf.setFontSize(14);
-      pdf.text("كشف حساب مالي موحد", 148, 25, { align: "center" });
+      pdf.text(fixArabic("كشف حساب مالي موحد"), 148, 25, { align: "center" });
       pdf.setFontSize(12);
-      pdf.text(`اسم الطبيب: ${studentName}`, 280, 35, { align: "right" });
-      pdf.text(`التاريخ: ${today()}`, 20, 35, { align: "left" });
+      pdf.text(fixArabic(`اسم الطبيب: ${studentName}`), 280, 35, { align: "right" });
+      pdf.text(fixArabic(`التاريخ: ${today()}`), 20, 35, { align: "left" });
 
       let y = 45;
       if (r2025) {
         pdf.setFontSize(11);
-        pdf.text("■ بيان 2025", 280, y, { align: "right" });
+        pdf.text(fixArabic("■ بيان 2025"), 280, y, { align: "right" });
         autoTable(pdf, {
-          head: [["الدفعة", "المساق", "الرسوم", "المسدد", "المتبقي", "الهاتف", "ملاحظات"]],
-          body: [[r2025.batch, r2025.specialty, fmt(r2025.fees), fmt(r2025.totalPaid), fmt(r2025.remaining), r2025.phone || "—", r2025.notes || "—"]],
+          head: [["الدفعة", "المساق", "الرسوم", "المسدد", "المتبقي", "الهاتف", "ملاحظات"].map(fixArabic)],
+          body: [[r2025.batch, r2025.specialty, fmt(r2025.fees), fmt(r2025.totalPaid), fmt(r2025.remaining), r2025.phone || "—", r2025.notes || "—"].map(fixArabic)],
           startY: y + 5,
           styles: { font: "Cairo", halign: "right", fontSize: 9 },
-          headStyles: { fillColor: [13, 148, 136] }
+          headStyles: { fillColor: [13, 148, 136] },
+          didParseCell: (cellData) => {
+            cellData.cell.text = [fixArabic(cellData.cell.raw)];
+          }
         });
         y = (pdf as any).lastAutoTable.finalY + 10;
       }
       if (r2026) {
         pdf.setFontSize(11);
-        pdf.text("■ بيان 2026", 280, y, { align: "right" });
+        pdf.text(fixArabic("■ بيان 2026"), 280, y, { align: "right" });
         autoTable(pdf, {
-          head: [["الدفعة", "المساق", "الرسوم", "متبقي 2025", "المسدد", "المتبقي", "الهاتف", "ملاحظات"]],
-          body: [[r2026.batch, r2026.specialty, fmt(r2026.fees), fmt(r2026.prevDue||0), fmt(r2026.totalPaid), fmt(r2026.remaining), r2026.phone||"—", r2026.notes||"—"]],
+          head: [["الدفعة", "المساق", "الرسوم", "متبقي 2025", "المسدد", "المتبقي", "الهاتف", "ملاحظات"].map(fixArabic)],
+          body: [[r2026.batch, r2026.specialty, fmt(r2026.fees), fmt(r2026.prevDue||0), fmt(r2026.totalPaid), fmt(r2026.remaining), r2026.phone||"—", r2026.notes||"—"].map(fixArabic)],
           startY: y + 5,
           styles: { font: "Cairo", halign: "right", fontSize: 9 },
-          headStyles: { fillColor: [30, 41, 59] }
+          headStyles: { fillColor: [30, 41, 59] },
+          didParseCell: (cellData) => {
+            cellData.cell.text = [fixArabic(cellData.cell.raw)];
+          }
         });
       }
       pdf.save(`كشف_حساب_${studentName}.pdf`);
-      toast.success("تم استخراج الكشف");
+      toast.success("تم استخراج الكشف بنجاح");
     } catch (error) {
       toast.error("فشل إنشاء PDF");
     }
   };
 
-  // ========== تصدير كشف عام ==========
+  // ========== تصدير كشف عام (يدعم العربية) ==========
   const printFullYearStatement = async (year: 2025 | 2026) => {
     const data = year === 2025 ? (installments2025 || []) : (installments || []);
     if (data.length === 0) {
@@ -355,24 +369,31 @@ export default function InstallmentsTab() {
     try {
       const pdf = await createArabicPDF("landscape");
       pdf.setFontSize(16);
-      pdf.text(`المجلس اليمني - كشف عام ${year}`, 148, 15, { align: "center" });
+      pdf.text(fixArabic(`المجلس اليمني - كشف عام ${year}`), 148, 15, { align: "center" });
+      
       const headers = year === 2025
-        ? [["الاسم", "الدفعة", "المساق", "الرسوم", "المسدد", "المتبقي", "الهاتف", "ملاحظات"]]
-        : [["الاسم", "الدفعة", "المساق", "الرسوم", "متبقي 2025", "المسدد", "المتبقي", "الهاتف", "ملاحظات"]];
+        ? ["الاسم", "الدفعة", "المساق", "الرسوم", "المسدد", "المتبقي", "الهاتف", "ملاحظات"]
+        : ["الاسم", "الدفعة", "المساق", "الرسوم", "متبقي 2025", "المسدد", "المتبقي", "الهاتف", "ملاحظات"];
+        
       const body = data.map((row: any) =>
         year === 2025
           ? [row.name, row.batch, row.specialty, fmt(row.fees), fmt(row.totalPaid), fmt(row.remaining), row.phone||"—", row.notes||"—"]
           : [row.name, row.batch, row.specialty, fmt(row.fees), fmt(row.prevDue||0), fmt(row.totalPaid), fmt(row.remaining), row.phone||"—", row.notes||"—"]
       );
+
       autoTable(pdf, {
-        head: headers,
-        body,
+        head: [headers.map(fixArabic)],
+        body: body.map(row => row.map(fixArabic)),
         startY: 25,
         styles: { font: "Cairo", halign: "right", fontSize: 8 },
-        headStyles: { fillColor: year === 2025 ? [13, 148, 136] : [30, 41, 59] }
+        headStyles: { fillColor: year === 2025 ? [13, 148, 136] : [30, 41, 59] },
+        didParseCell: (cellData) => {
+          cellData.cell.text = [fixArabic(cellData.cell.raw)];
+        }
       });
+      
       pdf.save(`كشف_عام_${year}.pdf`);
-      toast.success("تم التصدير");
+      toast.success("تم التصدير بنجاح");
     } catch (error) {
       toast.error("فشل تصدير الكشف");
     }
@@ -557,4 +578,4 @@ export default function InstallmentsTab() {
       })()}
     </div>
   );
-                                    }
+}
