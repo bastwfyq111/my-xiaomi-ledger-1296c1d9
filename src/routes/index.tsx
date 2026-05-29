@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import  { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Toaster, toast } from "sonner";
 
@@ -51,7 +51,7 @@ function Index() {
   const [activeTab, setActiveTab] = useState<Tab>("installments");
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-8" dir="ltr">
+    <div className="container mx-auto p-4 md:p-6 space-y-8" dir="rtl">
       
       {/* عنوان الصفحة الترحيبي (إضافة لمسة جمالية) */}
       <div className="flex flex-col gap-1 mb-6">
