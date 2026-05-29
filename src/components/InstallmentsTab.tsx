@@ -148,15 +148,25 @@ export default function InstallmentsTab() {
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
+        
+        // ✅ التأكد من أن الملف ليس فارغاً
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+          toast.error("ملف الإكسل فارغ أو تالف");
+          return;
+        }
+
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[];
         const headerIndex = findHeaderIndex(rows, ["اسم المتدرب", "متدرب", "الاسم"]);
+        
         if (headerIndex === -1) {
           toast.error("لم يتم العثور على صف العناوين في ملف 2025");
           return;
         }
+        
         const headers = rows[headerIndex].map((h: any) => String(h || "").trim());
         const dataRows = rows.slice(headerIndex + 1);
+        
         const cleanJson = dataRows
           .map(row => {
             const obj: any = {};
@@ -176,6 +186,7 @@ export default function InstallmentsTab() {
             const totalPaid = superCleanNumber(row["الإجمالي"]) || totalPaidFromMonths;
             const remaining = superCleanNumber(row["المتبقي"]) || (fees - totalPaid);
             return {
+              id: crypto.randomUUID(), // ✅ إضافة معرف فريد لتجنب تشابه الأسماء
               name,
               batch: String(row["رقم الدفعة"] || row["الدفعة"] || "").trim(),
               specialty: String(row["المساق"] || row["التخصص"] || "").trim(),
@@ -195,7 +206,7 @@ export default function InstallmentsTab() {
       }
     };
     reader.readAsArrayBuffer(file);
-    e.target.value = "";
+    e.target.value = ""; // تفريغ حقل الملف للسماح بإعادة الرفع
   };
 
   const handleImport2026 = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -206,15 +217,25 @@ export default function InstallmentsTab() {
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
+        
+        // ✅ التأكد من أن الملف ليس فارغاً
+        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+          toast.error("ملف الإكسل فارغ أو تالف");
+          return;
+        }
+
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[];
         const headerIndex = findHeaderIndex(rows, ["اسم المتدرب", "متدرب", "الاسم"]);
+        
         if (headerIndex === -1) {
           toast.error("لم يتم العثور على صف العناوين في ملف 2026");
           return;
         }
+        
         const headers = rows[headerIndex].map((h: any) => String(h || "").trim());
         const dataRows = rows.slice(headerIndex + 1);
+        
         const cleanJson = dataRows
           .map(row => {
             const obj: any = {};
@@ -236,6 +257,7 @@ export default function InstallmentsTab() {
             const totalDue = fees + prevDue;
             const remaining = superCleanNumber(row["المتبقي"]) || (totalDue - totalPaid);
             return {
+              id: crypto.randomUUID(), // ✅ إضافة معرف فريد لتجنب تشابه الأسماء
               name,
               batch: String(row["رقم الدفعة"] || row["الدفعة"] || "").trim(),
               specialty: String(row["المساق"] || row["التخصص"] || "").trim(),
@@ -256,7 +278,7 @@ export default function InstallmentsTab() {
       }
     };
     reader.readAsArrayBuffer(file);
-    e.target.value = "";
+    e.target.value = ""; // تفريغ حقل الملف
   };
 
   // ========== إضافة دفعة يدوية ==========
@@ -271,7 +293,8 @@ export default function InstallmentsTab() {
     const currentList = is2025 ? (installments2025 || []) : (installments || []);
 
     const updatedList = currentList.map((student: any) => {
-      if (student.name === paymentModal.row.name) {
+      // ✅ الاعتماد على id لضمان دقة تحديد المتدرب
+      if (student.id === paymentModal.row.id) {
         const updatedPayments = { ...student.payments };
         updatedPayments[payMonth] = (Number(updatedPayments[payMonth]) || 0) + amountNum;
         let newTotalPaid = 0;
@@ -439,7 +462,7 @@ export default function InstallmentsTab() {
             </thead>
             <tbody>
               {controls2025.rows.map((r, i) => (
-                <tr key={r.name + i} className="border-t hover:bg-slate-50">
+                <tr key={r.id || i} className="border-t hover:bg-slate-50">
                   <td className="p-2 text-center">{i + 1}</td>
                   <td className="p-2 font-semibold">{r.name}</td>
                   <td className="p-2 text-center">{r.batch}</td>
@@ -505,7 +528,7 @@ export default function InstallmentsTab() {
             </thead>
             <tbody>
               {controls2026.rows.map((r, i) => (
-                <tr key={r.name + i} className="border-t hover:bg-slate-50">
+                <tr key={r.id || i} className="border-t hover:bg-slate-50">
                   <td className="p-2 text-center">{i + 1}</td>
                   <td className="p-2 font-semibold">{r.name}</td>
                   <td className="p-2 text-center">{r.batch}</td>
@@ -590,10 +613,12 @@ export default function InstallmentsTab() {
                 if (cleaned[k] !== undefined) cleaned[k] = superCleanNumber(cleaned[k]);
               });
               if (is2025) {
-                const list = (installments2025 || []).map((item: any) => item.name === editingRow.row.name ? cleaned : item);
+                // ✅ التحديث بناءً على الـ id
+                const list = (installments2025 || []).map((item: any) => item.id === editingRow.row.id ? cleaned : item);
                 useStore.setState({ installments2025: list });
               } else {
-                const list = (installments || []).map((item: any) => item.name === editingRow.row.name ? cleaned : item);
+                // ✅ التحديث بناءً على الـ id
+                const list = (installments || []).map((item: any) => item.id === editingRow.row.id ? cleaned : item);
                 useStore.setState({ installments: list });
               }
               toast.success("تم التحديث");
