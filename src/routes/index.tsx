@@ -2,7 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Toaster, toast } from "sonner";
 
-// التعديل الضروري 1: استيراد مكونات التبويبات (Tabs) لكي يعمل التطبيق ولا يتوقف
+// استيراد أيقونات حديثة لتعزيز شكل التبويبات
+import { 
+  WalletCards, 
+  FileBox, 
+  FileSpreadsheet, 
+  BookOpenText, 
+  PieChart, 
+  TrendingUp, 
+  ReceiptText 
+} from "lucide-react";
+
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import HafizaTab from "@/components/HafizaTab";
@@ -11,8 +21,6 @@ import JournalTab from "@/components/JournalTab";
 import InstallmentsTab from "@/components/InstallmentsTab";
 import MonthlyStatementTab from "@/components/MonthlyStatementTab";
 import RevenueTab from "@/components/RevenueTab";
-
-// استيراد ملف تبويب المصروفات المتواجد في مشروعك
 import ExpensesTab from "@/components/ExpensesTab"; 
 
 import { useStore } from "@/lib/store";
@@ -37,44 +45,99 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-// معرفات التبويبات المسموحة في نظام TypeScript لضمان عدم حدوث أخطاء توافقية
 type Tab = "installments" | "hafiza" | "account" | "journal" | "monthly" | "revenue" | "Expenses" | "expenses-table";
 
 function Index() {
-  // حالة (State) لتتبع التبويب النشط حالياً
   const [activeTab, setActiveTab] = useState<Tab>("installments");
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6" dir="rtl">
+    <div className="container mx-auto p-4 md:p-6 space-y-8" dir="rtl">
       
-      {/* الحاوية الرئيسية للتبويبات، ترتبط بالحالة activeTab وتقوم بتحديثها عند التغيير */}
+      {/* عنوان الصفحة الترحيبي (إضافة لمسة جمالية) */}
+      <div className="flex flex-col gap-1 mb-6">
+        <h1 className="text-2xl font-bold text-teal-800">النظام المالي الشامل</h1>
+        <p className="text-sm text-slate-500">اختر القسم الذي تريد إدارته من القائمة أدناه</p>
+      </div>
+
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full">
         
-        {/* شريط أزرار التبويبات العلوية */}
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 gap-2">
-          <TabsTrigger value="installments">الأقساط</TabsTrigger>
-          <TabsTrigger value="hafiza">الحافظة</TabsTrigger>
-          <TabsTrigger value="account">الكشف</TabsTrigger>
-          <TabsTrigger value="journal">القيود</TabsTrigger>
-          <TabsTrigger value="monthly">التقرير الشهري</TabsTrigger>
-          <TabsTrigger value="revenue">الإيرادات</TabsTrigger>
-          
-          {/* تبويب جدول المصروفات الجديد */}
-          <TabsTrigger value="expenses-table">جدول المصروفات</TabsTrigger>
-        </TabsList>
+        {/* شريط التبويبات بتصميم حديث:
+          - flex و overflow-x-auto: للتمرير في الشاشات الصغيرة
+          - bg-slate-100/70 و backdrop-blur: تأثير زجاجي حديث
+          - p-1.5 و rounded-2xl: حواف دائرية أنيقة
+        */}
+        <div className="w-full overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
+          <TabsList className="flex w-max min-w-full md:w-full bg-slate-100/70 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/60 shadow-sm h-auto gap-1">
+            
+            <TabsTrigger 
+              value="installments" 
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-slate-200/50"
+            >
+              <WalletCards className="w-4 h-4" />
+              <span>الأقساط</span>
+            </TabsTrigger>
 
-        {/* محتويات التبويبات الحالية والجديدة */}
-        <TabsContent value="installments" className="mt-4"><InstallmentsTab /></TabsContent>
-        <TabsContent value="hafiza" className="mt-4"><HafizaTab /></TabsContent>
-        <TabsContent value="account" className="mt-4"><AccountTab /></TabsContent>
-        <TabsContent value="journal" className="mt-4"><JournalTab /></TabsContent>
-        <TabsContent value="monthly" className="mt-4"><MonthlyStatementTab /></TabsContent>
-        <TabsContent value="revenue" className="mt-4"><RevenueTab /></TabsContent>
+            <TabsTrigger 
+              value="hafiza" 
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-slate-200/50"
+            >
+              <FileBox className="w-4 h-4" />
+              <span>الحافظة</span>
+            </TabsTrigger>
 
-        {/* عرض ملف ExpensesTab المتاح لديك عند الضغط عليه */}
-        <TabsContent value="expenses-table" className="mt-4">
-          <ExpensesTab />
-        </TabsContent>
+            <TabsTrigger 
+              value="account" 
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-slate-200/50"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>الكشف</span>
+            </TabsTrigger>
+
+            <TabsTrigger 
+              value="journal" 
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-slate-200/50"
+            >
+              <BookOpenText className="w-4 h-4" />
+              <span>القيود</span>
+            </TabsTrigger>
+
+            <TabsTrigger 
+              value="monthly" 
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-slate-200/50"
+            >
+              <PieChart className="w-4 h-4" />
+              <span>التقرير الشهري</span>
+            </TabsTrigger>
+
+            <TabsTrigger 
+              value="revenue" 
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-slate-200/50"
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>الإيرادات</span>
+            </TabsTrigger>
+            
+            <TabsTrigger 
+              value="expenses-table" 
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-slate-200/50"
+            >
+              <ReceiptText className="w-4 h-4" />
+              <span>جدول المصروفات</span>
+            </TabsTrigger>
+
+          </TabsList>
+        </div>
+
+        {/* إضافة حركة دخول ناعمة (Fade-in) لمحتوى التبويبات */}
+        <div className="mt-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <TabsContent value="installments"><InstallmentsTab /></TabsContent>
+          <TabsContent value="hafiza"><HafizaTab /></TabsContent>
+          <TabsContent value="account"><AccountTab /></TabsContent>
+          <TabsContent value="journal"><JournalTab /></TabsContent>
+          <TabsContent value="monthly"><MonthlyStatementTab /></TabsContent>
+          <TabsContent value="revenue"><RevenueTab /></TabsContent>
+          <TabsContent value="expenses-table"><ExpensesTab /></TabsContent>
+        </div>
 
       </Tabs>
       <Toaster position="top-center" />
@@ -82,5 +145,4 @@ function Index() {
   );
 }
 
-// التعديل الضروري 2: تصدير المكون بشكل افتراضي ليتوافق مع نظام تتبع المسارات الـ Router
 export default Index;
