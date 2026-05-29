@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import EditModal, { type EditField } from "./EditModal";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 
-// الأشهر المحددة لعام 2025 في ملفك المرفوع
+// الأشهر المحددة لعام 2025
 const MONTHS_2025 = [
   "يونيو 2024", "يوليو 2024", "أغسطس 2024", 
   "مارس 2025", "ابريل 2025", "مايو 2025", 
@@ -16,12 +16,13 @@ const MONTHS_2025 = [
   "سبتمبر 2025", "أكتوبر 2025", "نوفمبر2025", "ديسمبر2025"
 ];
 
-// شهور عام 2026 كما هي مكتوبة تماماً وبأدق تفاصيلها في ملفك
+// شهور عام 2026
 const MONTHS_2026_CLEAN = [
   "يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", 
   "يوليو", "اغسطس", "سبتمبر", "اكتوبر ", "نوفمبر", "ديسمبر"
 ];
 
+// تعريف الحقول الأساسية - بدون prevDue لأنه خاص بـ 2026 فقط
 const BASE_COLS = [
   { key: "name", label: "الاسم" },
   { key: "batch", label: "الدفعة" },
@@ -45,19 +46,30 @@ export default function InstallmentsTab() {
   const [payAmount, setPayAmount] = useState<string>("");
   const [payMonth, setPayMonth] = useState<string>("");
 
-  const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining", "notes", "phone"]);
+  // تعريف مفاتيح البحث والفرز لعام 2026 بشكل منفصل ليشمل prevDue
+  const controls2026 = useTableControls(installments || [], [
+    "name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining", "notes", "phone"
+  ]);
   const controls2025 = useTableControls(installments2025 || [], BASE_COLS.map(c => c.key));
 
-  // دالة تطهير فائقة القوة تحذف الفواصل، الفراغات العربية، الأجنبية، والرموز المخفية تماماً
+  // دالة تطهير فائقة القوة تحذف الفواصل، الفراغات العربية، الأجنبية، والرموز المخفية
   const superCleanNumber = (val: any): number => {
     if (val === undefined || val === null) return 0;
+    if (typeof val === 'number') return val;
+    
     let str = String(val);
-    // حذف فواصل الآلاف، الفراغات العادية، والفراغات المشفرة الخاصة بملفات الـ CSV
+    // حذف فواصل الآلاف، الفراغات العادية، والفراغات المشفرة
     str = str.replace(/,/g, "")
              .replace(/\s+/g, "")
-             .replace(/[\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "")
+             .replace(/[\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "")
+             .replace(/[\u060C\u061B\u066B\u066C]/g, "") // فواصل ورموز عربية
              .trim();
-    return Number(str) || 0;
+    
+    // إذا كانت السلسلة فارغة بعد التنظيف
+    if (str === "" || str === "-" || str === "--") return 0;
+    
+    const num = Number(str);
+    return isNaN(num) ? 0 : num;
   };
 
   const totals2025 = useMemo(() => {
@@ -79,6 +91,224 @@ export default function InstallmentsTab() {
     };
   }, [controls2026.rows]);
 
+  // دالة مساعدة للبحث المرن في رؤوس الجدول
+  const findHeaderIndex = (rows: any[], keywords: string[]): number => {
+    return rows.findIndex(row => 
+      row && row.some((cell: any) => {
+        const cStr = String(cell || "").toLowerCase().trim();
+        return keywords.some(kw => cStr.includes(kw.toLowerCase()));
+      })
+    );
+  };
+
+  // استيراد عام 2025
+  const handleImport2025 = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[];
+        
+        // البحث عن صف العناوين بطريقة مرنة
+        const headerIndex = findHeaderIndex(rows, ["اسم المتدرب", "متدرب", "الاسم"]);
+        
+        if (headerIndex === -1) {
+          toast.error("❌ لم يتم العثور على سطر العناوين في الملف. تأكد أن الملف يحتوي على عمود 'اسم المتدرب'");
+          console.log("صفوف الملف المستورد:", rows.slice(0, 5)); // للتشخيص
+          return;
+        }
+
+        const headers = rows[headerIndex].map((h: any) => String(h || "").trim());
+        const dataRows = rows.slice(headerIndex + 1);
+        
+        console.log("رؤوس 2025:", headers); // للتشخيص
+
+        const cleanJson = dataRows
+          .map(row => {
+            const rowData: any = {};
+            headers.forEach((header, index) => { 
+              if (header) rowData[header] = row[index]; 
+            });
+            return rowData;
+          })
+          .filter(row => {
+            const name = row["اسم المتدرب"] || row["الاسم"] || row["متدرب"] || "";
+            const nameStr = String(name).trim();
+            return nameStr && 
+                   nameStr !== "" && 
+                   !nameStr.includes("الإجمالي") && 
+                   !nameStr.includes("المجموع") &&
+                   nameStr.length > 2; // تجاهل الأسماء القصيرة جداً
+          })
+          .map(row => {
+            const name = String(row["اسم المتدرب"] || row["الاسم"] || row["متدرب"] || "").trim();
+            
+            // استخراج بيانات الدفعات الشهرية
+            const payments: any = {};
+            MONTHS_2025.forEach(m => {
+              const value = superCleanNumber(row[m]);
+              payments[m] = value;
+            });
+            
+            // حساب الإجمالي من مجموع الأقساط الشهرية (هذا أدق)
+            const totalPaidFromMonths = Object.values(payments).reduce((sum: number, val: any) => sum + Number(val), 0);
+            
+            // قراءة الإجمالي المسدد من الملف (إذا كان موجوداً)
+            const totalPaidFromFile = superCleanNumber(row["الإجمالي"] || row["إجمالي المسدد"] || row["المسدد"]);
+            
+            // استخدام القيمة من الملف إذا كانت موجودة ومنطقية، وإلا استخدام مجموع الأقساط
+            const totalPaid = totalPaidFromFile > 0 ? totalPaidFromFile : totalPaidFromMonths;
+            
+            const fees = superCleanNumber(row["مبلغ الرسوم"] || row["الرسوم"] || row["رسوم"]);
+            const remaining = superCleanNumber(row["المتبقي"] || row["المتبقي "]);
+            
+            // التحقق من صحة البيانات
+            const calculatedRemaining = fees - totalPaid;
+            const finalRemaining = remaining > 0 ? remaining : (calculatedRemaining > 0 ? calculatedRemaining : 0);
+
+            return {
+              name,
+              batch: String(row["رقم الدفعة"] || row["الدفعة"] || "").trim(),
+              specialty: String(row["المساق"] || row["التخصص"] || "").trim(),
+              fees,
+              totalPaid,
+              remaining: finalRemaining,
+              notes: String(row["ملاحظات"] || row["الملاحظات"] || "").trim(),
+              phone: String(row["رقم الهاتف"] || row["الهاتف"] || row["جوال"] || "").trim(),
+              payments
+            };
+          });
+
+        if (cleanJson.length === 0) {
+          toast.error("⚠️ لم يتم استخراج أي سجلات صالحة من الملف");
+          return;
+        }
+
+        useStore.setState({ installments2025: cleanJson });
+        toast.success(`✅ تم استيراد ${cleanJson.length} سجل بنجاح لعام 2025م`);
+        
+        console.log("عينة من البيانات المستوردة 2025:", cleanJson[0]); // للتشخيص
+        
+      } catch (error) {
+        console.error("خطأ في استيراد 2025:", error);
+        toast.error("❌ حدث خطأ أثناء معالجة ملف 2025. تأكد من صحة تنسيق الملف");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
+
+  // استيراد عام 2026
+  const handleImport2026 = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[];
+        
+        // البحث عن صف العناوين
+        const headerIndex = findHeaderIndex(rows, ["اسم المتدرب", "متدرب", "الاسم"]);
+        
+        if (headerIndex === -1) {
+          toast.error("❌ لم يتم العثور على سطر العناوين في ملف 2026");
+          console.log("صفوف الملف المستورد:", rows.slice(0, 5));
+          return;
+        }
+
+        const headers = rows[headerIndex].map((h: any) => String(h || "").trim());
+        const dataRows = rows.slice(headerIndex + 1);
+        
+        console.log("رؤوس 2026:", headers); // للتشخيص
+
+        const cleanJson = dataRows
+          .map(row => {
+            const rowData: any = {};
+            headers.forEach((header, index) => { 
+              if (header) rowData[header] = row[index]; 
+            });
+            return rowData;
+          })
+          .filter(row => {
+            const name = row["اسم المتدرب"] || row["الاسم"] || row["متدرب"] || "";
+            const nameStr = String(name).trim();
+            return nameStr && 
+                   nameStr !== "" && 
+                   !nameStr.includes("الإجمالي") && 
+                   !nameStr.includes("المجموع") &&
+                   !nameStr.includes("كشف تفصيلي") &&
+                   nameStr.length > 2;
+          })
+          .map(row => {
+            const name = String(row["اسم المتدرب"] || row["الاسم"] || row["متدرب"] || "").trim();
+            
+            // استخراج بيانات الدفعات الشهرية
+            const payments: any = {};
+            MONTHS_2026_CLEAN.forEach(m => {
+              const value = superCleanNumber(row[m]);
+              payments[m] = value;
+            });
+            
+            // حساب الإجمالي من مجموع الأقساط الشهرية
+            const totalPaidFromMonths = Object.values(payments).reduce((sum: number, val: any) => sum + Number(val), 0);
+            
+            // قراءة القيم من الملف
+            const fees = superCleanNumber(row["مبلغ الرسوم"] || row["رسوم الدراسة"] || row["الرسوم"] || row["رسوم"]);
+            const prevDue = superCleanNumber(row["المتبقي عليهم من العام 2025"] || row["متبقي 2025"] || row["المتبقي السابق"]);
+            const totalPaidFromFile = superCleanNumber(row["الإجمالي"] || row["إجمالي المسدد"] || row["المسدد"]);
+            
+            // استخدام القيمة من الملف إذا كانت موجودة، وإلا استخدام مجموع الأقساط
+            const totalPaid = totalPaidFromFile > 0 ? totalPaidFromFile : totalPaidFromMonths;
+            
+            // حساب المتبقي
+            const totalDue = fees + prevDue;
+            const remainingFromFile = superCleanNumber(row["المتبقي"] || row["المتبقي "]);
+            const calculatedRemaining = totalDue - totalPaid;
+            const remaining = remainingFromFile > 0 ? remainingFromFile : (calculatedRemaining > 0 ? calculatedRemaining : 0);
+
+            return {
+              name,
+              batch: String(row["رقم الدفعة"] || row["الدفعة"] || "").trim(),
+              specialty: String(row["المساق"] || row["التخصص"] || "").trim(),
+              fees,
+              prevDue,
+              totalPaid,
+              remaining,
+              notes: String(row["ملاحظات"] || row["الملاحظات"] || "").trim(),
+              phone: String(row["رقم الهاتف"] || row["الهاتف"] || row["جوال"] || "").trim(),
+              payments
+            };
+          });
+
+        if (cleanJson.length === 0) {
+          toast.error("⚠️ لم يتم استخراج أي سجلات صالحة من ملف 2026");
+          return;
+        }
+
+        useStore.setState({ installments: cleanJson });
+        toast.success(`✅ تم استيراد ${cleanJson.length} سجل بنجاح لعام 2026م`);
+        
+        console.log("عينة من البيانات المستوردة 2026:", cleanJson[0]); // للتشخيص
+        
+      } catch (error) {
+        console.error("خطأ في استيراد 2026:", error);
+        toast.error("❌ حدث خطأ أثناء معالجة ملف 2026. تأكد من صحة تنسيق الملف");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
+
+  // باقي الكود كما هو (handleAddManualPayment, printComprehensiveStatement, render...)
   const handleAddManualPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!paymentModal || !payAmount || !payMonth) {
@@ -130,136 +360,6 @@ export default function InstallmentsTab() {
     setPayMonth("");
   };
 
-  // استيراد عام 2025
-  const handleImport2025 = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[];
-        
-        const headerIndex = rows.findIndex(row => row && row.some((cell: any) => {
-          const cStr = String(cell);
-          return cStr.includes("متدرب") || cStr.includes("الاسم");
-        }));
-        
-        if (headerIndex === -1) {
-          toast.error("لم يتم العثور على سطر العناوين (اسم المتدرب)");
-          return;
-        }
-
-        const headers = rows[headerIndex].map((h: any) => String(h || "").trim());
-        const dataRows = rows.slice(headerIndex + 1);
-
-        const cleanJson = dataRows
-          .map(row => {
-            const rowData: any = {};
-            headers.forEach((header, index) => { if (header) rowData[header] = row[index]; });
-            return rowData;
-          })
-          .filter(row => row["اسم المتدرب"] && String(row["اسم المتدرب"]).trim() !== "" && String(row["اسم المتدرب"]).trim() !== "الإجمالي")
-          .map(row => {
-            const payments = MONTHS_2025.reduce((acc, m) => ({ ...acc, [m]: superCleanNumber(row[m]) }), {} as any);
-            let totalPaid = superCleanNumber(row["الإجمالي"]);
-            if (!totalPaid) {
-              MONTHS_2025.forEach(m => { totalPaid += payments[m]; });
-            }
-
-            return {
-              name: String(row["اسم المتدرب"] || "").trim(),
-              batch: String(row["رقم الدفعة"] || "").trim(),
-              specialty: String(row["المساق"] || "").trim(),
-              fees: superCleanNumber(row["مبلغ الرسوم"]),
-              totalPaid: totalPaid,
-              remaining: superCleanNumber(row["المتبقي"]),
-              notes: String(row["ملاحظات"] || "").trim(),
-              phone: String(row["رقم الهاتف"] || "").trim(),
-              payments: payments
-            };
-          });
-
-        useStore.setState({ installments2025: cleanJson });
-        toast.success(`تم استيراد ${cleanJson.length} سجل بنجاح لعام 2025م`);
-      } catch (error) {
-        toast.error("حدث خطأ أثناء معالجة ملف 2025");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
-  };
-
-  // استيراد عام 2026 الفائق والمطابق تماماً لملفك المرفوع
-  const handleImport2026 = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[];
-        
-        const headerIndex = rows.findIndex(row => row && row.some((cell: any) => {
-          const cStr = String(cell);
-          return cStr.includes("متدرب") || cStr.includes("الاسم");
-        }));
-        
-        if (headerIndex === -1) {
-          toast.error("لم يتم العثور على سطر العناوين في ملف 2026");
-          return;
-        }
-
-        // قراءة العناوين مع تنظيف الفراغات
-        const headers = rows[headerIndex].map((h: any) => String(h || "").trim());
-        const dataRows = rows.slice(headerIndex + 1);
-
-        const cleanJson = dataRows
-          .map(row => {
-            const rowData: any = {};
-            headers.forEach((header, index) => { if (header) rowData[header] = row[index]; });
-            return rowData;
-          })
-          .filter(row => {
-            const nameVal = String(row["اسم المتدرب"] || row["الاسم"] || "").trim();
-            return nameVal !== "" && nameVal !== "الإجمالي" && !nameVal.includes("كشف تفصيلي");
-          })
-          .map(row => {
-            // البحث المرن عن المسميات داخل ملف الـ CSV التابع لك
-            const name = String(row["اسم المتدرب"] || row["الاسم"] || "").trim();
-            const batch = String(row["رقم الدفعة"] || row["الدفعة"] || "").trim();
-            const specialty = String(row["المساق"] || "").trim();
-            
-            const fees = superCleanNumber(row["مبلغ الرسوم"] || row["رسوم الدراسة"]);
-            const prevDue = superCleanNumber(row["المتبقي عليهم من العام 2025"]);
-            const totalPaid = superCleanNumber(row["الإجمالي"] || row["المسدد"]);
-            const remaining = superCleanNumber(row["المتبقي"] || row["المتبقي "]);
-
-            const payments = MONTHS_2026_CLEAN.reduce((acc, m) => ({ ...acc, [m]: superCleanNumber(row[m]) }), {} as any);
-
-            return {
-              name, batch, specialty, fees, prevDue, totalPaid, remaining,
-              notes: String(row["ملاحظات"] || "").trim(),
-              phone: String(row["رقم الهاتف"] || "").trim(),
-              payments
-            };
-          });
-
-        useStore.setState({ installments: cleanJson });
-        toast.success(`تم استيراد ${cleanJson.length} سجل بنجاح لعام 2026م`);
-      } catch (error) {
-        console.error(error);
-        toast.error("حدث خطأ أثناء معالجة ملف 2026");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
-  };
-
   const printComprehensiveStatement = (studentName: string) => {
     const r2025 = (installments2025 || []).find((i: any) => i.name === studentName);
     const r2026 = (installments || []).find((i: any) => i.name === studentName);
@@ -290,7 +390,7 @@ export default function InstallmentsTab() {
         body: body2025,
         startY: currentY + 3,
         styles: { halign: "right", fontSize: 9 },
-        headStyles: { fillCountry: [13, 148, 136] }
+        headStyles: { fillColor: [13, 148, 136] }
       });
       currentY = (pdf as any).lastAutoTable.finalY + 10;
     }
@@ -307,7 +407,7 @@ export default function InstallmentsTab() {
         body: body2026,
         startY: currentY + 3,
         styles: { halign: "right", fontSize: 9 },
-        headStyles: { fillCountry: [30, 41, 59] }
+        headStyles: { fillColor: [30, 41, 59] }
       });
     }
 
@@ -490,7 +590,7 @@ export default function InstallmentsTab() {
         </div>
       )}
 
-      {/* ================== مودال التعديل الشامل والكامل ================== */}
+      {/* ================== مودال التعديل الشامل ================== */}
       {editingRow && (() => {
         const is2025 = editingRow.year === 2025;
         const fields: EditField[] = [
