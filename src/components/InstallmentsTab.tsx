@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useStore, INSTALLMENT_MONTHS } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import { fmt, today } from "@/lib/format";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -14,7 +14,7 @@ import { Bidi } from "bidi-js";
 
 const bidi = new Bidi();
 
-// دالة سحرية لإصلاح الحروف المقطعة وتصحيح اتجاه النص العربي
+// دالة لإصلاح الحروف المقطعة وتصحيح اتجاه النص العربي
 const fixArabic = (text: any): string => {
   if (text === null || text === undefined) return "";
   const str = String(text).trim();
@@ -110,7 +110,7 @@ export default function InstallmentsTab() {
     return isNaN(num) ? 0 : num;
   };
 
-  // الإجماليات
+  // الإجماليات بناءً على الصفوف المتحكم بها (controls)
   const totals2025 = useMemo(() => {
     const list = controls2025.rows || [];
     return {
@@ -304,7 +304,7 @@ export default function InstallmentsTab() {
     setPayMonth("");
   };
 
-  // ========== طباعة كشف فردي موحد (يدعم العربية) ==========
+  // ========== طباعة كشف فردي موحد ==========
   const printComprehensiveStatement = async (studentName: string) => {
     const r2025 = (installments2025 || []).find((i: any) => i.name === studentName);
     const r2026 = (installments || []).find((i: any) => i.name === studentName);
@@ -328,12 +328,14 @@ export default function InstallmentsTab() {
         pdf.text(fixArabic("■ بيان 2025"), 280, y, { align: "right" });
         autoTable(pdf, {
           head: [["الدفعة", "المساق", "الرسوم", "المسدد", "المتبقي", "الهاتف", "ملاحظات"].map(fixArabic)],
-          body: [[r2025.batch, r2025.specialty, fmt(r2025.fees), fmt(r2025.totalPaid), fmt(r2025.remaining), r2025.phone || "—", r2025.notes || "—"].map(fixArabic)],
+          body: [[r2025.batch, r2025.specialty, fmt(r2025.fees), fmt(r2025.totalPaid), fmt(r2025.remaining), r2025.phone || "—", r2025.notes || "—"]],
           startY: y + 5,
           styles: { font: "Cairo", halign: "right", fontSize: 9 },
           headStyles: { fillColor: [13, 148, 136] },
           didParseCell: (cellData) => {
-            cellData.cell.text = [fixArabic(cellData.cell.raw)];
+            if (cellData.section === 'body' || cellData.section === 'head') {
+              cellData.cell.text = [fixArabic(cellData.cell.raw)];
+            }
           }
         });
         y = (pdf as any).lastAutoTable.finalY + 10;
@@ -343,12 +345,14 @@ export default function InstallmentsTab() {
         pdf.text(fixArabic("■ بيان 2026"), 280, y, { align: "right" });
         autoTable(pdf, {
           head: [["الدفعة", "المساق", "الرسوم", "متبقي 2025", "المسدد", "المتبقي", "الهاتف", "ملاحظات"].map(fixArabic)],
-          body: [[r2026.batch, r2026.specialty, fmt(r2026.fees), fmt(r2026.prevDue||0), fmt(r2026.totalPaid), fmt(r2026.remaining), r2026.phone||"—", r2026.notes||"—"].map(fixArabic)],
+          body: [[r2026.batch, r2026.specialty, fmt(r2026.fees), fmt(r2026.prevDue||0), fmt(r2026.totalPaid), fmt(r2026.remaining), r2026.phone||"—", r2026.notes||"—"]],
           startY: y + 5,
           styles: { font: "Cairo", halign: "right", fontSize: 9 },
           headStyles: { fillColor: [30, 41, 59] },
           didParseCell: (cellData) => {
-            cellData.cell.text = [fixArabic(cellData.cell.raw)];
+            if (cellData.section === 'body' || cellData.section === 'head') {
+              cellData.cell.text = [fixArabic(cellData.cell.raw)];
+            }
           }
         });
       }
@@ -359,9 +363,9 @@ export default function InstallmentsTab() {
     }
   };
 
-  // ========== تصدير كشف عام (يدعم العربية) ==========
+  // ========== تصدير كشف عام ==========
   const printFullYearStatement = async (year: 2025 | 2026) => {
-    const data = year === 2025 ? (installments2025 || []) : (installments || []);
+    const data = year === 2025 ? (controls2025.rows || []) : (controls2026.rows || []);
     if (data.length === 0) {
       toast.error("لا توجد بيانات للتصدير");
       return;
@@ -383,12 +387,14 @@ export default function InstallmentsTab() {
 
       autoTable(pdf, {
         head: [headers.map(fixArabic)],
-        body: body.map(row => row.map(fixArabic)),
+        body: body,
         startY: 25,
         styles: { font: "Cairo", halign: "right", fontSize: 8 },
         headStyles: { fillColor: year === 2025 ? [13, 148, 136] : [30, 41, 59] },
         didParseCell: (cellData) => {
-          cellData.cell.text = [fixArabic(cellData.cell.raw)];
+          if (cellData.section === 'body' || cellData.section === 'head') {
+            cellData.cell.text = [fixArabic(cellData.cell.raw)];
+          }
         }
       });
       
@@ -399,7 +405,6 @@ export default function InstallmentsTab() {
     }
   };
 
-  // ========== واجهة المستخدم ==========
   return (
     <div className="space-y-8" dir="rtl">
       {/* قسم 2025 */}
@@ -417,6 +422,7 @@ export default function InstallmentsTab() {
             </label>
           </div>
         </div>
+
         {/* جدول 2025 */}
         <div className="overflow-x-auto">
           <table className="w-full text-xs md:text-sm">
@@ -428,7 +434,7 @@ export default function InstallmentsTab() {
                     {c.label} {sortIndicator(controls2025.sortKey === c.key, controls2025.sortDir)}
                   </th>
                 ))}
-                <th className="p-2 w-48">إجراءات</th>
+                <th className="p-2 w-48 text-center">إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -450,6 +456,15 @@ export default function InstallmentsTab() {
                   </td>
                 </tr>
               ))}
+              {controls2025.rows.length > 0 && (
+                <tr className="bg-slate-100 font-bold border-t-2">
+                  <td colSpan={4} className="p-2 text-center">الإجمالي العام</td>
+                  <td className="p-2 font-mono">{fmt(totals2025.fees)}</td>
+                  <td className="p-2 font-mono text-emerald-600">{fmt(totals2025.paid)}</td>
+                  <td className="p-2 font-mono text-rose-600">{fmt(totals2025.remaining)}</td>
+                  <td colSpan={3}></td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -470,21 +485,22 @@ export default function InstallmentsTab() {
             </label>
           </div>
         </div>
+
         {/* جدول 2026 */}
         <div className="overflow-x-auto">
           <table className="w-full text-xs md:text-sm">
             <thead className="bg-slate-100 text-slate-800 font-bold border-b">
               <tr>
                 <th className="p-2 w-10">م</th>
-                <th className="p-2 text-right">الاسم</th>
-                <th className="p-2 text-center">الدفعة</th>
-                <th className="p-2">المساق</th>
-                <th className="p-2 text-right">رسوم الدراسة</th>
-                <th className="p-2 text-right">متبقي 2025</th>
-                <th className="p-2 text-right">المسدد 2026</th>
-                <th className="p-2 text-right">المتبقي الحالي</th>
+                <th className="p-2 text-right cursor-pointer" onClick={() => controls2026.toggleSort("name")}>الاسم {sortIndicator(controls2026.sortKey === "name", controls2026.sortDir)}</th>
+                <th className="p-2 text-center cursor-pointer" onClick={() => controls2026.toggleSort("batch")}>الدفعة {sortIndicator(controls2026.sortKey === "batch", controls2026.sortDir)}</th>
+                <th className="p-2 cursor-pointer" onClick={() => controls2026.toggleSort("specialty")}>المساق {sortIndicator(controls2026.sortKey === "specialty", controls2026.sortDir)}</th>
+                <th className="p-2 text-right cursor-pointer" onClick={() => controls2026.toggleSort("fees")}>رسوم الدراسة {sortIndicator(controls2026.sortKey === "fees", controls2026.sortDir)}</th>
+                <th className="p-2 text-right cursor-pointer" onClick={() => controls2026.toggleSort("prevDue")}>متبقي 2025 {sortIndicator(controls2026.sortKey === "prevDue", controls2026.sortDir)}</th>
+                <th className="p-2 text-right cursor-pointer" onClick={() => controls2026.toggleSort("totalPaid")}>المسدد 2026 {sortIndicator(controls2026.sortKey === "totalPaid", controls2026.sortDir)}</th>
+                <th className="p-2 text-right cursor-pointer" onClick={() => controls2026.toggleSort("remaining")}>المتبقي الحالي {sortIndicator(controls2026.sortKey === "remaining", controls2026.sortDir)}</th>
                 <th className="p-2">ملاحظات</th>
-                <th className="p-2 w-48">إجراءات</th>
+                <th className="p-2 w-48 text-center">إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -506,6 +522,16 @@ export default function InstallmentsTab() {
                   </td>
                 </tr>
               ))}
+              {controls2026.rows.length > 0 && (
+                <tr className="bg-slate-100 font-bold border-t-2">
+                  <td colSpan={4} className="p-2 text-center">الإجمالي العام</td>
+                  <td className="p-2 font-mono">{fmt(totals2026.fees)}</td>
+                  <td className="p-2 font-mono text-amber-600">{fmt(totals2026.prevDue)}</td>
+                  <td className="p-2 font-mono text-emerald-600">{fmt(totals2026.paid)}</td>
+                  <td className="p-2 font-mono text-rose-600">{fmt(totals2026.remaining)}</td>
+                  <td colSpan={2}></td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
