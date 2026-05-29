@@ -111,11 +111,12 @@ type State = {
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
 const recalcInstallment = (i: Installment): Installment => {
-  const totalPaid = Object.values(i.payments).reduce((s, v) => s + (Number(v) || 0), 0);
-  return { ...i, totalPaid, remaining: i.prevDue - totalPaid };
+  const totalPaid = Object.values(i.payments || {}).reduce((s, v) => s + (Number(v) || 0), 0);
+  const fees = Number(i.fees) || 0;
+  const prevDue = Number(i.prevDue) || 0;
+  return { ...i, fees, prevDue, totalPaid, remaining: prevDue - totalPaid };
 };
 
-// تابع الربط الصرف والمباشر: حوافظ ← حسابات
 const buildAccountFromHafiza = (h: Hafiza): Account => ({
   id: uid(),
   date: h.date,
@@ -127,8 +128,8 @@ const buildAccountFromHafiza = (h: Hafiza): Account => ({
   description: h.description,
   specialty: h.specialty,
   name: h.name,
-  hafizaAmount: h.hafizaAmount,
-  income: h.notifyAmount || 0,   
+  hafizaAmount: Number(h.hafizaAmount) || 0,
+  income: Number(h.notifyAmount) || 0,   
   expense: 0,                   
   sourceHafizaId: h.id,
 });
@@ -151,9 +152,8 @@ export const useStore = create<State>()(
           s.trainees.find((x) => x.name === t.name) ? s : { trainees: [...s.trainees, t] }
         ),
 
-      // إضافة حافظة يدوياً ينقلها مباشرة لتبويب الحساب
       addHafiza: (h) => {
-        const item = { ...h, id: uid() };
+        const item = { ...h, id: uid(), hafizaAmount: Number(h.hafizaAmount) || 0, notifyAmount: Number(h.notifyAmount) || 0 };
         const acc = buildAccountFromHafiza(item);
         set((s) => ({
           hafiza: [...s.hafiza, item],
@@ -162,12 +162,12 @@ export const useStore = create<State>()(
         return item;
       },
       addAccount: (a) => {
-        const item = { ...a, id: uid() };
+        const item = { ...a, id: uid(), hafizaAmount: Number(a.hafizaAmount) || 0, income: Number(a.income) || 0, expense: Number(a.expense) || 0 };
         set((s) => ({ accounts: [...s.accounts, item] }));
         return item;
       },
       addJournal: (j) => {
-        const item = { ...j, id: uid() };
+        const item = { ...j, id: uid(), debit: Number(j.debit) || 0, credit: Number(j.credit) || 0 };
         set((s) => ({ journal: [...s.journal, item] }));
         return item;
       },
@@ -189,8 +189,8 @@ export const useStore = create<State>()(
             description: newH.description,
             specialty: newH.specialty,
             name: newH.name,
-            hafizaAmount: newH.hafizaAmount,
-            income: newH.notifyAmount || 0, 
+            hafizaAmount: Number(newH.hafizaAmount) || 0,
+            income: Number(newH.notifyAmount) || 0, 
           };
           
           return { 
@@ -215,10 +215,10 @@ export const useStore = create<State>()(
                     description: newAcc.description,
                     specialty: newAcc.specialty,
                     name: newAcc.name,
-                    hafizaAmount: newAcc.hafizaAmount,
+                    hafizaAmount: Number(newAcc.hafizaAmount) || 0,
                     notifyNo: newAcc.notifyNo,
                     notifyDate: newAcc.notifyDate,
-                    notifyAmount: newAcc.income
+                    notifyAmount: Number(newAcc.income) || 0
                   } 
                 : h
             );
@@ -238,9 +238,14 @@ export const useStore = create<State>()(
         set((s) => ({ journal: s.journal.filter((x) => x.id !== id) })),
       setOpeningBalance: (n) => set({ openingBalance: n }),
 
-      // استيراد البيانات من إكسل: كل جدول منفصل بلا ترحيل تلقائي (حسب الخطة)
+      // إصلاح دالة الاستيراد لضمان سلامة الـ IDs والتحويل الرقمي الصارم
       importData: (d) => set((s) => ({
-        hafiza: d.hafiza ? [...s.hafiza, ...d.hafiza.map((h) => ({ ...h, id: h.id || uid() }))] : s.hafiza,
+        hafiza: d.hafiza ? [...s.hafiza, ...d.hafiza.map((h) => ({ 
+          ...h, 
+          id: h.id || uid(),
+          hafizaAmount: Number(h.hafizaAmount) || 0,
+          notifyAmount: Number(h.notifyAmount) || 0
+        }))] : s.hafiza,
         accounts: d.accounts ? [...s.accounts, ...d.accounts.map((acc) => ({
           ...acc,
           id: acc.id || uid(),
@@ -248,7 +253,13 @@ export const useStore = create<State>()(
           income: Number(acc.income) || 0,
           expense: Number(acc.expense) || 0,
         }))] : s.accounts,
-        journal: d.journal ? [...s.journal, ...d.journal] : s.journal,
+        // تم إصلاح الجرنال هنا ليتضمن تحويل الأرقام وتوليد الـ ID
+        journal: d.journal ? [...s.journal, ...d.journal.map((j) => ({
+          ...j,
+          id: j.id || uid(),
+          debit: Number(j.debit) || 0,
+          credit: Number(j.credit) || 0
+        }))] : s.journal,
         trainees: d.trainees ? [...s.trainees, ...d.trainees.filter((t) => !s.trainees.find((x) => x.name === t.name))] : s.trainees,
         installments: d.installments && d.installments.length
           ? Array.from(new Map([
@@ -294,4 +305,3 @@ export const useStore = create<State>()(
     { name: "majlis-yemen-pure-link-v1" }
   )
 );
-
