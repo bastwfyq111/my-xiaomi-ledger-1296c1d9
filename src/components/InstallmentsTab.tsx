@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import EditModal, { type EditField } from "./EditModal";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 
-// الأشهر المحددة لعام 2025 في ملفك المرفوع
+// الأشهر المحددة لعام 2025
 const MONTHS_2025 = [
   "يونيو 2024", "يوليو 2024", "أغسطس 2024", 
   "مارس 2025", "ابريل 2025", "مايو 2025", 
@@ -16,7 +16,7 @@ const MONTHS_2025 = [
   "سبتمبر 2025", "أكتوبر 2025", "نوفمبر2025", "ديسمبر2025"
 ];
 
-// شهور عام 2026 كما هي مكتوبة تماماً وبأدق تفاصيلها في ملفك
+// شهور عام 2026
 const MONTHS_2026_CLEAN = [
   "يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", 
   "يوليو", "اغسطس", "سبتمبر", "اكتوبر ", "نوفمبر", "ديسمبر"
@@ -41,31 +41,23 @@ export default function InstallmentsTab() {
 
   const [editingRow, setEditingRow] = useState<{ row: any; year: 2025 | 2026 } | null>(null);
   const [paymentModal, setPaymentModal] = useState<{ row: any; year: 2025 | 2026 } | null>(null);
-  
   const [payAmount, setPayAmount] = useState<string>("");
   const [payMonth, setPayMonth] = useState<string>("");
 
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining", "notes", "phone"]);
   const controls2025 = useTableControls(installments2025 || [], BASE_COLS.map(c => c.key));
 
-  // دالة تطهير فائقة القوة تحذف الفواصل، الفراغات العربية، الأجنبية، والرموز المخفية تماماً
+  // دالة تطهير الأرقام من الفواصل والفراغات المخفية
   const superCleanNumber = (val: any): number => {
     if (val === undefined || val === null) return 0;
     let str = String(val);
-    str = str.replace(/,/g, "")
-             .replace(/\s+/g, "")
-             .replace(/[\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "")
-             .trim();
+    str = str.replace(/,/g, "").replace(/\s+/g, "").replace(/[\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "").trim();
     return Number(str) || 0;
   };
 
-  // دالة مساعدة لتنظيف النصوص والمفاتيح لضمان مطابقتها الفعالة
   const cleanKey = (str: any): string => {
     if (!str) return "";
-    return String(str)
-      .replace(/\s+/g, "")
-      .replace(/[\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "")
-      .trim();
+    return String(str).replace(/\s+/g, "").replace(/[\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "").trim();
   };
 
   const totals2025 = useMemo(() => {
@@ -138,7 +130,7 @@ export default function InstallmentsTab() {
     setPayMonth("");
   };
 
-  // ================== استيراد مرن ومطور لعام 2025 م ==================
+  // ================== استيراد ملف 2025 ==================
   const handleImport2025 = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -172,13 +164,11 @@ export default function InstallmentsTab() {
             return rowData;
           })
           .filter(row => {
-            // البحث عن المفتاح الفعلي للاسم داخل السطر الحالي
             const actualNameKey = Object.keys(row).find(k => k.includes("اسم") || k.includes("الاسم"));
             const nameVal = actualNameKey ? String(row[actualNameKey]).trim() : "";
             return nameVal !== "" && nameVal !== "الإجمالي" && !nameVal.includes("كشف");
           })
           .map(row => {
-            // ربط ديناميكي للأعمدة مع تنظيف كامل للمفاتيح
             const findVal = (keywords: string[]) => {
               const foundKey = Object.keys(row).find(k => keywords.some(kw => k.includes(kw)));
               return foundKey ? row[foundKey] : "";
@@ -193,14 +183,12 @@ export default function InstallmentsTab() {
             const notes = String(findVal(["ملاحظات"])).trim();
             const phone = String(findVal(["هاتف", "تلفون"])).trim();
 
-            // معالجة دفعات الأشهر لعام 2025
             const payments = MONTHS_2025.reduce((acc, m) => {
               const exactMonthKey = Object.keys(row).find(k => cleanKey(k) === cleanKey(m));
               acc[m] = exactMonthKey ? superCleanNumber(row[exactMonthKey]) : 0;
               return acc;
             }, {} as any);
 
-            // حساب الإجمالي المسدد إذا لم يتوفر بالعمود المباشر
             let totalPaid = totalPaidFromExcel;
             if (!totalPaid) {
               MONTHS_2025.forEach(m => { totalPaid += payments[m]; });
@@ -224,7 +212,7 @@ export default function InstallmentsTab() {
     e.target.value = "";
   };
 
-  // ================== استيراد مرن ومطور لعام 2026 م ==================
+  // ================== استيراد ملف 2026 ==================
   const handleImport2026 = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -278,7 +266,6 @@ export default function InstallmentsTab() {
             const notes = String(findVal(["ملاحظات"])).trim();
             const phone = String(findVal(["هاتف", "تلفون"])).trim();
 
-            // معالجة دفعات الأشهر لعام 2026 بشكل مرن ونظيف
             const payments = MONTHS_2026_CLEAN.reduce((acc, m) => {
               const exactMonthKey = Object.keys(row).find(k => cleanKey(k) === cleanKey(m));
               acc[m] = exactMonthKey ? superCleanNumber(row[exactMonthKey]) : 0;
@@ -303,7 +290,8 @@ export default function InstallmentsTab() {
     e.target.value = "";
   };
 
-  const printComprehensiveStatement = (studentName: string) => {
+  // ================== تصدير كشف حساب PDF مع دعم العربية وحجم A4 ==================
+  const printComprehensiveStatement = async (studentName: string) => {
     const r2025 = (installments2025 || []).find((i: any) => i.name === studentName);
     const r2026 = (installments || []).find((i: any) => i.name === studentName);
 
@@ -312,50 +300,118 @@ export default function InstallmentsTab() {
       return;
     }
 
-    const pdf = new jsPDF({ orientation: "landscape" });
-    pdf.setFontSize(20);
-    pdf.text(`المجلس اليمني للاختصاصات الطبية - كشف حساب مالي موحد`, 148, 15, { align: "center" });
-    pdf.setFontSize(13);
-    pdf.text(`اسم الطبيب المتدرب: ${studentName}`, 280, 24, { align: "right" });
+    // 1. إنشاء مستند A4 أفقي بدقة
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+    });
+
+    // 2. تحميل وتضمين خط عربي (يمكنك تغيير الرابط لخط تستضيفه أنت)
+    const arabicFontUrl = "/fonts/Cairo-Regular.ttf"; // تأكد من وضع ملف TTF في المجلد العام
+    try {
+      const fontResponse = await fetch(arabicFontUrl);
+      if (!fontResponse.ok) throw new Error("فشل تحميل الخط");
+      const fontData = await fontResponse.arrayBuffer();
+      const fontBase64 = btoa(
+        new Uint8Array(fontData).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+      pdf.addFileToVFS("Cairo-Regular.ttf", fontBase64);
+      pdf.addFont("Cairo-Regular.ttf", "Cairo", "normal");
+      pdf.setFont("Cairo");
+      pdf.setR2L(true); // تفعيل الكتابة من اليمين لليسار
+    } catch (fontError) {
+      toast.error("تعذر تحميل الخط العربي، سيتم استخدام الخط الافتراضي");
+      // يمكن المتابعة بخط افتراضي لكن العربية قد لا تظهر بشكل صحيح
+    }
+
+    // 3. كتابة العناوين
+    pdf.setFontSize(18);
+    pdf.text("المجلس اليمني للاختصاصات الطبية - كشف حساب مالي موحد", 148, 15, { align: "center" });
+    pdf.setFontSize(12);
+    pdf.text(`اسم الطبيب المتدرب: ${studentName}`, 270, 24, { align: "right" });
     pdf.text(`تاريخ الاستخراج: ${today()}`, 20, 24, { align: "left" });
 
     let currentY = 30;
 
+    // 4. إعداد نمط الجدول العربي
+    const tableStyles = {
+      styles: {
+        font: "Cairo",
+        fontSize: 9,
+        halign: "right",
+        cellPadding: 2,
+      },
+      headStyles: {
+        fillColor: [13, 148, 136],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+    };
+
+    // 5. جدول 2025
     if (r2025) {
       pdf.setFontSize(11);
-      pdf.text(`■ بيان الأقساط والرسوم لعام 2025م:`, 280, currentY, { align: "right" });
-      
+      pdf.text("■ بيان الأقساط والرسوم لعام 2025م:", 280, currentY, { align: "right" });
+
       const head2025 = ["الدفعة", "المساق", "مبلغ الرسوم", "الإجمالي المسدد", "المتبقي", "رقم الهاتف", "ملاحظات"];
-      const body2025 = [[r2025.batch, r2025.specialty, fmt(r2025.fees), fmt(r2025.totalPaid), fmt(r2025.remaining), r2025.phone, r2025.notes || "—"]];
+      const body2025 = [[
+        r2025.batch,
+        r2025.specialty,
+        fmt(r2025.fees),
+        fmt(r2025.totalPaid),
+        fmt(r2025.remaining),
+        r2025.phone,
+        r2025.notes || "—",
+      ]];
 
       autoTable(pdf, {
         head: [head2025],
         body: body2025,
-        startY: currentY + 3,
-        styles: { halign: "right", fontSize: 9 },
-        headStyles: { fillCountry: [13, 148, 136] }
+        startY: currentY + 5,
+        ...tableStyles,
+        headStyles: { ...tableStyles.headStyles, fillColor: [13, 148, 136] },
       });
       currentY = (pdf as any).lastAutoTable.finalY + 10;
     }
 
+    // 6. جدول 2026
     if (r2026) {
       pdf.setFontSize(11);
-      pdf.text(`■ بيان الأقساط والرسوم لعام 2026م:`, 280, currentY, { align: "right" });
-      
+      pdf.text("■ بيان الأقساط والرسوم لعام 2026م:", 280, currentY, { align: "right" });
+
       const head2026 = ["الدفعة", "المساق", "رسوم الدراسة", "متبقي 2025", "المسدد 2026", "المتبقي الحالي", "رقم الهاتف", "ملاحظات"];
-      const body2026 = [[r2026.batch, r2026.specialty, fmt(r2026.fees), fmt(r2026.prevDue), fmt(r2026.totalPaid), fmt(r2026.remaining), r2026.phone, r2026.notes || "—"]];
+      const body2026 = [[
+        r2026.batch,
+        r2026.specialty,
+        fmt(r2026.fees),
+        fmt(r2026.prevDue),
+        fmt(r2026.totalPaid),
+        fmt(r2026.remaining),
+        r2026.phone,
+        r2026.notes || "—",
+      ]];
 
       autoTable(pdf, {
         head: [head2026],
         body: body2026,
-        startY: currentY + 3,
-        styles: { halign: "right", fontSize: 9 },
-        headStyles: { fillCountry: [30, 41, 59] }
+        startY: currentY + 5,
+        ...tableStyles,
+        headStyles: { ...tableStyles.headStyles, fillColor: [30, 41, 59] },
       });
     }
 
     pdf.save(`كشف_حساب_موحد_${studentName}.pdf`);
     toast.success("تم استخراج التقرير بنجاح");
+  };
+
+  // زر يستدعي الدالة async
+  const handlePrint = (studentName: string) => {
+    toast.promise(printComprehensiveStatement(studentName), {
+      loading: "جاري تجهيز التقرير...",
+      success: "تم الحفظ",
+      error: "فشل التصدير",
+    });
   };
 
   return (
@@ -408,7 +464,7 @@ export default function InstallmentsTab() {
                   <td className="p-2 text-center space-x-1 space-x-reverse whitespace-nowrap">
                     <button onClick={() => setPaymentModal({ row: r, year: 2025 })} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold hover:bg-emerald-600 hover:text-white transition">💵 دفعة</button>
                     <button onClick={() => setEditingRow({ row: r, year: 2025 })} className="text-blue-600 hover:underline font-bold px-1">تعديل</button>
-                    <button onClick={() => printComprehensiveStatement(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
+                    <button onClick={() => handlePrint(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
                   </td>
                 </tr>
               ))}
@@ -468,7 +524,7 @@ export default function InstallmentsTab() {
                   <td className="p-2 text-center space-x-1 space-x-reverse whitespace-nowrap">
                     <button onClick={() => setPaymentModal({ row: r, year: 2026 })} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold hover:bg-emerald-600 hover:text-white transition">💵 دفعة</button>
                     <button onClick={() => setEditingRow({ row: r, year: 2026 })} className="text-blue-600 hover:underline font-bold px-1">تعديل</button>
-                    <button onClick={() => printComprehensiveStatement(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
+                    <button onClick={() => handlePrint(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
                   </td>
                 </tr>
               ))}
@@ -477,7 +533,7 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* ================== نافذة تسجيل قسط يدوي (Payment Modal) ================== */}
+      {/* ================== نافذة تسجيل قسط يدوي ================== */}
       {paymentModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl border p-6 max-w-md w-full text-right" dir="rtl">
@@ -533,7 +589,7 @@ export default function InstallmentsTab() {
         </div>
       )}
 
-      {/* ================== مودال التعديل الشامل والكامل ================== */}
+      {/* ================== مودال التعديل ================== */}
       {editingRow && (() => {
         const is2025 = editingRow.year === 2025;
         const fields: EditField[] = [
@@ -575,4 +631,4 @@ export default function InstallmentsTab() {
       })()}
     </div>
   );
-}
+                                                             }
