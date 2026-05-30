@@ -308,7 +308,7 @@ export default function InstallmentsTab() {
     });
 
     // 2. تحميل وتضمين خط عربي (يمكنك تغيير الرابط لخط تستضيفه أنت)
-    const arabicFontUrl = "/fonts/Cairo-Regular.ttf"; // تأكد من وضع ملف TTF في المجلد العام
+    const arabicFontUrl = "/public/Cairo-Regular.ttf"; // تأكد من وضع ملف TTF في المجلد العام
     try {
       const fontResponse = await fetch(arabicFontUrl);
       if (!fontResponse.ok) throw new Error("فشل تحميل الخط");
