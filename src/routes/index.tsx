@@ -47,53 +47,37 @@ export const Route = createFileRoute("/")({
       { rel: "icon", href: "/icon.svg" },
       { rel: "apple-touch-icon", href: "/icon-192.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2 family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap" },
     ],
   }),
 });
 
-// تعريف الأنواع الصارمة للتبويبات لضمان عدم حدوث أخطاء إملائية أثناء التنقل
+// تعريف الأنواع الصارمة للتبويبات
 type Tab = "installments" | "hafiza" | "account" | "journal" | "monthly" | "revenue" | "expenses-table";
 
 function Index() {
-  // الحالة الخاصة بالتبويب النشط حالياً
   const [activeTab, setActiveTab] = useState<Tab>("installments");
-  
-  // حالة تMemory للتحقق مما إذا كان التطبيق متاحاً للتثبيت كبرنامج مستقيل (PWA)
   const [pwaInstallable, setPwaInstallable] = useState<boolean>(false);
 
-  // استدعاء دالة استيراد البيانات الآمنة التي قمنا بإصلاحها في الـ Store
   const importData = useStore((state) => state.importData);
   const fullState = useStore((state) => state);
 
-  // مراقبة جاهزية التطبيق للتثبيت فور تشغيله
   useEffect(() => {
-    // التحقق الأولي
     setPwaInstallable(canInstall());
-
-    // الاشتراك في حدث توفر التثبيت لتحديث الواجهة تلقائياً
     const unsubscribe = onInstallAvailability((available) => {
       setPwaInstallable(available);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // دالة التعامل مع رفع ملف الإكسل وتحليله
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      // تفجير إشعار انتظار للمستخدم لتعزيز تجربة الاستخدام
       const loadingToast = toast.loading("جاري قراءة ومعالجة ملف الإكسل...");
-      
-      // استدعاء الدالة المساعدة لتحويل الإكسل إلى كائن بيانات
       const data = await importFromExcel(file);
-      
-      // تمرير البيانات المصفاة إلى المخزن المصلح
       importData(data);
-      
       toast.dismiss(loadingToast);
       toast.success("تم استيراد البيانات المكونة وتوليد المعرفات بنجاح!");
     } catch (error) {
@@ -101,7 +85,6 @@ function Index() {
     }
   };
 
-  // دالة تصدير البيانات الشاملة إلى ملف إكسل بضغطة زر واحدة
   const handleExportExcel = () => {
     try {
       exportToExcel(fullState);
@@ -111,7 +94,6 @@ function Index() {
     }
   };
 
-  // دالة تشغيل تثبيت التطبيق على الجهاز
   const handlePWAInstall = async () => {
     const success = await promptInstall();
     if (success) {
@@ -121,31 +103,41 @@ function Index() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-8 bg-slate-50/50 min-h-screen" dir="rtl">
+    <div className="container mx-auto p-4 md:p-8 space-y-8 bg-gradient-to-b from-slate-50 to-slate-100/80 min-h-screen font-tajawal selection:bg-teal-500/20" dir="rtl">
       
-      {/* القسم العلوي: الهيدر والأزرار السريعة بالتصميم الزجاجي العصري */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-extrabold text-teal-900 tracking-tight font-cairo">المجلس اليمني للاختصاصات الطبية</h1>
-          <p className="text-sm text-slate-500 font-medium">نظام الإدارة المالية الذكي والقيود اليومية المحاسبية</p>
+      {/* القسم العلوي: الهيدر والأزرار السريعة بتصميم زجاجي فاخر */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 bg-white/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-100/50 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/40">
+        <div className="flex items-center gap-4">
+          <div className="p-3.5 bg-gradient-to-br from-teal-600 to-cyan-700 rounded-2xl text-white shadow-lg shadow-teal-600/20 hidden sm:block">
+            <FileSpreadsheet className="w-7 h-7 animate-pulse" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight font-cairo bg-gradient-to-r from-slate-900 to-teal-950 bg-clip-text text-transparent">
+              المجلس اليمني للاختصاصات الطبية
+            </h1>
+            <p className="text-xs md:text-sm text-slate-500 font-medium flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+              نظام الإدارة المالية الذكي والقيود اليومية المحاسبية • يعمل بدون إنترنت
+            </p>
+          </div>
         </div>
 
-        {/* أزرار العمليات الحيوية المستوردة */}
+        {/* أزرار العمليات الحيوية بنمط عصري وموحد */}
         <div className="flex flex-wrap items-center gap-3">
           
-          {/* زر تثبيت التطبيق PWA - يظهر ديناميكياً فقط عند الحاجة */}
+          {/* زر تثبيت التطبيق PWA */}
           {pwaInstallable && (
             <button
               onClick={handlePWAInstall}
-              className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition shadow-sm animate-pulse"
+              className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs px-5 py-3 rounded-xl transition-all duration-300 shadow-md shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98]"
             >
               <DownloadCloud className="w-4 h-4" />
               <span>تثبيت النظام على الجهاز</span>
             </button>
           )}
 
-          {/* زر استيراد إكسل المخفي خلف تصميم زر عصري */}
-          <label className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs px-4 py-2.5 rounded-xl cursor-pointer transition shadow-sm">
+          {/* زر استيراد إكسل */}
+          <label className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 font-bold text-xs px-5 py-3 rounded-xl cursor-pointer transition-all duration-300 shadow-sm hover:border-teal-500/30 hover:text-teal-700 hover:scale-[1.02] active:scale-[0.98]">
             <Upload className="w-4 h-4 text-teal-600" />
             <span>استيراد ملف Excel</span>
             <input 
@@ -159,7 +151,7 @@ function Index() {
           {/* زر التصدير الفوري */}
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition shadow-sm"
+            className="flex items-center gap-2 bg-gradient-to-r from-teal-700 to-emerald-800 hover:from-teal-800 hover:to-emerald-900 text-white font-bold text-xs px-5 py-3 rounded-xl transition-all duration-300 shadow-md shadow-teal-700/20 hover:scale-[1.02] active:scale-[0.98]"
           >
             <Download className="w-4 h-4" />
             <span>تصدير البيانات الشاملة</span>
@@ -168,85 +160,55 @@ function Index() {
       </div>
 
       {/* نظام التبويبات الفاخر */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-6">
         
-        {/* شريط الخيارات مع خاصية التمرير الذكي للشاشات الصغيرة */}
-        <div className="w-full overflow-x-auto pb-2 scrollbar-none">
-          <TabsList className="flex w-max min-w-full md:w-full bg-slate-200/60 p-1.5 rounded-2xl border border-slate-300/40 shadow-inner h-auto gap-1">
+        {/* شريط الخيارات مع إخفاء شريط التمرير مع الحفاظ على مرونته */}
+        <div className="w-full overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="flex w-max min-w-full lg:w-full bg-slate-200/70 p-1.5 rounded-2xl border border-slate-300/30 shadow-inner h-auto gap-1.5 backdrop-blur-sm">
             
-            <TabsTrigger 
-              value="installments" 
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all duration-300 data-[state=active]:bg-teal-700 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 hover:bg-white/50"
-            >
-              <WalletCards className="w-4 h-4" />
-              <span>كشف الأقساط</span>
-            </TabsTrigger>
-
-            <TabsTrigger 
-              value="hafiza" 
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all duration-300 data-[state=active]:bg-teal-700 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 hover:bg-white/50"
-            >
-              <FileBox className="w-4 h-4" />
-              <span>حوافظ التوريد</span>
-            </TabsTrigger>
-
-            <TabsTrigger 
-              value="account" 
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all duration-300 data-[state=active]:bg-teal-700 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 hover:bg-white/50"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>الحساب الجاري</span>
-            </TabsTrigger>
-
-            <TabsTrigger 
-              value="journal" 
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all duration-300 data-[state=active]:bg-teal-700 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 hover:bg-white/50"
-            >
-              <BookOpenText className="w-4 h-4" />
-              <span>قيود اليومية</span>
-            </TabsTrigger>
-
-            <TabsTrigger 
-              value="monthly" 
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all duration-300 data-[state=active]:bg-teal-700 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 hover:bg-white/50"
-            >
-              <PieChart className="w-4 h-4" />
-              <span>التقرير الشهري</span>
-            </TabsTrigger>
-
-            <TabsTrigger 
-              value="revenue" 
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all duration-300 data-[state=active]:bg-teal-700 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 hover:bg-white/50"
-            >
-              <TrendingUp className="w-4 h-4" />
-              <span>حركة الإيرادات</span>
-            </TabsTrigger>
-            
-            <TabsTrigger 
-              value="expenses-table" 
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all duration-300 data-[state=active]:bg-teal-700 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-600 hover:bg-white/50"
-            >
-              <ReceiptText className="w-4 h-4" />
-              <span>بيان المصروفات</span>
-            </TabsTrigger>
+            {[
+              { id: "installments", label: "كشف الأقساط", icon: WalletCards },
+              { id: "hafiza", label: "حوافظ التوريد", icon: FileBox },
+              { id: "account", label: "الحساب الجاري", icon: FileSpreadsheet },
+              { id: "journal", label: "قيود اليومية", icon: BookOpenText },
+              { id: "monthly", label: "التقرير الشهري", icon: PieChart },
+              { id: "revenue", label: "حركة الإيرادات", icon: TrendingUp },
+              { id: "expenses-table", label: "بيان المصروفات", icon: ReceiptText },
+            ].map((tab) => {
+              const IconComponent = tab.icon;
+              return (
+                <TabsTrigger 
+                  key={tab.id}
+                  value={tab.id} 
+                  className="flex items-center gap-2.5 px-5 py-3.5 rounded-xl text-xs font-bold transition-all duration-300 
+                             data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-700 data-[state=active]:to-teal-800
+                             data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-teal-700/20 
+                             text-slate-600 hover:text-slate-900 hover:bg-white/60 data-[state=active]:hover:bg-teal-700 
+                             flex-1 justify-center min-w-[130px] lg:min-w-0"
+                >
+                  <IconComponent className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
+                  <span>{tab.label}</span>
+                </TabsTrigger>
+              );
+            })}
 
           </TabsList>
         </div>
 
-        {/* عرض محتويات التبويبات بحركة انسيابية ناعمة جدًا */}
-        <div className="mt-6 bg-white p-4 md:p-6 rounded-2xl border border-slate-200/60 shadow-sm min-h-[400px] animate-in fade-in slide-in-from-bottom-3 duration-300">
-          <TabsContent value="installments" className="focus-visible:outline-none"><InstallmentsTab /></TabsContent>
-          <TabsContent value="hafiza" className="focus-visible:outline-none"><HafizaTab /></TabsContent>
-          <TabsContent value="account" className="focus-visible:outline-none"><AccountTab /></TabsContent>
-          <TabsContent value="journal" className="focus-visible:outline-none"><JournalTab /></TabsContent>
-          <TabsContent value="monthly" className="focus-visible:outline-none"><MonthlyStatementTab /></TabsContent>
-          <TabsContent value="revenue" className="focus-visible:outline-none"><RevenueTab /></TabsContent>
-          <TabsContent value="expenses-table" className="focus-visible:outline-none"><ExpensesTab /></TabsContent>
+        {/* عرض محتويات التبويبات بحركة انسيابية ناعمة وجذابة */}
+        <div className="bg-white p-5 md:p-8 rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-100/40 min-h-[450px] animate-in fade-in slide-in-from-bottom-4 duration-300 focus-visible:outline-none">
+          <TabsContent value="installments" className="focus-visible:outline-none mt-0"><InstallmentsTab /></TabsContent>
+          <TabsContent value="hafiza" className="focus-visible:outline-none mt-0"><HafizaTab /></TabsContent>
+          <TabsContent value="account" className="focus-visible:outline-none mt-0"><AccountTab /></TabsContent>
+          <TabsContent value="journal" className="focus-visible:outline-none mt-0"><JournalTab /></TabsContent>
+          <TabsContent value="monthly" className="focus-visible:outline-none mt-0"><MonthlyStatementTab /></TabsContent>
+          <TabsContent value="revenue" className="focus-visible:outline-none mt-0"><RevenueTab /></TabsContent>
+          <TabsContent value="expenses-table" className="focus-visible:outline-none mt-0"><ExpensesTab /></TabsContent>
         </div>
 
       </Tabs>
       
-      {/* نظام التنبيهات المنبثقة العلوي */}
+      {/* نظام التنبيهات المنبثقة */}
       <Toaster position="top-center" richColors />
     </div>
   );
