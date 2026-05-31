@@ -98,7 +98,7 @@ export default function HafizaTab() {
               onFocus={() => setShowSugg(true)}
               onBlur={() => setTimeout(() => setShowSugg(false), 200)}
               placeholder="ابحث أو اكتب اسم المتدرب..."
-              className="w-full px-3 py-2 border rounded-lg bg-input/30 focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full px-3 py-0 border rounded-lg bg-input/30 focus:outline-none focus:ring-2 focus:ring-ring"
             />
             {showSugg && nameSuggestions.length > 0 && (
               <ul className="absolute z-20 left-0 right-0 mt-1 bg-popover border rounded-lg shadow-lg max-h-60 overflow-y-auto">
