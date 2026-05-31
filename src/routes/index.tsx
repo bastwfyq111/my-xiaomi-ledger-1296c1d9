@@ -102,10 +102,10 @@ function Index() {
   };
 
   return (
-    // تم تغيير الحاوية هنا من container إلى w-full وإلغاء البادينج الجانبي للهاتف لملء كامل عرض الشاشة
+    // الحاوية الرئيسية الممتدة بالكامل من الحافة إلى الحافة وباتجاه عربي يدعم شاشات الموبايل بالكامل
     <div className="w-full min-h-screen bg-[#f3f7fa] p-0 sm:p-4 md:p-6 space-y-4 sm:space-y-6 font-tajawal selection:bg-[#10528e]/20" dir="rtl">
       
-      {/* قسم الهيدر العلوي: يمتد بالكامل من الحافة إلى الحافة في الهاتف (rounded-none في الشاشات الصغيرة) */}
+      {/* قسم الهيدر العلوي والأزرار السريعة بالألوان الزرقاء الملكية */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-gradient-to-r from-[#10528e] to-[#0b3d6d] p-5 sm:rounded-2xl border-b sm:border border-slate-200/40 shadow-md text-white">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-white/10 rounded-xl text-white hidden sm:block">
@@ -122,7 +122,6 @@ function Index() {
           </div>
         </div>
 
-        {/* أزرار العمليات الحيوية: تأخذ حشوة خفيفة ومناسبة على أطراف شاشة الهاتف */}
         <div className="flex flex-wrap items-center gap-2 px-1 sm:px-0">
           {pwaInstallable && (
             <button
@@ -153,18 +152,18 @@ function Index() {
       {/* نظام التبويبات الرئيسي الممتد */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-3 sm:space-y-4">
         
-        {/* شريط التبويبات: يلتصق بالحواف تماماً في الهاتف لمنحك أقصى مساحة تصفح ممكنة */}
+        {/* شريط التبويبات: تم تعديل اتجاه فليكس للتأكيد الصارم على بدء "كشف الأقساط" من جهة اليمين عياناً */}
         <div className="w-full overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList className="flex w-max min-w-full bg-[#0b3d6d] p-0.5 sm:p-1 sm:rounded-xl shadow-md h-auto gap-0.5 sm:gap-1 rounded-none border-b border-white/10">
+          <TabsList className="flex flex-row-reverse w-max min-w-full bg-[#0b3d6d] p-0.5 sm:p-1 sm:rounded-xl shadow-md h-auto gap-0.5 sm:gap-1 rounded-none border-b border-white/10">
             
             {[
-              { id: "installments", label: "كشف الأقساط", icon: WalletCards },       // 1. يظهر في أقصى اليمين
-              { id: "hafiza", label: "حوافظ التوريد", icon: FileBox },              // 2. يليه ثانياً
-              { id: "account", label: "الحساب الجاري", icon: FileSpreadsheet },       // 3. يليه ثالثاً
-              { id: "journal", label: "القيود اليومية", icon: BookOpenText },          // 4. يليه رابعاً
-              { id: "monthly", label: "كشف حساب شهري", icon: PieChart },          // 5. يليه خامساً
-              { id: "revenue", label: "حركة الإيرادات", icon: TrendingUp },          // 6. يليه سادساً
-              { id: "expenses-table", label: "جدول المصروفات", icon: ReceiptText },  // 7. يظهر في أقصى اليسار
+              { id: "expenses-table", label: "جدول المصروفات", icon: ReceiptText },  // يظهر في أقصى اليسار
+              { id: "revenue", label: "حركة الإيرادات", icon: TrendingUp },          
+              { id: "monthly", label: "كشف حساب شهري", icon: PieChart },          
+              { id: "journal", label: "القيود اليومية", icon: BookOpenText },          
+              { id: "account", label: "الحساب الجاري", icon: FileSpreadsheet },       
+              { id: "hafiza", label: "حوافظ التوريد", icon: FileBox },              
+              { id: "installments", label: "كشف الأقساط", icon: WalletCards },       // سيظهر أول واحد في أقصى اليمين بسبب flex-row-reverse و dir="rtl"
             ].map((tab) => {
               const IconComponent = tab.icon;
               return (
@@ -185,7 +184,7 @@ function Index() {
           </TabsList>
         </div>
 
-        {/* وعاء عرض المحتوى الداخلي: ممتد بالكامل من الحافة إلى الحافة على شاشات الهاتف لتوفير مساحة قصوى للجداول */}
+        {/* وعاء عرض المحتوى الداخلي الممتد بالكامل */}
         <div className="w-full bg-white p-3 sm:p-5 md:p-6 sm:rounded-2xl border-y sm:border border-slate-200/60 shadow-sm min-h-[450px]">
           <TabsContent value="installments" className="focus-visible:outline-none mt-0"><InstallmentsTab /></TabsContent>
           <TabsContent value="hafiza" className="focus-visible:outline-none mt-0"><HafizaTab /></TabsContent>
