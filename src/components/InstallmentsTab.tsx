@@ -291,7 +291,7 @@ export default function InstallmentsTab() {
   };
 
   // ================== تصدير كشف حساب PDF مع دعم العربية وحجم A4 ==================
-  const printComprehensiveStatement = async (studentName: string) => {
+        const printComprehensiveStatement = (studentName: string) => {
     const r2025 = (installments2025 || []).find((i: any) => i.name === studentName);
     const r2026 = (installments || []).find((i: any) => i.name === studentName);
 
@@ -300,238 +300,49 @@ export default function InstallmentsTab() {
       return;
     }
 
-    // 1. إنشاء مستند A4 أفقي بدقة
-    const pdf = new jsPDF({
-      orientation: "landscape",
-      unit: "mm",
-      format: "a4",
-    });
+    const w = window.open("", "_blank", "width=900,height=700");
+    if (!w) return;
 
-    // 2. تحميل وتضمين خط عربي (يمكنك تغيير الرابط لخط تستضيفه أنت)
-    const arabicFontUrl = "/public/Cairo-Regular.ttf"; // تأكد من وضع ملف TTF في المجلد العام
-    try {
-      const fontResponse = await fetch(arabicFontUrl);
-      if (!fontResponse.ok) throw new Error("فشل تحميل الخط");
-      const fontData = await fontResponse.arrayBuffer();
-      const fontBase64 = btoa(
-        new Uint8Array(fontData).reduce((data, byte) => data + String.fromCharCode(byte), '')
-      );
-      pdf.addFileToVFS("Cairo-Regular.ttf", fontBase64);
-      pdf.addFont("Cairo-Regular.ttf", "Cairo", "normal");
-      pdf.setFont("Cairo");
-      pdf.setR2L(true); // تفعيل الكتابة من اليمين لليسار
-    } catch (fontError) {
-      toast.error("تعذر تحميل الخط العربي، سيتم استخدام الخط الافتراضي");
-      // يمكن المتابعة بخط افتراضي لكن العربية قد لا تظهر بشكل صحيح
-    }
+    let body = `
+    <h1>كشف الحساب المالي الموحد</h1>
+    <div class="meta">المجلس اليمني للاختصاصات الطبية — فرع صعدة</div>
+    <div class="student-info">
+      <div>الاسم: <strong>${studentName}</strong></div>
+      <div>التخصص: <strong>${r2026?.specialty || r2025?.specialty || "—"}</strong></div>
+    </div>
+    `;
 
-    // 3. كتابة العناوين
-    pdf.setFontSize(18);
-    pdf.text("المجلس اليمني للاختصاصات الطبية - كشف حساب مالي موحد", 148, 15, { align: "center" });
-    pdf.setFontSize(12);
-    pdf.text(`اسم الطبيب المتدرب: ${studentName}`, 270, 24, { align: "right" });
-    pdf.text(`تاريخ الاستخراج: ${today()}`, 20, 24, { align: "left" });
-
-    let currentY = 30;
-
-    // 4. إعداد نمط الجدول العربي
-    const tableStyles = {
-      styles: {
-        font: "Cairo",
-        fontSize: 9,
-        halign: "right",
-        cellPadding: 2,
-      },
-      headStyles: {
-        fillColor: [13, 148, 136],
-        textColor: 255,
-        fontStyle: "bold",
-      },
-    };
-
-    // 5. جدول 2025
     if (r2025) {
-      pdf.setFontSize(11);
-      pdf.text("■ بيان الأقساط والرسوم لعام 2025م:", 280, currentY, { align: "right" });
-
-      const head2025 = ["الدفعة", "المساق", "مبلغ الرسوم", "الإجمالي المسدد", "المتبقي", "رقم الهاتف", "ملاحظات"];
-      const body2025 = [[
-        r2025.batch,
-        r2025.specialty,
-        fmt(r2025.fees),
-        fmt(r2025.totalPaid),
-        fmt(r2025.remaining),
-        r2025.phone,
-        r2025.notes || "—",
-      ]];
-
-      autoTable(pdf, {
-        head: [head2025],
-        body: body2025,
-        startY: currentY + 5,
-        ...tableStyles,
-        headStyles: { ...tableStyles.headStyles, fillColor: [13, 148, 136] },
-      });
-      currentY = (pdf as any).lastAutoTable.finalY + 10;
+      body += `<h3>بيانات عام 2025م</h3>
+      <table>
+        <thead><tr><th>الرسوم</th><th>المسدد</th><th>المتبقي</th></tr></thead>
+        <tbody><tr><td>${fmt(r2025.fees)}</td><td>${fmt(r2025.totalPaid)}</td><td>${fmt(r2025.remaining)}</td></tr></tbody>
+      </table>`;
     }
 
-    // 6. جدول 2026
     if (r2026) {
-      pdf.setFontSize(11);
-      pdf.text("■ بيان الأقساط والرسوم لعام 2026م:", 280, currentY, { align: "right" });
-
-      const head2026 = ["الدفعة", "المساق", "رسوم الدراسة", "متبقي 2025", "المسدد 2026", "المتبقي الحالي", "رقم الهاتف", "ملاحظات"];
-      const body2026 = [[
-        r2026.batch,
-        r2026.specialty,
-        fmt(r2026.fees),
-        fmt(r2026.prevDue),
-        fmt(r2026.totalPaid),
-        fmt(r2026.remaining),
-        r2026.phone,
-        r2026.notes || "—",
-      ]];
-
-      autoTable(pdf, {
-        head: [head2026],
-        body: body2026,
-        startY: currentY + 5,
-        ...tableStyles,
-        headStyles: { ...tableStyles.headStyles, fillColor: [30, 41, 59] },
-      });
+      body += `<h3>بيانات عام 2026م</h3>
+      <table>
+        <thead><tr><th>الرسوم</th><th>متبقي 2025</th><th>المسدد 2026</th><th>المتبقي الحالي</th></tr></thead>
+        <tbody><tr><td>${fmt(r2026.fees)}</td><td>${fmt(r2026.prevDue)}</td><td>${fmt(r2026.totalPaid)}</td><td>${fmt(r2026.remaining)}</td></tr></tbody>
+      </table>`;
     }
 
-    pdf.save(`كشف_حساب_موحد_${studentName}.pdf`);
-    toast.success("تم استخراج التقرير بنجاح");
+    const head = `
+    <meta charset="utf-8">
+    <style>
+      body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; padding: 20px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+      th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+      h1, h3 { color: #0f766e; text-align: center; }
+      .student-info { display: flex; justify-content: space-around; background: #f1f5f9; padding: 10px; margin-bottom: 20px; }
+    </style>`;
+
+    w.document.write(`<html><head>${head}</head><body>${body}<script>window.onload=()=>window.print()</script></body></html>`);
+    w.document.close();
   };
 
-  // زر يستدعي الدالة async
-  const handlePrint = (studentName: string) => {
-    toast.promise(printComprehensiveStatement(studentName), {
-      loading: "جاري تجهيز التقرير...",
-      success: "تم الحفظ",
-      error: "فشل التصدير",
-    });
-  };
-
-  return (
-    <div className="space-y-8" dir="rtl">
-      
-      {/* ================== عام 2025م ================== */}
-      <div className="bg-card rounded-xl shadow-sm border p-5 bg-white text-right">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3 mb-4">
-          <div>
-            <h2 className="text-base font-bold text-teal-800">أقساط ورسوم عام 2025م</h2>
-            <p className="text-xxs text-slate-500">الأرشيف المستورد والمعدّل لعام 2025</p>
-          </div>
-          <label className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-emerald-700 shadow-sm transition">
-            <span>📥 استيراد ملف إكسل 2025</span>
-            <input type="file" accept=".xlsx, .xls, .csv" onChange={handleImport2025} className="hidden" />
-          </label>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 max-w-xl">
-          <div className="bg-slate-50 p-2 border rounded-lg"><span className="text-xxs text-slate-500 block">إجمالي رسوم 2025</span><span className="text-sm font-mono font-bold text-slate-800">{fmt(totals2025.fees)}</span></div>
-          <div className="bg-emerald-50 p-2 border border-emerald-200 rounded-lg"><span className="text-xxs text-emerald-600 block">إجمالي المسدد 2025</span><span className="text-sm font-mono font-bold text-emerald-700">{fmt(totals2025.paid)}</span></div>
-          <div className="bg-rose-50 p-2 border border-rose-100 rounded-lg"><span className="text-xxs text-rose-600 block">المتبقي الإجمالي 2025</span><span className="text-sm font-mono font-bold text-rose-700">{fmt(totals2025.remaining)}</span></div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs md:text-sm">
-            <thead className="bg-slate-100 text-slate-800 font-bold border-b">
-              <tr>
-                <th className="p-2 text-center w-10">م</th>
-                {BASE_COLS.map(c => (
-                  <th key={c.key} className="p-2 text-right cursor-pointer" onClick={() => controls2025.toggleSort(c.key)}>
-                    {c.label} {sortIndicator(controls2025.sortKey === c.key, controls2025.sortDir)}
-                  </th>
-                ))}
-                <th className="p-2 text-center w-48">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {controls2025.rows.map((r, i) => (
-                <tr key={r.name + i} className="border-t hover:bg-slate-50 transition-colors">
-                  <td className="p-2 text-center text-slate-400">{i + 1}</td>
-                  <td className="p-2 font-semibold text-slate-800">{r.name}</td>
-                  <td className="p-2 text-center">{r.batch}</td>
-                  <td className="p-2">{r.specialty}</td>
-                  <td className="p-2 font-mono">{fmt(r.fees)}</td>
-                  <td className="p-2 font-mono text-emerald-600 font-bold">{fmt(r.totalPaid)}</td>
-                  <td className="p-2 font-mono text-rose-600 font-bold">{fmt(r.remaining)}</td>
-                  <td className="p-2 text-slate-500 truncate max-w-xs">{r.notes || "—"}</td>
-                  <td className="p-2 text-slate-600 font-mono">{r.phone || "—"}</td>
-                  <td className="p-2 text-center space-x-1 space-x-reverse whitespace-nowrap">
-                    <button onClick={() => setPaymentModal({ row: r, year: 2025 })} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold hover:bg-emerald-600 hover:text-white transition">💵 دفعة</button>
-                    <button onClick={() => setEditingRow({ row: r, year: 2025 })} className="text-blue-600 hover:underline font-bold px-1">تعديل</button>
-                    <button onClick={() => handlePrint(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ================== عام 2026م ================== */}
-      <div className="bg-card rounded-xl shadow-sm border p-5 bg-white text-right">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3 mb-4">
-          <div>
-            <h2 className="text-base font-bold text-teal-800">أقساط ورسوم عام 2026م (العام الحالي)</h2>
-            <p className="text-xxs text-slate-500">يتضمن الربط المباشر مع متبقيات 2025 وعمليات الدفع المباشرة</p>
-          </div>
-          <label className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-800 shadow-sm transition">
-            <span>📥 استيراد ملف إكسل 2026</span>
-            <input type="file" accept=".xlsx, .xls, .csv" onChange={handleImport2026} className="hidden" />
-          </label>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
-          <div className="bg-slate-50 p-2 border rounded-lg"><span className="text-xxs text-slate-500 block">رسوم 2026</span><span className="text-sm font-mono font-bold">{fmt(totals2026.fees)}</span></div>
-          <div className="bg-amber-50 p-2 border border-amber-200 rounded-lg"><span className="text-xxs text-amber-600 block">متبقيات سابقة 2025</span><span className="text-sm font-mono font-bold text-amber-700">{fmt(totals2026.prevDue)}</span></div>
-          <div className="bg-emerald-50 p-2 border border-emerald-200 rounded-lg"><span className="text-xxs text-emerald-600 block">المسدد 2026</span><span className="text-sm font-mono font-bold text-emerald-700">{fmt(totals2026.paid)}</span></div>
-          <div className="bg-rose-50 p-2 border border-rose-100 rounded-lg"><span className="text-xxs text-rose-600 block">إجمالي المتبقي الحالي</span><span className="text-sm font-mono font-bold text-rose-700">{fmt(totals2026.remaining)}</span></div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs md:text-sm">
-            <thead className="bg-slate-100 text-slate-800 font-bold border-b">
-              <tr>
-                <th className="p-2 text-center w-10">م</th>
-                <th className="p-2 text-right">الاسم</th>
-                <th className="p-2 text-center">الدفعة</th>
-                <th className="p-2">المساق</th>
-                <th className="p-2 text-right">رسوم الدراسة</th>
-                <th className="p-2 text-right">متبقي 2025</th>
-                <th className="p-2 text-right">المسدد 2026</th>
-                <th className="p-2 text-right">المتبقي الحالي</th>
-                <th className="p-2">ملاحظات</th>
-                <th className="p-2 text-center w-48">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {controls2026.rows.map((r, i) => (
-                <tr key={r.name + i} className="border-t hover:bg-slate-50 transition-colors">
-                  <td className="p-2 text-center text-slate-400">{i + 1}</td>
-                  <td className="p-2 font-semibold text-slate-800">{r.name}</td>
-                  <td className="p-2 text-center">{r.batch}</td>
-                  <td className="p-2">{r.specialty}</td>
-                  <td className="p-2 font-mono">{fmt(r.fees)}</td>
-                  <td className="p-2 font-mono text-amber-600 font-bold">{fmt(r.prevDue || 0)}</td>
-                  <td className="p-2 font-mono text-emerald-600 font-bold">{fmt(r.totalPaid)}</td>
-                  <td className="p-2 font-mono text-rose-600 font-bold">{fmt(r.remaining)}</td>
-                  <td className="p-2 text-slate-500 truncate max-w-xs">{r.notes || "—"}</td>
-                  <td className="p-2 text-center space-x-1 space-x-reverse whitespace-nowrap">
-                    <button onClick={() => setPaymentModal({ row: r, year: 2026 })} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold hover:bg-emerald-600 hover:text-white transition">💵 دفعة</button>
-                    <button onClick={() => setEditingRow({ row: r, year: 2026 })} className="text-blue-600 hover:underline font-bold px-1">تعديل</button>
-                    <button onClick={() => handlePrint(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    
 
       {/* ================== نافذة تسجيل قسط يدوي ================== */}
       {paymentModal && (
