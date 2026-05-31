@@ -102,7 +102,7 @@ function Index() {
   };
 
   return (
-    // الحاوية الرئيسية الممتدة بالكامل من الحافة إلى الحافة وباتجاه عربي يدعم شاشات الموبايل بالكامل
+    // الحاوية الرئيسية ممتدة بالكامل من الحافة إلى الحافة وباتجاه عربي أصيل (RTL)
     <div className="w-full min-h-screen bg-[#f3f7fa] p-0 sm:p-4 md:p-6 space-y-4 sm:space-y-6 font-tajawal selection:bg-[#10528e]/20" dir="rtl">
       
       {/* قسم الهيدر العلوي والأزرار السريعة بالألوان الزرقاء الملكية */}
@@ -152,39 +152,77 @@ function Index() {
       {/* نظام التبويبات الرئيسي الممتد */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-3 sm:space-y-4">
         
-        {/* شريط التبويبات: تم تعديل اتجاه فليكس للتأكيد الصارم على بدء "كشف الأقساط" من جهة اليمين عياناً */}
+        {/* شريط التبويبات: تم صف التبويبات كعناصر مباشرة دون دالة loop لضمان الترتيب الصارم من اليمين لليسار */}
         <div className="w-full overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList className="flex flex-row-reverse w-max min-w-full bg-[#0b3d6d] p-0.5 sm:p-1 sm:rounded-xl shadow-md h-auto gap-0.5 sm:gap-1 rounded-none border-b border-white/10">
+          <TabsList className="flex w-max min-w-full bg-[#0b3d6d] p-0.5 sm:p-1 sm:rounded-xl shadow-md h-auto gap-0.5 sm:gap-1 rounded-none border-b border-white/10 justify-start">
             
-            {[
-              { id: "expenses-table", label: "جدول المصروفات", icon: ReceiptText },  // يظهر في أقصى اليسار
-              { id: "revenue", label: "حركة الإيرادات", icon: TrendingUp },          
-              { id: "monthly", label: "كشف حساب شهري", icon: PieChart },          
-              { id: "journal", label: "القيود اليومية", icon: BookOpenText },          
-              { id: "account", label: "الحساب الجاري", icon: FileSpreadsheet },       
-              { id: "hafiza", label: "حوافظ التوريد", icon: FileBox },              
-              { id: "installments", label: "كشف الأقساط", icon: WalletCards },       // سيظهر أول واحد في أقصى اليمين بسبب flex-row-reverse و dir="rtl"
-            ].map((tab) => {
-              const IconComponent = tab.icon;
-              return (
-                <TabsTrigger 
-                  key={tab.id}
-                  value={tab.id} 
-                  className="flex items-center gap-1.5 px-3 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent
-                             data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400
-                             text-white/70 hover:text-white hover:bg-white/5 rounded-none
-                             flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
-                >
-                  <IconComponent className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
-                </TabsTrigger>
-              );
-            })}
+            {/* 1. الأقساط (في أول اليمين) */}
+            <TabsTrigger 
+              value="installments" 
+              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+            >
+              <WalletCards className="w-3.5 h-3.5" />
+              <span>كشف الأقساط</span>
+            </TabsTrigger>
+
+            {/* 2. حوافظ التوريد */}
+            <TabsTrigger 
+              value="hafiza" 
+              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+            >
+              <FileBox className="w-3.5 h-3.5" />
+              <span>حوافظ التوريد</span>
+            </TabsTrigger>
+
+            {/* 3. الحساب الجاري */}
+            <TabsTrigger 
+              value="account" 
+              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>الحساب الجاري</span>
+            </TabsTrigger>
+
+            {/* 4. القيود اليومية */}
+            <TabsTrigger 
+              value="journal" 
+              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+            >
+              <BookOpenText className="w-3.5 h-3.5" />
+              <span>القيود اليومية</span>
+            </TabsTrigger>
+
+            {/* 5. كشف حساب شهري */}
+            <TabsTrigger 
+              value="monthly" 
+              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+            >
+              <PieChart className="w-3.5 h-3.5" />
+              <span>كشف حساب شهري</span>
+            </TabsTrigger>
+
+            {/* 6. حركة الإيرادات */}
+            <TabsTrigger 
+              value="revenue" 
+              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>حركة الإيرادات</span>
+            </TabsTrigger>
+
+            {/* 7. جدول المصروفات (في أقصى اليسار) */}
+            <TabsTrigger 
+              value="expenses-table" 
+              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+            >
+              <ReceiptText className="w-3.5 h-3.5" />
+              <span>جدول المصروفات</span>
+            </TabsTrigger>
 
           </TabsList>
         </div>
 
-        {/* وعاء عرض المحتوى الداخلي الممتد بالكامل */}
+        {/* وعاء عرض المحتوى الداخلي الممتد بالكامل من الحافة إلى الحافة */}
         <div className="w-full bg-white p-3 sm:p-5 md:p-6 sm:rounded-2xl border-y sm:border border-slate-200/60 shadow-sm min-h-[450px]">
           <TabsContent value="installments" className="focus-visible:outline-none mt-0"><InstallmentsTab /></TabsContent>
           <TabsContent value="hafiza" className="focus-visible:outline-none mt-0"><HafizaTab /></TabsContent>
