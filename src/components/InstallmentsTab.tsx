@@ -553,7 +553,7 @@ export default function InstallmentsTab() {
                   placeholder="مثال: 30000"
                   value={payAmount}
                   onChange={(e) => setPayAmount(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 text-left font-mono"
+                  className="w-full px-0 py-2 border rounded-lg text-sm bg-slate-50 text-left font-mono"
                 />
               </div>
 
@@ -563,7 +563,7 @@ export default function InstallmentsTab() {
                   required
                   value={payMonth}
                   onChange={(e) => setPayMonth(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50"
+                  className="w-full px-0 py-2 border rounded-lg text-sm bg-slate-50"
                 >
                   <option value="">-- اختر الشهر المالي --</option>
                   {(paymentModal.year === 2025 ? MONTHS_2025 : MONTHS_2026_CLEAN).map(m => (
