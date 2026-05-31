@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Toaster, toast } from "sonner";
 
-// استيراد الأيقونات الحديثة لتعزيز الواجهة التفاعلية
+// 1. استيراد الأيقونات التوضيحية لكل تبويب وزر في النظام
 import { 
   WalletCards, 
   FileBox, 
@@ -16,10 +16,10 @@ import {
   DownloadCloud
 } from "lucide-react";
 
-// استيراد مكونات التبويبات الأساسية من النظام
+// 2. استيراد مكونات التبويبات الجاهزة من مكتبة الشاشات UI
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-// استيراد التبويبات الفرعية الخاصة بكل قسم مالي
+// 3. استيراد الصفحات والملفات الفرعية لكل قسم محاسبي
 import HafizaTab from "@/components/HafizaTab";
 import AccountTab from "@/components/AccountTab";
 import JournalTab from "@/components/JournalTab";
@@ -28,19 +28,19 @@ import MonthlyStatementTab from "@/components/MonthlyStatementTab";
 import RevenueTab from "@/components/RevenueTab";
 import ExpensesTab from "@/components/ExpensesTab"; 
 
-// استيراد إدارة الحالة والوظائف المساعدة (الملفات المحلية)
+// 4. استيراد مخزن البيانات المحتفظ به في ذاكرة التطبيق المحلية
 import { useStore } from "@/lib/store";
 import { exportToExcel, importFromExcel } from "@/lib/exportImport";
 import { canInstall, onInstallAvailability, promptInstall } from "@/lib/pwa";
 
-// إعداد مسار التوجيه (Route) والبيانات التعريفية للموقع (Meta Data)
+// إعداد مسار التوجيه ومعلومات الترويسة لمتصفحات الويب
 export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
       { title: "قيادة النظام المالي - المجلس اليمني للاختصاصات الطبية" },
       { name: "description", content: "تطبيق إدارة قيود اليومية وحوافظ التوريد للمجلس اليمني للاختصاصات الطبية - يعمل بدون إنترنت" },
-      { name: "theme-color", content: "#0f766e" },
+      { name: "theme-color", content: "#10528e" },
     ],
     links: [
       { rel: "manifest", href: "/manifest.json" },
@@ -52,16 +52,18 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-// تعريف الأنواع الصارمة للتبويبات
+// تعريف دقيق للأنواع المقبولة للتبويبات لمنع الأخطاء الإملائية أثناء البرمجة
 type Tab = "installments" | "hafiza" | "account" | "journal" | "monthly" | "revenue" | "expenses-table";
 
 function Index() {
+  // التبويب الافتراضي الذي يفتح عند تشغيل التطبيق هو "كشف الأقساط"
   const [activeTab, setActiveTab] = useState<Tab>("installments");
   const [pwaInstallable, setPwaInstallable] = useState<boolean>(false);
 
   const importData = useStore((state) => state.importData);
   const fullState = useStore((state) => state);
 
+  // مراقبة جاهزية التطبيق للتثبيت على الهواتف والأجهزة الذكية
   useEffect(() => {
     setPwaInstallable(canInstall());
     const unsubscribe = onInstallAvailability((available) => {
@@ -70,6 +72,7 @@ function Index() {
     return () => unsubscribe();
   }, []);
 
+  // دالة التعامل مع استيراد ملفات الإكسيل وتحويلها لبيانات مالية داخل النظام
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -85,6 +88,7 @@ function Index() {
     }
   };
 
+  // دالة تصدير التقارير وجداول البيانات إلى ملف إكسيل خارجي
   const handleExportExcel = () => {
     try {
       exportToExcel(fullState);
@@ -94,6 +98,7 @@ function Index() {
     }
   };
 
+  // دالة تثبيت التطبيق كنظام مستقل يعمل بدون متصفح وبدون إنترنت
   const handlePWAInstall = async () => {
     const success = await promptInstall();
     if (success) {
@@ -103,90 +108,80 @@ function Index() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-8 bg-gradient-to-b from-slate-50 to-slate-100/80 min-h-screen font-tajawal selection:bg-teal-500/20" dir="rtl">
+    <div className="container mx-auto p-4 md:p-6 space-y-6 bg-[#f3f7fa] min-h-screen font-tajawal selection:bg-[#10528e]/20" dir="rtl">
       
-      {/* القسم العلوي: الهيدر والأزرار السريعة بتصميم زجاجي فاخر */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 bg-white/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-100/50 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/40">
+      {/* هيدر النظام المالي بالألوان الزرقاء الملكية المستوحاة من الصورة */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 bg-gradient-to-r from-[#10528e] to-[#0b3d6d] p-6 rounded-2xl border border-slate-200/40 shadow-md text-white">
         <div className="flex items-center gap-4">
-          <div className="p-3.5 bg-gradient-to-br from-teal-600 to-cyan-700 rounded-2xl text-white shadow-lg shadow-teal-600/20 hidden sm:block">
-            <FileSpreadsheet className="w-7 h-7 animate-pulse" />
+          <div className="p-3 bg-white/10 rounded-xl text-white hidden sm:block">
+            <FileSpreadsheet className="w-6 h-6" />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight font-cairo bg-gradient-to-r from-slate-900 to-teal-950 bg-clip-text text-transparent">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-xl md:text-2xl font-bold tracking-wide font-cairo">
               المجلس اليمني للاختصاصات الطبية
             </h1>
-            <p className="text-xs md:text-sm text-slate-500 font-medium flex items-center gap-1.5">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-              نظام الإدارة المالية الذكي والقيود اليومية المحاسبية • يعمل بدون إنترنت
+            <p className="text-xs opacity-85 font-medium flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              نظام الإدارة المالية وحوافظ التوريد - صعدة • 2026م
             </p>
           </div>
         </div>
 
-        {/* أزرار العمليات الحيوية بنمط عصري وموحد */}
-        <div className="flex flex-wrap items-center gap-3">
-          
-          {/* زر تثبيت التطبيق PWA */}
+        {/* أزرار العمليات (التثبيت، الاستيراد، التصدير) بتصميم مستدير الحواف ومتناسق */}
+        <div className="flex flex-wrap items-center gap-2">
           {pwaInstallable && (
             <button
               onClick={handlePWAInstall}
-              className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs px-5 py-3 rounded-xl transition-all duration-300 shadow-md shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm"
             >
               <DownloadCloud className="w-4 h-4" />
-              <span>تثبيت النظام على الجهاز</span>
+              <span>تثبيت النظام على الهاتف</span>
             </button>
           )}
 
-          {/* زر استيراد إكسل */}
-          <label className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 font-bold text-xs px-5 py-3 rounded-xl cursor-pointer transition-all duration-300 shadow-sm hover:border-teal-500/30 hover:text-teal-700 hover:scale-[1.02] active:scale-[0.98]">
-            <Upload className="w-4 h-4 text-teal-600" />
+          <label className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-[#10528e] border-2 border-[#10528e] font-bold text-xs px-4 py-2 rounded-xl cursor-pointer transition-all shadow-sm">
+            <Upload className="w-4 h-4" />
             <span>استيراد ملف Excel</span>
-            <input 
-              type="file" 
-              accept=".xlsx, .xls" 
-              className="hidden" 
-              onChange={handleImportExcel} 
-            />
+            <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
           </label>
 
-          {/* زر التصدير الفوري */}
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 bg-gradient-to-r from-teal-700 to-emerald-800 hover:from-teal-800 hover:to-emerald-900 text-white font-bold text-xs px-5 py-3 rounded-xl transition-all duration-300 shadow-md shadow-teal-700/20 hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm"
           >
             <Download className="w-4 h-4" />
-            <span>تصدير البيانات الشاملة</span>
+            <span>تصدير ملف Excel</span>
           </button>
         </div>
       </div>
 
-      {/* نظام التبويبات الفاخر */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-6">
+      {/* نظام ومكونات التبويبات الفاخر */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-4">
         
-        {/* شريط الخيارات مع إخفاء شريط التمرير مع الحفاظ على مرونته */}
+        {/* شريط الخيارات والتبويبات مرتب ترتيباً دقيقاً حسب طلبك */}
         <div className="w-full overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList className="flex w-max min-w-full lg:w-full bg-slate-200/70 p-1.5 rounded-2xl border border-slate-300/30 shadow-inner h-auto gap-1.5 backdrop-blur-sm">
+          <TabsList className="flex w-max min-w-full lg:w-full bg-[#0b3d6d] p-1 rounded-xl border border-white/10 shadow-md h-auto gap-1">
             
             {[
-              { id: "installments", label: "كشف الأقساط", icon: WalletCards },
-              { id: "hafiza", label: "حوافظ التوريد", icon: FileBox },
-              { id: "account", label: "الحساب الجاري", icon: FileSpreadsheet },
-              { id: "journal", label: "قيود اليومية", icon: BookOpenText },
-              { id: "monthly", label: "التقرير الشهري", icon: PieChart },
-              { id: "revenue", label: "حركة الإيرادات", icon: TrendingUp },
-              { id: "expenses-table", label: "بيان المصروفات", icon: ReceiptText },
+              { id: "installments", label: "كشف الأقساط", icon: WalletCards },       // 1. أقساط
+              { id: "hafiza", label: "حوافظ التوريد", icon: FileBox },              // 2. حوافظ التوريد
+              { id: "account", label: "الحساب الجاري", icon: FileSpreadsheet },       // 3. الحساب اليومي
+              { id: "journal", label: "القيود اليومية", icon: BookOpenText },          // 4. القيود اليومية
+              { id: "monthly", label: "كشف حساب شهري", icon: PieChart },          // 5. كشف حساب شهري
+              { id: "revenue", label: "حركة الإيرادات", icon: TrendingUp },          // 6. الإيرادات
+              { id: "expenses-table", label: "جدول المصروفات", icon: ReceiptText },  // 7. جدول المصروفات
             ].map((tab) => {
               const IconComponent = tab.icon;
               return (
                 <TabsTrigger 
                   key={tab.id}
                   value={tab.id} 
-                  className="flex items-center gap-2.5 px-5 py-3.5 rounded-xl text-xs font-bold transition-all duration-300 
-                             data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-700 data-[state=active]:to-teal-800
-                             data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-teal-700/20 
-                             text-slate-600 hover:text-slate-900 hover:bg-white/60 data-[state=active]:hover:bg-teal-700 
-                             flex-1 justify-center min-w-[130px] lg:min-w-0"
+                  className="flex items-center gap-1.5 px-4 py-3 rounded-lg text-xs font-bold transition-all border-b-2 border-transparent
+                             data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400
+                             text-white/70 hover:text-white hover:bg-white/5 
+                             flex-1 justify-center min-w-[125px] lg:min-w-0"
                 >
-                  <IconComponent className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
+                  <IconComponent className="w-3.5 h-3.5" />
                   <span>{tab.label}</span>
                 </TabsTrigger>
               );
@@ -195,8 +190,9 @@ function Index() {
           </TabsList>
         </div>
 
-        {/* عرض محتويات التبويبات بحركة انسيابية ناعمة وجذابة */}
-        <div className="bg-white p-5 md:p-8 rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-100/40 min-h-[450px] animate-in fade-in slide-in-from-bottom-4 duration-300 focus-visible:outline-none">
+        {/* الحاوية البيضاء المستديرة لعرض محتويات الصفحة الفعالة */}
+        <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200/60 shadow-sm min-h-[450px]">
+          {/* تم ترتيب عرض المكونات هنا ليتزامن ويتطابق تماماً مع الاختيار العلوي */}
           <TabsContent value="installments" className="focus-visible:outline-none mt-0"><InstallmentsTab /></TabsContent>
           <TabsContent value="hafiza" className="focus-visible:outline-none mt-0"><HafizaTab /></TabsContent>
           <TabsContent value="account" className="focus-visible:outline-none mt-0"><AccountTab /></TabsContent>
@@ -208,7 +204,7 @@ function Index() {
 
       </Tabs>
       
-      {/* نظام التنبيهات المنبثقة */}
+      {/* نظام رسائل النجاح والخطأ المنبثقة */}
       <Toaster position="top-center" richColors />
     </div>
   );
