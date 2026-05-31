@@ -91,7 +91,7 @@ type State = {
   addTrainee: (t: Trainee) => void;
   addHafiza: (h: Omit<Hafiza, "id">) => Hafiza;
   addAccount: (a: Omit<Account, "id">) => Account;
-  addJournal: (j: Omit<Journal, "id">) => Journal;
+  addJournal: (j: Omit<Journal, "id text">) => Journal;
   updateHafiza: (id: string, h: Partial<Hafiza>) => void;
   updateAccount: (id: string, a: Partial<Account>) => void;
   updateJournal: (id: string, j: Partial<Journal>) => void;
@@ -238,7 +238,6 @@ export const useStore = create<State>()(
         set((s) => ({ journal: s.journal.filter((x) => x.id !== id) })),
       setOpeningBalance: (n) => set({ openingBalance: n }),
 
-      // إصلاح دالة الاستيراد لضمان سلامة الـ IDs والتحويل الرقمي الصارم
       importData: (d) => set((s) => ({
         hafiza: d.hafiza ? [...s.hafiza, ...d.hafiza.map((h) => ({ 
           ...h, 
@@ -253,7 +252,6 @@ export const useStore = create<State>()(
           income: Number(acc.income) || 0,
           expense: Number(acc.expense) || 0,
         }))] : s.accounts,
-        // تم إصلاح الجرنال هنا ليتضمن تحويل الأرقام وتوليد الـ ID
         journal: d.journal ? [...s.journal, ...d.journal.map((j) => ({
           ...j,
           id: j.id || uid(),
