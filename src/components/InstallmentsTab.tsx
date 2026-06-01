@@ -15,9 +15,8 @@ const cleanNumber = (val: any): number => {
 
 export default function InstallmentsTab() {
   const { installments, installments2025 } = useStore() as any;
-  const [paymentModal, setPaymentModal] = useState<{ row: any } | null>(null);
+  const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
   const [payAmount, setPayAmount] = useState("");
-  const [payMonth, setPayMonth] = useState("");
   const [previewModal, setPreviewModal] = useState<{ name: string; html: string } | null>(null);
   const [newPaymentModal, setNewPaymentModal] = useState(false);
   const [newStudentName, setNewStudentName] = useState("");
@@ -44,7 +43,6 @@ export default function InstallmentsTab() {
     remaining: controls2026.rows.reduce((s, r) => s + cleanNumber(r.remaining), 0),
   }), [controls2026.rows]);
 
-  // الإكمال التلقائي للأسماء
   const allNames = useMemo(() => {
     const names2025 = (installments2025 || []).map((s: any) => s.name);
     const names2026 = (installments || []).map((s: any) => s.name);
@@ -54,32 +52,36 @@ export default function InstallmentsTab() {
   const handleNameChange = (value: string) => {
     setNewStudentName(value);
     if (value.length > 0) {
-      const suggestions = allNames.filter((n: string) => n.includes(value));
-      setNameSuggestions(suggestions);
+      setNameSuggestions(allNames.filter((n: string) => n.includes(value)));
       setShowSuggestions(true);
     } else {
       setShowSuggestions(false);
     }
   };
 
+  // تحديث البيانات بعد أي تغيير في المدفوعات
+  const updateInstallments = (updatedList: any[]) => {
+    useStore.setState({ installments: updatedList });
+  };
+
   const addPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paymentModal || !payAmount || !payMonth) return toast.error("يرجى إدخال المبلغ واختيار الشهر");
+    if (!paymentModal || !payAmount) return toast.error("يرجى إدخال المبلغ");
     
     const amount = Number(payAmount) || 0;
-    const list = installments;
+    const list = [...(installments || [])];
 
     const updated = list.map((s: any) => {
       if (s.name !== paymentModal.row.name) return s;
-      const payments = { ...s.payments, [payMonth]: (Number(s.payments[payMonth]) || 0) + amount };
+      const payments = { ...s.payments, [paymentModal.month]: (Number(s.payments[paymentModal.month]) || 0) + amount };
       const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
       const remaining = cleanNumber(s.prevDue) - totalPaid;
       return { ...s, payments, totalPaid, remaining: Math.max(0, remaining) };
     });
 
-    useStore.setState({ installments: updated });
-    toast.success(`تم تسجيل دفعة ${fmt(amount)} لشهر ${payMonth}`);
-    setPaymentModal(null); setPayAmount(""); setPayMonth("");
+    updateInstallments(updated);
+    toast.success(`تم تسجيل دفعة ${fmt(amount)} لشهر ${paymentModal.month}`);
+    setPaymentModal(null); setPayAmount("");
   };
 
   const addNewPayment = (e: React.FormEvent) => {
@@ -87,7 +89,7 @@ export default function InstallmentsTab() {
     if (!newStudentName || !newStudentAmount || !newStudentMonth) return toast.error("يرجى إدخال جميع البيانات");
     
     const amount = Number(newStudentAmount) || 0;
-    const list = installments || [];
+    const list = [...(installments || [])];
     const existing = list.find((s: any) => s.name === newStudentName);
     
     if (existing) {
@@ -98,7 +100,7 @@ export default function InstallmentsTab() {
         const remaining = cleanNumber(s.prevDue) - totalPaid;
         return { ...s, payments, totalPaid, remaining: Math.max(0, remaining) };
       });
-      useStore.setState({ installments: updated });
+      updateInstallments(updated);
     } else {
       const payments = MONTHS_2026.reduce((acc: any, m) => (acc[m] = m === newStudentMonth ? amount : 0, acc), {});
       const newRecord = {
@@ -113,7 +115,7 @@ export default function InstallmentsTab() {
         phone: "",
         payments
       };
-      useStore.setState({ installments: [...list, newRecord] });
+      updateInstallments([...list, newRecord]);
     }
 
     toast.success(`تم إضافة دفعة ${fmt(amount)} لـ ${newStudentName}`);
@@ -126,7 +128,7 @@ export default function InstallmentsTab() {
     if (!editPaymentModal || !editAmount) return;
     
     const newAmount = Number(editAmount) || 0;
-    const list = installments;
+    const list = [...(installments || [])];
 
     const updated = list.map((s: any) => {
       if (s.name !== editPaymentModal.row.name) return s;
@@ -136,7 +138,7 @@ export default function InstallmentsTab() {
       return { ...s, payments, totalPaid, remaining: Math.max(0, remaining) };
     });
 
-    useStore.setState({ installments: updated });
+    updateInstallments(updated);
     toast.success("تم تعديل القسط");
     setEditPaymentModal(null); setEditAmount("");
   };
@@ -144,7 +146,7 @@ export default function InstallmentsTab() {
   const deletePayment = (row: any, month: string) => {
     if (!confirm(`حذف قسط شهر ${month} للمتدرب ${row.name}؟`)) return;
     
-    const list = installments;
+    const list = [...(installments || [])];
     const updated = list.map((s: any) => {
       if (s.name !== row.name) return s;
       const payments = { ...s.payments, [month]: 0 };
@@ -153,8 +155,9 @@ export default function InstallmentsTab() {
       return { ...s, payments, totalPaid, remaining: Math.max(0, remaining) };
     });
 
-    useStore.setState({ installments: updated });
+    updateInstallments(updated);
     toast.success(`تم حذف قسط شهر ${month}`);
+    if (editPaymentModal) setEditPaymentModal(null);
   };
 
   const importFile = (e: React.ChangeEvent<HTMLInputElement>, year: 2025 | 2026) => {
@@ -203,9 +206,8 @@ export default function InstallmentsTab() {
     e.target.value = "";
   };
 
-  const getStatusText = (remaining: number, prevDue: number) => {
+  const getStatusText = (remaining: number) => {
     if (remaining <= 0) return { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" };
-    if (remaining < prevDue) return { text: "عليه", color: "text-amber-600", bg: "bg-amber-50" };
     return { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
   };
 
@@ -218,7 +220,7 @@ export default function InstallmentsTab() {
 
       const paidMonths = months.filter(m => Number(r.payments?.[m]) > 0);
       if (paidMonths.length === 0) {
-        return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden"><div style="background:${color};color:white;padding:6px 12px;font-size:11px">📅 ${year}</div><div style="padding:10px;text-align:center;color:#94a3b8;font-size:10px">${year === "2025" ? `رسوم: ${fmt(opening)}` : `متبقي 2025: ${fmt(opening)}`}<br>لا توجد مدفوعات</div></div>`;
+        return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden"><div style="background:${color};color:white;padding:6px 12px;font-size:11px">📅 ${year}</div><div style="padding:10px;text-align:center;color:#94a3b8;font-size:10px">الرصيد: ${fmt(opening)}<br>لا توجد مدفوعات</div></div>`;
       }
 
       let balance = opening;
@@ -227,18 +229,20 @@ export default function InstallmentsTab() {
         balance -= paid;
         const status = balance <= 0 ? "له" : "عليه";
         const sc = balance <= 0 ? "#059669" : "#dc2626";
-        return `<tr><td style="padding:4px 8px;font-size:9px">${m}</td><td style="padding:4px 8px;font-size:9px;text-align:center;font-family:monospace">${fmt(paid)}</td><td style="padding:4px 8px;font-size:9px;text-align:center;font-family:monospace;color:${sc}">${fmt(Math.max(0, balance))}</td><td style="padding:4px 8px;text-align:center"><span style="background:${balance<=0?'#d1fae5':'#fee2e2'};color:${sc};padding:1px 8px;border-radius:8px;font-size:8px;font-weight:700">${status}</span></td></tr>`;
+        const bg = balance <= 0 ? "#d1fae5" : "#fee2e2";
+        return `<tr><td style="padding:4px 8px;font-size:9px">${m}</td><td style="padding:4px 8px;font-size:9px;text-align:center;font-family:monospace">${fmt(paid)}</td><td style="padding:4px 8px;font-size:9px;text-align:center;font-family:monospace;color:${sc}">${fmt(Math.max(0, balance))}</td><td style="padding:4px 8px;text-align:center"><span style="background:${bg};color:${sc};padding:1px 8px;border-radius:8px;font-size:8px;font-weight:700">${status}</span></td></tr>`;
       }).join("");
 
-      return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;background:white"><div style="background:${color};color:white;padding:6px 12px;display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:700">📅 ${year}</span><span style="font-size:9px">${r.specialty||''} ${r.batch||''}</span></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e2e8f0;text-align:center"><div style="background:#f8fafc;padding:5px"><div style="font-size:7px;color:#64748b">الرصيد الافتتاحي</div><div style="font-size:11px;font-weight:700">${fmt(opening)}</div></div><div style="background:#f8fafc;padding:5px"><div style="font-size:7px;color:#64748b">المسدد</div><div style="font-size:11px;font-weight:700;color:#059669">${fmt(r.totalPaid||0)}</div></div><div style="background:#f8fafc;padding:5px"><div style="font-size:7px;color:#64748b">الرصيد</div><div style="font-size:11px;font-weight:700;color:${Math.max(0,balance) > 0 ? '#dc2626' : '#059669'}">${fmt(Math.max(0,balance))}</div></div></div><table width="100%" style="border-collapse:collapse"><thead><tr style="background:#f8fafc"><th style="padding:4px 8px;font-size:8px;color:#64748b">الشهر</th><th style="padding:4px 8px;font-size:8px;color:#64748b">المبلغ</th><th style="padding:4px 8px;font-size:8px;color:#64748b">الرصيد</th><th style="padding:4px 8px;font-size:8px;color:#64748b">الحالة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      const finalBalance = Math.max(0, balance);
+      return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;background:white"><div style="background:${color};color:white;padding:6px 12px;display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:700">📅 ${year}</span><span style="font-size:9px">${r.specialty||''} ${r.batch||''}</span></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e2e8f0;text-align:center"><div style="background:#f8fafc;padding:5px"><div style="font-size:7px;color:#64748b">الرصيد الافتتاحي</div><div style="font-size:11px;font-weight:700">${fmt(opening)}</div></div><div style="background:#f8fafc;padding:5px"><div style="font-size:7px;color:#64748b">المسدد</div><div style="font-size:11px;font-weight:700;color:#059669">${fmt(r.totalPaid||0)}</div></div><div style="background:#f8fafc;padding:5px"><div style="font-size:7px;color:#64748b">الرصيد</div><div style="font-size:11px;font-weight:700;color:${finalBalance > 0 ? '#dc2626' : '#059669'}">${fmt(finalBalance)}</div></div></div><table width="100%" style="border-collapse:collapse"><thead><tr style="background:#f8fafc"><th style="padding:4px 8px;font-size:8px;color:#64748b">الشهر</th><th style="padding:4px 8px;font-size:8px;color:#64748b">المبلغ</th><th style="padding:4px 8px;font-size:8px;color:#64748b">الرصيد</th><th style="padding:4px 8px;font-size:8px;color:#64748b">الحالة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     };
+
+    const css = `*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Cairo',sans-serif;background:#f1f5f9;padding:8px;direction:rtl}.container{max-width:1100px;margin:0 auto;background:white;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.04);overflow:hidden}.header{background:#1e293b;color:white;padding:10px 18px;display:flex;justify-content:space-between;align-items:center}.header h1{font-size:13px;font-weight:700}.header .date{font-size:9px;opacity:0.8}.student-bar{background:linear-gradient(135deg,#0891b2,#06b6d4);color:white;padding:8px 18px;display:flex;justify-content:space-between}.student-bar .name{font-size:13px;font-weight:700}.student-bar .phone{font-size:9px;opacity:0.9}.content{padding:8px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.btn{padding:5px 15px;border:none;border-radius:5px;font-family:'Cairo';font-size:10px;font-weight:700;cursor:pointer;color:white}@media print{body{background:white;padding:0}.container{box-shadow:none}.btn{display:none}}@media(max-width:768px){.grid{grid-template-columns:1fr}}`;
 
     const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet"><style>${css}</style></head><body><div class="container"><div class="header"><h1>📊 المجلس اليمني للاختصاصات الطبية</h1><span class="date">📅 ${today()}</span></div><div class="student-bar"><span class="name">👨‍⚕️ ${name}</span><span class="phone">📱 ${r2025?.phone || r2026?.phone || ''}</span></div><div class="content"><div class="grid">${buildTable(r2025, MONTHS_2025, "2025", cleanNumber(r2025?.fees||0), "#0891b2")}${buildTable(r2026, MONTHS_2026, "2026", cleanNumber(r2026?.prevDue||0), "#7c3aed")}</div></div><div style="padding:10px;background:#f8fafc;border-top:2px solid #e2e8f0;text-align:center"><button class="btn" style="background:#0891b2" onclick="window.print()">🖨️ طباعة</button></div></div></body></html>`;
     
     setPreviewModal({ name, html });
   };
-
-  const css = `*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Cairo',sans-serif;background:#f1f5f9;padding:8px;direction:rtl}.container{max-width:1100px;margin:0 auto;background:white;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.04);overflow:hidden}.header{background:#1e293b;color:white;padding:10px 18px;display:flex;justify-content:space-between;align-items:center}.header h1{font-size:13px;font-weight:700}.header .date{font-size:9px;opacity:0.8}.student-bar{background:linear-gradient(135deg,#0891b2,#06b6d4);color:white;padding:8px 18px;display:flex;justify-content:space-between}.student-bar .name{font-size:13px;font-weight:700}.student-bar .phone{font-size:9px;opacity:0.9}.content{padding:8px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.btn{padding:5px 15px;border:none;border-radius:5px;font-family:'Cairo';font-size:10px;font-weight:700;cursor:pointer;color:white}@media print{body{background:white;padding:0}.container{box-shadow:none}.btn{display:none}}@media(max-width:768px){.grid{grid-template-columns:1fr}}`;
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -247,7 +251,7 @@ export default function InstallmentsTab() {
         <div className="flex justify-between items-center border-b pb-2 mb-3">
           <div>
             <h2 className="text-sm font-bold text-teal-800">أقساط ورسوم 2025</h2>
-            <p className="text-[10px] text-slate-400">الأرشيف</p>
+            <p className="text-[10px] text-slate-400">الأرشيف - الرصيد الافتتاحي = رسوم الدراسة</p>
           </div>
           <label className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-bold cursor-pointer hover:bg-emerald-700">
             📥 استيراد 2025
@@ -298,7 +302,7 @@ export default function InstallmentsTab() {
         <div className="flex justify-between items-center border-b pb-2 mb-3">
           <div>
             <h2 className="text-sm font-bold text-purple-800">أقساط ورسوم 2026</h2>
-            <p className="text-[10px] text-slate-400">الرصيد الافتتاحي = متبقي 2025</p>
+            <p className="text-[10px] text-slate-400">الرصيد الافتتاحي = متبقي 2025 فقط</p>
           </div>
           <div className="flex gap-2">
             <button onClick={() => setNewPaymentModal(true)} className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700">
@@ -327,16 +331,17 @@ export default function InstallmentsTab() {
                 <th className="p-2 text-center">رسوم 2026</th>
                 <th className="p-2 text-center">متبقي 2025</th>
                 {MONTHS_2026.map(m => (
-                  <th key={m} className="p-1 text-center text-[9px] w-16">{m}</th>
+                  <th key={m} className="p-1 text-center text-[9px] w-[70px]">{m}</th>
                 ))}
                 <th className="p-2 text-center">المسدد</th>
                 <th className="p-2 text-center">الرصيد</th>
                 <th className="p-2 text-center">الحالة</th>
+                <th className="p-2 text-center w-16">كشف</th>
               </tr>
             </thead>
             <tbody>
               {controls2026.rows.map((r: any, i: number) => {
-                const status = getStatusText(r.remaining, r.prevDue);
+                const status = getStatusText(r.remaining);
                 return (
                   <tr key={i} className="border-t hover:bg-slate-50">
                     <td className="p-2 text-center text-slate-400">{i + 1}</td>
@@ -345,27 +350,53 @@ export default function InstallmentsTab() {
                     <td className="p-2">{r.specialty}</td>
                     <td className="p-2 font-mono text-center">{fmt(r.fees)}</td>
                     <td className="p-2 font-mono text-amber-600 font-bold text-center">{fmt(r.prevDue || 0)}</td>
-                    {MONTHS_2026.map(m => (
-                      <td key={m} className="p-1 text-center">
-                        {Number(r.payments?.[m]) > 0 ? (
-                          <div className="relative group">
-                            <span className="font-mono text-[10px] text-emerald-600 font-bold">{fmt(r.payments[m])}</span>
-                            <div className="absolute hidden group-hover:flex -top-8 right-0 bg-white shadow-lg border rounded p-1 gap-1 z-10 whitespace-nowrap">
-                              <button onClick={() => { setEditPaymentModal({ row: r, month: m, amount: r.payments[m] }); setEditAmount(String(r.payments[m])); }} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] hover:bg-blue-100">✏️</button>
-                              <button onClick={() => deletePayment(r, m)} className="px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-[9px] hover:bg-red-100">🗑️</button>
+                    {MONTHS_2026.map(m => {
+                      const paid = Number(r.payments?.[m]) || 0;
+                      return (
+                        <td key={m} className="p-1 text-center relative">
+                          {paid > 0 ? (
+                            <div className="group relative inline-block">
+                              <span className="font-mono text-[10px] text-emerald-600 font-bold cursor-pointer">{fmt(paid)}</span>
+                              <div className="absolute hidden group-hover:flex -top-7 left-1/2 -translate-x-1/2 bg-white shadow-lg border rounded p-0.5 gap-0.5 z-10 whitespace-nowrap">
+                                <button 
+                                  onClick={() => { setEditPaymentModal({ row: r, month: m, amount: paid }); setEditAmount(String(paid)); }} 
+                                  className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] hover:bg-blue-100 font-bold"
+                                >
+                                  ✏️
+                                </button>
+                                <button 
+                                  onClick={() => deletePayment(r, m)} 
+                                  className="px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-[9px] hover:bg-red-100 font-bold"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <button onClick={() => { setPaymentModal({ row: r }); setPayMonth(m); setPayAmount(""); }} className="text-[9px] text-slate-300 hover:text-emerald-500">+</button>
-                        )}
-                      </td>
-                    ))}
+                          ) : (
+                            <button 
+                              onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }} 
+                              className="text-[10px] text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded px-1 py-0.5"
+                            >
+                              +
+                            </button>
+                          )}
+                        </td>
+                      );
+                    })}
                     <td className="p-2 font-mono text-emerald-600 font-bold text-center">{fmt(r.totalPaid)}</td>
                     <td className="p-2 font-mono text-rose-600 font-bold text-center">{fmt(r.remaining)}</td>
                     <td className="p-2 text-center">
                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${status.bg} ${status.color}`}>
-                        {r.remaining <= 0 ? "له" : "عليه"}
+                        {status.text}
                       </span>
+                    </td>
+                    <td className="p-2 text-center">
+                      <button 
+                        onClick={() => generatePreview(r.name)} 
+                        className="px-2 py-1 bg-teal-50 text-teal-600 rounded text-[10px] font-bold hover:bg-teal-100 hover:text-teal-700"
+                      >
+                        🖨️
+                      </button>
                     </td>
                   </tr>
                 );
@@ -375,7 +406,7 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* ========== نافذة إضافة قسط جديد (2026) ========== */}
+      {/* ========== نافذة إضافة قسط جديد ========== */}
       {newPaymentModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-5 max-w-sm w-full" dir="rtl">
@@ -410,7 +441,7 @@ export default function InstallmentsTab() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-5 max-w-sm w-full" dir="rtl">
             <h3 className="font-bold text-sm border-b pb-2 mb-3">💵 دفعة - {paymentModal.row.name}</h3>
-            <p className="text-xs text-slate-500 mb-2">الشهر: {payMonth}</p>
+            <p className="text-xs text-slate-500 mb-2">الشهر: <b>{paymentModal.month}</b></p>
             <form onSubmit={addPayment} className="space-y-3">
               <input type="number" required placeholder="المبلغ" value={payAmount} onChange={e => setPayAmount(e.target.value)} className="w-full p-2 border rounded text-sm bg-slate-50" autoFocus />
               <div className="flex justify-end gap-2 pt-2 border-t">
@@ -440,7 +471,7 @@ export default function InstallmentsTab() {
         </div>
       )}
 
-      {/* ========== نافذة المعاينة ========== */}
+      {/* ========== نافذة المعاينة والطباعة ========== */}
       {previewModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl w-full max-w-5xl h-[90vh] flex flex-col" dir="rtl">
@@ -448,7 +479,7 @@ export default function InstallmentsTab() {
               <h3 className="font-bold text-xs">📊 كشف حساب - {previewModal.name}</h3>
               <div className="flex gap-1.5">
                 <button onClick={() => { const w = window.open('', '', 'width=1000,height=700'); w?.document.write(previewModal.html); w?.document.close(); setTimeout(() => w?.print(), 500); }} className="px-3 py-1.5 bg-teal-600 text-white rounded text-[10px] font-bold">🖨️ طباعة</button>
-                <button onClick={() => setPreviewModal(null)} className="px-3 py-1.5 bg-slate-500 text-white rounded text-[10px] font-bold">✕</button>
+                <button onClick={() => setPreviewModal(null)} className="px-3 py-1.5 bg-slate-500 text-white rounded text-[10px] font-bold">✕ إغلاق</button>
               </div>
             </div>
             <iframe srcDoc={previewModal.html} className="flex-1 w-full border-0" />
@@ -457,4 +488,4 @@ export default function InstallmentsTab() {
       )}
     </div>
   );
-    }
+                                       }
