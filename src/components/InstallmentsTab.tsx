@@ -4,8 +4,9 @@ import { fmt, today } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
+import { X, ChevronDown } from "lucide-react";
 
-const MONTHS_2025 = ["يونيو 2024", "يوليو 2024", "أغسطس 2024", "مارس 2025", "ابريل 2025", "مايو 2025", "يونيو 2025", "يوليو 2025", "أغسطس 2025", "سبتمبر 2025", "اكتوبر 2025", "نوفمبر 2025"];
+const MONTHS_2025 = ["يونيو 2024", "يوليو 2024", "أغسطس 2024", "مارس 2025", "ابريل 2025", "مايو 2025", "يونيو 2025", "يوليو 2025", "أغسطس 2025", "سبتمبر"];
 const MONTHS_2026 = ["يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", "يوليو", "اغسطس", "سبتمبر", "اكتوبر", "نوفمبر", "ديسمبر"];
 
 const cleanNumber = (val: any): number => {
@@ -13,17 +14,44 @@ const cleanNumber = (val: any): number => {
   return Number(String(val).replace(/[^0-9.-]/g, "")) || 0;
 };
 
-// مكون إعادة استخدام الإحصائيات
-const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) => (
-  <div className={`grid grid-cols-${columns} gap-2 mb-4`}>
-    {stats.map((stat, idx) => (
-      <div key={idx} className={`${stat.bgClass} p-3 rounded-lg text-center border ${stat.borderClass}`}>
-        <div className="text-[9px] font-medium text-slate-600">{stat.label}</div>
-        <div className="text-sm font-mono font-bold mt-1 text-slate-900">{stat.value}</div>
+// مكون إعادة استخدام الإحصائيات - محسّن للجوال
+const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) => {
+  const colClass = columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3";
+  return (
+    <div className={`grid ${colClass} gap-2 mb-4`}>
+      {stats.map((stat, idx) => (
+        <div key={idx} className={`${stat.bgClass} p-2 sm:p-3 rounded-lg text-center border ${stat.borderClass} shadow-sm`}>
+          <div className="text-xs sm:text-sm font-medium text-slate-600">{stat.label}</div>
+          <div className="text-sm sm:text-base font-mono font-bold mt-1 text-slate-900 break-words">{stat.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// نافذة جديدة محسّنة للجوال
+const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        {/* رأس النافذة */}
+        <div className="flex justify-between items-center p-4 border-b bg-gradient-to-l from-blue-50 to-slate-50 sticky top-0">
+          <h3 className="font-bold text-base sm:text-lg text-slate-900">{title}</h3>
+          <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-lg transition">
+            <X className="w-5 h-5 text-slate-600" />
+          </button>
+        </div>
+        
+        {/* محتوى النافذة */}
+        <div className="p-4 space-y-3">
+          {children}
+        </div>
       </div>
-    ))}
-  </div>
-);
+    </div>
+  );
+};
 
 export default function InstallmentsTab() {
   const { installments, installments2025 } = useStore() as any;
@@ -94,7 +122,7 @@ export default function InstallmentsTab() {
     });
 
     updateInstallments(updated);
-    toast.success(`تم تسجيل دفعة ${fmt(amount)} لشهر ${paymentModal.month}`);
+    toast.success(`تم تسجيل دفعة ${fmt(amount)}`);
     setPaymentModal(null);
     setPayAmount("");
   };
@@ -104,7 +132,7 @@ export default function InstallmentsTab() {
     if (!newStudentName || !newStudentAmount || !newStudentMonth) return toast.error("يرجى إدخال جميع البيانات");
 
     const amount = Number(newStudentAmount) || 0;
-    if (amount <= 0) return toast.error("يرجى إدخال مبلغ صحيح");
+    if (amount <= 0) return toast.error("يرجى إدخال ��بلغ صحيح");
 
     const list = [...(installments || [])];
     const existing = list.find((s: any) => s.name === newStudentName);
@@ -135,7 +163,7 @@ export default function InstallmentsTab() {
       updateInstallments([...list, newRecord]);
     }
 
-    toast.success(`تم إضافة دفعة ${fmt(amount)} لـ ${newStudentName}`);
+    toast.success(`تم إضافة دفعة ${fmt(amount)}`);
     setNewPaymentModal(false);
     setNewStudentName("");
     setNewStudentAmount("");
@@ -166,7 +194,7 @@ export default function InstallmentsTab() {
   };
 
   const deletePayment = (row: any, month: string) => {
-    if (!confirm(`حذف قسط شهر ${month} للمتدرب ${row.name}؟`)) return;
+    if (!confirm(`حذف قسط شهر ${month}؟`)) return;
 
     const list = [...(installments || [])];
     const updated = list.map((s: any) => {
@@ -221,7 +249,7 @@ export default function InstallmentsTab() {
           });
 
         useStore.setState(year === 2025 ? { installments2025: data } : { installments: data });
-        toast.success(`تم استيراد ${data.length} سجل لعام ${year}`);
+        toast.success(`تم استيراد ${data.length} سجل`);
       } catch (error) {
         console.error("خطأ في استيراد الملف:", error);
         toast.error("خطأ في معالجة الملف");
@@ -234,44 +262,6 @@ export default function InstallmentsTab() {
   const getStatusText = (remaining: number) => {
     if (remaining <= 0) return { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" };
     return { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
-  };
-
-  const generatePreview = (name: string) => {
-    const r2025 = (installments2025 || []).find((i: any) => i.name === name);
-    const r2026 = (installments || []).find((i: any) => i.name === name);
-
-    const buildTable = (r: any, months: string[], year: string, opening: number, color: string) => {
-      if (!r) return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;opacity:0.5"><div style="background:${color};color:white;padding:8px 12px;font-size:14px;font-weight:bold">📅 ${year}</div><div style="padding:12px;text-align:center;color:#94a3b8">لا توجد بيانات</div></div>`;
-
-      const paidMonths = months.filter(m => Number(r.payments?.[m]) > 0);
-      if (paidMonths.length === 0) {
-        return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden"><div style="background:${color};color:white;padding:8px 12px;font-size:14px;font-weight:bold">📅 ${year}</div><table style="width:100%;border-collapse:collapse"><tr style="border-bottom:1px solid #e5e7eb"><td style="padding:12px;font-size:12px;text-align:center;color:#94a3b8">لم يتم تسجيل أي دفعات</td></tr></table></div>`;
-      }
-
-      let balance = opening;
-      const rows = paidMonths.map(m => {
-        const paid = Number(r.payments?.[m]) || 0;
-        balance -= paid;
-        const status = balance <= 0 ? "له" : "عليه";
-        const sc = balance <= 0 ? "#059669" : "#dc2626";
-        const bg = balance <= 0 ? "#d1fae5" : "#fee2e2";
-        return `<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 8px;font-size:12px;text-align:right;background:#f9fafb">${m}</td><td style="padding:6px 8px;font-size:12px;text-align:center">${fmt(paid)}</td><td style="padding:6px 8px;font-size:12px;text-align:center">${fmt(Math.abs(balance))}</td><td style="padding:6px 8px;font-size:12px;text-align:center;color:${sc};font-weight:bold;background:${bg}">${status}</td></tr>`;
-      }).join("");
-
-      const finalBalance = Math.max(0, balance);
-      return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;background:white"><div style="background:${color};color:white;padding:8px 12px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:bold">📅 ${year}</span><span style="font-size:12px">الرصيد: ${fmt(finalBalance)}</span></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead style="background:#f1f5f9;font-weight:bold"><tr><th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb">الشهر</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e5e7eb">المبلغ</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e5e7eb">الرصيد</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e5e7eb">الحالة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-    };
-
-    const css = `*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Cairo','Segoe UI',sans-serif;background:#f1f5f9;padding:12px;direction:rtl;line-height:1.6}.container{max-width:1100px;margin:0 auto}h1{text-align:center;color:#0f172a;margin-bottom:20px;font-size:18px}h2{color:#64748b;font-size:14px;margin:16px 0 8px 0}.tables{display:grid;grid-template-columns:1fr 1fr;gap:16px}.single{grid-column:1/-1}@media(max-width:768px){.tables{grid-template-columns:1fr}.single{grid-column:auto}}`;
-
-    const opening2025 = r2025?.fees || 0;
-    const opening2026 = r2026?.prevDue || 0;
-    const table2025 = buildTable(r2025, MONTHS_2025, "أقساط ورسوم 2025", opening2025, "#0d9488");
-    const table2026 = buildTable(r2026, MONTHS_2026, "أقساط ورسوم 2026", opening2026, "#7c3aed");
-
-    const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet"><style>${css}</style></head><body><div class="container"><h1>📊 كشف حساب مالي - ${name}</h1><div class="tables">${table2025}${table2026}</div></div></body></html>`;
-
-    setPreviewModal({ name, html });
   };
 
   const stats2025 = [
@@ -288,57 +278,53 @@ export default function InstallmentsTab() {
   ];
 
   return (
-    <div className="space-y-6 p-0 min-h-screen" dir="rtl">
+    <div className="space-y-4 sm:space-y-6 p-0 w-full" dir="rtl">
       {/* ========== جدول 2025 ========== */}
-      <div className="bg-white shadow-md border border-slate-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-base font-bold text-white">📊 أقساط ورسوم 2025</h2>
-              <p className="text-xs text-teal-100 mt-1">الأرشيف - الرصيد الافتتاحي = رسوم الدراسة</p>
+      <div className="bg-gradient-to-b from-teal-50 to-white shadow border border-teal-200 rounded-xl overflow-hidden">
+        <div className="bg-gradient-to-l from-teal-600 to-teal-700 px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex justify-between items-start gap-2 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-white">📊 أقساط 2025</h2>
+              <p className="text-xs text-teal-100 mt-1">الأرشيف</p>
             </div>
-            <label className="px-4 py-2 bg-white text-teal-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-teal-50 transition">
-              📥 استيراد 2025
+            <label className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white text-teal-700 rounded-lg text-xs sm:text-sm font-bold cursor-pointer hover:bg-teal-50 transition active:scale-95 flex-shrink-0">
+              📥 استيراد
               <input type="file" accept=".xlsx,.xls,.csv" onChange={e => importFile(e, 2025)} className="hidden" />
             </label>
           </div>
         </div>
-        <div className="p-4">
+        <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2025} columns={3} />
           <div className="overflow-x-auto rounded-lg border border-slate-200">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-100 font-bold border-b border-slate-300">
+            <table className="w-full text-xs sm:text-sm">
+              <thead className="bg-slate-100 font-bold border-b border-slate-300 sticky top-0">
                 <tr>
-                  <th className="p-3 text-center text-slate-700 w-10">#</th>
-                  <th className="p-3 text-right text-slate-700">الاسم</th>
-                  <th className="p-3 text-center text-slate-700">الدفعة</th>
-                  <th className="p-3 text-right text-slate-700">المساق</th>
-                  <th className="p-3 text-center text-slate-700">رسوم 2025</th>
-                  <th className="p-3 text-center text-emerald-700">المسدد</th>
-                  <th className="p-3 text-center text-rose-700">المتبقي</th>
-                  <th className="p-3 text-right text-slate-700">ملاحظات</th>
-                  <th className="p-3 text-center text-slate-700">الهاتف</th>
+                  <th className="p-2 sm:p-3 text-center text-slate-700">#</th>
+                  <th className="p-2 sm:p-3 text-right text-slate-700 min-w-24">الاسم</th>
+                  <th className="p-2 sm:p-3 text-center text-slate-700">الدفعة</th>
+                  <th className="p-2 sm:p-3 text-right text-slate-700 min-w-20">المساق</th>
+                  <th className="p-2 sm:p-3 text-center text-slate-700">رسوم</th>
+                  <th className="p-2 sm:p-3 text-center text-emerald-700">مسدد</th>
+                  <th className="p-2 sm:p-3 text-center text-rose-700">متبقي</th>
                 </tr>
               </thead>
               <tbody>
                 {controls2025.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-6 text-center text-slate-400">
+                    <td colSpan={7} className="p-4 text-center text-slate-400 text-sm">
                       لا توجد بيانات
                     </td>
                   </tr>
                 ) : (
                   controls2025.rows.map((r: any, i: number) => (
                     <tr key={i} className="border-t border-slate-200 hover:bg-slate-50 transition">
-                      <td className="p-3 text-center text-slate-400 font-medium">{i + 1}</td>
-                      <td className="p-3 font-semibold text-slate-900">{r.name}</td>
-                      <td className="p-3 text-center text-slate-600">{r.batch || "—"}</td>
-                      <td className="p-3 text-slate-700">{r.specialty || "—"}</td>
-                      <td className="p-3 text-center font-mono text-slate-900">{fmt(r.fees)}</td>
-                      <td className="p-3 text-center font-mono text-emerald-700 font-bold">{fmt(r.totalPaid)}</td>
-                      <td className="p-3 text-center font-mono text-rose-700 font-bold">{fmt(r.remaining)}</td>
-                      <td className="p-3 text-xs text-slate-500 truncate max-w-xs">{r.notes || "—"}</td>
-                      <td className="p-3 text-center text-xs text-slate-600">{r.phone || "—"}</td>
+                      <td className="p-2 sm:p-3 text-center text-slate-400 font-medium">{i + 1}</td>
+                      <td className="p-2 sm:p-3 font-semibold text-slate-900 truncate">{r.name}</td>
+                      <td className="p-2 sm:p-3 text-center text-slate-600 text-xs">{r.batch || "—"}</td>
+                      <td className="p-2 sm:p-3 text-slate-700 text-xs truncate">{r.specialty || "—"}</td>
+                      <td className="p-2 sm:p-3 text-center font-mono text-slate-900 text-xs">{fmt(r.fees)}</td>
+                      <td className="p-2 sm:p-3 text-center font-mono text-emerald-700 font-bold text-xs">{fmt(r.totalPaid)}</td>
+                      <td className="p-2 sm:p-3 text-center font-mono text-rose-700 font-bold text-xs">{fmt(r.remaining)}</td>
                     </tr>
                   ))
                 )}
@@ -349,49 +335,47 @@ export default function InstallmentsTab() {
       </div>
 
       {/* ========== جدول 2026 ========== */}
-      <div className="bg-white shadow-md border border-slate-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-base font-bold text-white">📊 أقساط ورسوم 2026</h2>
-              <p className="text-xs text-purple-100 mt-1">الرصيد الافتتاحي = متبقي 2025 فقط</p>
+      <div className="bg-gradient-to-b from-purple-50 to-white shadow border border-purple-200 rounded-xl overflow-hidden">
+        <div className="bg-gradient-to-l from-purple-600 to-purple-700 px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex justify-between items-start gap-2 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-white">📊 أقساط 2026</h2>
+              <p className="text-xs text-purple-100 mt-1">العام الحالي</p>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => setNewPaymentModal(true)} className="px-4 py-2 bg-white text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-50 transition">
-                ➕ إضافة قسط
+            <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-end flex-shrink-0">
+              <button onClick={() => setNewPaymentModal(true)} className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white text-purple-700 rounded-lg text-xs sm:text-sm font-bold hover:bg-purple-50 transition active:scale-95">
+                ➕ إضافة
               </button>
-              <label className="px-4 py-2 bg-white text-purple-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-purple-50 transition">
-                📥 استيراد 2026
+              <label className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white text-purple-700 rounded-lg text-xs sm:text-sm font-bold cursor-pointer hover:bg-purple-50 transition active:scale-95">
+                📥 استيراد
                 <input type="file" accept=".xlsx,.xls,.csv" onChange={e => importFile(e, 2026)} className="hidden" />
               </label>
             </div>
           </div>
         </div>
-        <div className="p-4">
+        <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2026} columns={4} />
           <div className="overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-xs">
               <thead className="bg-slate-100 font-bold border-b border-slate-300 sticky top-0">
                 <tr>
-                  <th className="p-2 text-center text-slate-700 w-8">#</th>
-                  <th className="p-2 text-right text-slate-700 min-w-32">الاسم</th>
-                  <th className="p-2 text-center text-slate-700 w-16">الدفعة</th>
-                  <th className="p-2 text-right text-slate-700 min-w-24">المساق</th>
-                  <th className="p-2 text-center text-slate-700 w-16">رسوم 2026</th>
-                  <th className="p-2 text-center text-slate-700 w-16">متبقي 2025</th>
+                  <th className="p-1.5 sm:p-2 text-center text-slate-700">#</th>
+                  <th className="p-1.5 sm:p-2 text-right text-slate-700 min-w-20">الاسم</th>
+                  <th className="p-1.5 sm:p-2 text-center text-slate-700 w-14">دفعة</th>
+                  <th className="p-1.5 sm:p-2 text-center text-slate-700 w-12">2026</th>
+                  <th className="p-1.5 sm:p-2 text-center text-slate-700 w-12">2025</th>
                   {MONTHS_2026.map(m => (
-                    <th key={m} className="p-1.5 text-center text-slate-700 text-[10px] w-12 bg-slate-50">{m}</th>
+                    <th key={m} className="p-1 text-center text-slate-700 text-xs w-10 bg-slate-50 border-l border-slate-200 font-semibold">{m.substring(0, 3)}</th>
                   ))}
-                  <th className="p-2 text-center text-emerald-700 w-12">المسدد</th>
-                  <th className="p-2 text-center text-rose-700 w-12">الرصيد</th>
-                  <th className="p-2 text-center text-slate-700 w-12">الحالة</th>
-                  <th className="p-2 text-center text-slate-700 w-12">كشف</th>
+                  <th className="p-1.5 sm:p-2 text-center text-emerald-700 w-10">مسدد</th>
+                  <th className="p-1.5 sm:p-2 text-center text-rose-700 w-10">رصيد</th>
+                  <th className="p-1.5 sm:p-2 text-center text-slate-700 w-10">حالة</th>
                 </tr>
               </thead>
               <tbody>
                 {controls2026.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={14} className="p-6 text-center text-slate-400">
+                    <td colSpan={16} className="p-4 text-center text-slate-400 text-sm">
                       لا توجد بيانات
                     </td>
                   </tr>
@@ -400,38 +384,35 @@ export default function InstallmentsTab() {
                     const status = getStatusText(r.remaining);
                     return (
                       <tr key={i} className="border-t border-slate-200 hover:bg-slate-50 transition">
-                        <td className="p-2 text-center text-slate-400 font-medium">{i + 1}</td>
-                        <td className="p-2 font-semibold text-slate-900">{r.name}</td>
-                        <td className="p-2 text-center text-slate-600">{r.batch || "—"}</td>
-                        <td className="p-2 text-slate-700">{r.specialty || "—"}</td>
-                        <td className="p-2 text-center font-mono text-slate-900">{fmt(r.fees)}</td>
-                        <td className="p-2 text-center font-mono text-amber-700 font-bold">{fmt(r.prevDue || 0)}</td>
+                        <td className="p-1.5 sm:p-2 text-center text-slate-400 font-medium">{i + 1}</td>
+                        <td className="p-1.5 sm:p-2 font-semibold text-slate-900 truncate text-xs">{r.name}</td>
+                        <td className="p-1.5 sm:p-2 text-center text-slate-600 text-xs">{r.batch || "—"}</td>
+                        <td className="p-1.5 sm:p-2 text-center font-mono text-slate-900 text-xs">{fmt(r.fees)}</td>
+                        <td className="p-1.5 sm:p-2 text-center font-mono text-amber-700 font-bold text-xs">{fmt(r.prevDue || 0)}</td>
                         {MONTHS_2026.map(m => {
                           const paid = Number(r.payments?.[m]) || 0;
                           const cellId = `${r.name}-${m}`;
                           return (
                             <td
                               key={m}
-                              className="p-1.5 text-center relative bg-slate-50 hover:bg-slate-100 transition"
+                              className="p-1 text-center relative bg-slate-50 border-l border-slate-200 hover:bg-slate-100 transition cursor-pointer group"
                               onMouseEnter={() => setHoveredCell(cellId)}
                               onMouseLeave={() => setHoveredCell(null)}
                             >
                               {paid > 0 ? (
                                 <div className="relative">
-                                  <span className="font-mono text-emerald-700 font-bold cursor-pointer">
-                                    {fmt(paid)}
-                                  </span>
+                                  <span className="font-mono text-emerald-700 font-bold text-xs block">{fmt(paid).substring(0, 5)}</span>
                                   {hoveredCell === cellId && (
-                                    <div className="absolute -top-9 left-1/2 -translate-x-1/2 flex gap-1 bg-white shadow-lg border border-slate-300 rounded px-2 py-1 z-30 whitespace-nowrap">
+                                    <div className="absolute -top-7 right-0 flex gap-0.5 bg-white shadow-lg border border-slate-300 rounded px-1 py-1 z-30 whitespace-nowrap">
                                       <button
                                         onClick={() => { setEditPaymentModal({ row: r, month: m, amount: paid }); setEditAmount(String(paid)); setHoveredCell(null); }}
-                                        className="px-2 py-1 bg-blue-500 text-white rounded text-[8px] hover:bg-blue-600 font-bold transition"
+                                        className="px-1 py-0.5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 font-bold transition"
                                       >
                                         ✏️
                                       </button>
                                       <button
                                         onClick={() => { deletePayment(r, m); setHoveredCell(null); }}
-                                        className="px-2 py-1 bg-red-500 text-white rounded text-[8px] hover:bg-red-600 font-bold transition"
+                                        className="px-1 py-0.5 bg-red-500 text-white rounded text-xs hover:bg-red-600 font-bold transition"
                                       >
                                         🗑️
                                       </button>
@@ -441,8 +422,8 @@ export default function InstallmentsTab() {
                               ) : (
                                 <button
                                   onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }}
-                                  className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-100 rounded-full w-5 h-5 flex items-center justify-center font-bold transition duration-200 text-base"
-                                  title="إضافة قسط"
+                                  className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-100 rounded-full w-4 h-4 flex items-center justify-center font-bold transition text-xs"
+                                  title="إضافة"
                                 >
                                   +
                                 </button>
@@ -450,21 +431,12 @@ export default function InstallmentsTab() {
                             </td>
                           );
                         })}
-                        <td className="p-2 text-center font-mono text-emerald-700 font-bold">{fmt(r.totalPaid)}</td>
-                        <td className="p-2 text-center font-mono text-rose-700 font-bold">{fmt(r.remaining)}</td>
-                        <td className="p-2 text-center">
-                          <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${status.bg} ${status.color}`}>
+                        <td className="p-1.5 sm:p-2 text-center font-mono text-emerald-700 font-bold text-xs">{fmt(r.totalPaid)}</td>
+                        <td className="p-1.5 sm:p-2 text-center font-mono text-rose-700 font-bold text-xs">{fmt(r.remaining)}</td>
+                        <td className="p-1.5 sm:p-2 text-center">
+                          <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color} block truncate`}>
                             {status.text}
                           </span>
-                        </td>
-                        <td className="p-2 text-center">
-                          <button
-                            onClick={() => generatePreview(r.name)}
-                            className="px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-xs font-bold hover:bg-teal-100 transition"
-                            title="عرض الكشف"
-                          >
-                            🖨️
-                          </button>
                         </td>
                       </tr>
                     );
@@ -477,151 +449,124 @@ export default function InstallmentsTab() {
       </div>
 
       {/* ========== نافذة إضافة قسط جديد ========== */}
-      {newPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl" dir="rtl">
-            <h3 className="font-bold text-lg border-b pb-3 mb-4 text-slate-900">➕ إضافة قسط جديد - 2026</h3>
-            <form onSubmit={addNewPayment} className="space-y-4">
-              <div className="relative">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">اسم المتدرب *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="ابحث أو أدخل الاسم"
-                  value={newStudentName}
-                  onChange={e => handleNameChange(e.target.value)}
-                  onFocus={() => newStudentName.length > 0 && setShowSuggestions(true)}
-                  className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition bg-white"
-                />
-                {showSuggestions && nameSuggestions.length > 0 && (
-                  <div className="absolute top-full right-0 left-0 bg-white border border-slate-300 rounded-b-lg shadow-lg z-20 max-h-40 overflow-y-auto mt-1">
-                    {nameSuggestions.map((n, idx) => (
-                      <div key={idx} onClick={() => { setNewStudentName(n); setShowSuggestions(false); }} className="p-2.5 text-sm hover:bg-purple-50 cursor-pointer border-b last:border-0 transition">
-                        {n}
-                      </div>
-                    ))}
+      <Modal title="➕ إضافة قسط جديد - 2026" isOpen={newPaymentModal} onClose={() => setNewPaymentModal(false)}>
+        <form onSubmit={addNewPayment} className="space-y-3">
+          <div className="relative">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">اسم المتدرب *</label>
+            <input
+              type="text"
+              required
+              placeholder="ابحث أو أدخل الاسم"
+              value={newStudentName}
+              onChange={e => handleNameChange(e.target.value)}
+              onFocus={() => newStudentName.length > 0 && setShowSuggestions(true)}
+              className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition bg-white"
+            />
+            {showSuggestions && nameSuggestions.length > 0 && (
+              <div className="absolute top-full right-0 left-0 bg-white border border-slate-300 rounded-b-lg shadow-lg z-20 max-h-32 overflow-y-auto mt-1">
+                {nameSuggestions.map((n, idx) => (
+                  <div key={idx} onClick={() => { setNewStudentName(n); setShowSuggestions(false); }} className="p-2 text-sm hover:bg-purple-50 cursor-pointer border-b last:border-0 transition">
+                    {n}
                   </div>
-                )}
+                ))}
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ *</label>
-                <input type="number" required placeholder="0.00" value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition bg-white" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">الشهر *</label>
-                <select required value={newStudentMonth} onChange={e => setNewStudentMonth(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition bg-white">
-                  <option value="">-- اختر الشهر --</option>
-                  {MONTHS_2026.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <button type="button" onClick={() => setNewPaymentModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
-                  إلغاء
-                </button>
-                <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 transition">
-                  حفظ
-                </button>
-              </div>
-            </form>
+            )}
           </div>
-        </div>
-      )}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">المبلغ *</label>
+            <input type="number" required placeholder="0.00" value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">الشهر *</label>
+            <select required value={newStudentMonth} onChange={e => setNewStudentMonth(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white">
+              <option value="">-- اختر الشهر --</option>
+              {MONTHS_2026.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t">
+            <button type="button" onClick={() => setNewPaymentModal(false)} className="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
+              إلغاء
+            </button>
+            <button type="submit" className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 transition">
+              حفظ
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* ========== نافذة تسجيل دفعة ========== */}
-      {paymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl" dir="rtl">
-            <h3 className="font-bold text-lg border-b pb-3 mb-4 text-slate-900">💵 تسجيل دفعة</h3>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4">
+      <Modal title="💵 تسجيل دفعة" isOpen={!!paymentModal} onClose={() => setPaymentModal(null)}>
+        {paymentModal && (
+          <>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
               <p className="text-sm text-emerald-900"><b>المتدرب:</b> {paymentModal.row.name}</p>
               <p className="text-sm text-emerald-900"><b>الشهر:</b> {paymentModal.month}</p>
             </div>
-            <form onSubmit={addPayment} className="space-y-4">
+            <form onSubmit={addPayment} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ *</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">المبلغ *</label>
                 <input
                   type="number"
                   required
                   placeholder="0.00"
                   value={payAmount}
                   onChange={e => setPayAmount(e.target.value)}
-                  className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition bg-white"
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none bg-white"
                   autoFocus
                   min="0"
                   step="0.01"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <button type="button" onClick={() => setPaymentModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
+              <div className="flex justify-end gap-2 pt-3 border-t">
+                <button type="button" onClick={() => setPaymentModal(null)} className="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
                   إلغاء
                 </button>
-                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition">
+                <button type="submit" className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition">
                   حفظ
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
       {/* ========== نافذة تعديل قسط ========== */}
-      {editPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl" dir="rtl">
-            <h3 className="font-bold text-lg border-b pb-3 mb-4 text-slate-900">✏️ تعديل قسط</h3>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <p className="text-sm text-blue-900"><b>{editPaymentModal.row.name}</b></p>
+      <Modal title="✏️ تعديل قسط" isOpen={!!editPaymentModal} onClose={() => setEditPaymentModal(null)}>
+        {editPaymentModal && (
+          <>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm font-bold text-blue-900">{editPaymentModal.row.name}</p>
               <p className="text-sm text-blue-900">{editPaymentModal.month}</p>
             </div>
-            <form onSubmit={editPayment} className="space-y-4">
+            <form onSubmit={editPayment} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ الجديد *</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">المبلغ الجديد *</label>
                 <input
                   type="number"
                   required
                   placeholder="0.00"
                   value={editAmount}
                   onChange={e => setEditAmount(e.target.value)}
-                  className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition bg-white"
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
                   min="0"
                   step="0.01"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <button type="button" onClick={() => setEditPaymentModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
+              <div className="flex justify-end gap-2 pt-3 border-t">
+                <button type="button" onClick={() => setEditPaymentModal(null)} className="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
                   إلغاء
                 </button>
-                <button type="button" onClick={() => deletePayment(editPaymentModal.row, editPaymentModal.month)} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition">
+                <button type="button" onClick={() => deletePayment(editPaymentModal.row, editPaymentModal.month)} className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition">
                   🗑️ حذف
                 </button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition">
+                <button type="submit" className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition">
                   حفظ
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* ========== نافذة المعاينة والطباعة ========== */}
-      {previewModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl" dir="rtl">
-            <div className="flex justify-between items-center p-4 border-b bg-gradient-to-r from-slate-100 to-slate-50">
-              <h3 className="font-bold text-sm text-slate-900">📊 كشف حساب - {previewModal.name}</h3>
-              <div className="flex gap-2">
-                <button onClick={() => { const w = window.open('', '', 'width=1000,height=700'); if (w) { w.document.write(previewModal.html); w.document.close(); setTimeout(() => w.print(), 500); } }} className="px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-bold hover:bg-teal-700 transition">
-                  🖨️ طباعة
-                </button>
-                <button onClick={() => setPreviewModal(null)} className="px-3 py-1.5 bg-slate-500 text-white rounded-lg text-xs font-bold hover:bg-slate-600 transition">
-                  ✕ إغلاق
-                </button>
-              </div>
-            </div>
-            <iframe srcDoc={previewModal.html} className="flex-1 w-full border-0 rounded-b-xl" title="معاينة الكشف" />
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }
