@@ -4,10 +4,10 @@ import { fmt, today } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
-import { X, ChevronDown } from "lucide-react";
+import { X, ChevronDown, Printer } from "lucide-react";
 
-const MONTHS_2025 = ["يونيو 2024", "يوليو 2024", "أغسطس 2024", "مارس 2025", "ابريل 2025", "مايو 2025", "يونيو 2025", "يوليو 2025", "أغسطس 2025", "سبتمبر"];
-const MONTHS_2026 = ["يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", "يوليو", "اغسطس", "سبتمبر", "اكتوبر", "نوفمبر", "ديسمبر"];
+const MONTHS_2025 = ["يونيو 2024", "يوليو 2024", "أغسطس 2024", "مارس 2025", "ابريل 2025", "مايو 2025", "يونيو 2025", "يوليو 2025", "أغسطس 2025", "سبتمبر 2025", "اكتوبر 2025", "نوفمبر 2025", "ديسمبر 2025"];
+const MONTHS_2026 = ["يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", "يوليو", "اغسطس", "سبتمبر", "اكتوبر", "نوفمبر", "د��سمبر"];
 
 const cleanNumber = (val: any): number => {
   if (!val) return 0;
@@ -132,7 +132,7 @@ export default function InstallmentsTab() {
     if (!newStudentName || !newStudentAmount || !newStudentMonth) return toast.error("يرجى إدخال جميع البيانات");
 
     const amount = Number(newStudentAmount) || 0;
-    if (amount <= 0) return toast.error("يرجى إدخال ��بلغ صحيح");
+    if (amount <= 0) return toast.error("يرجى إدخال مبلغ صحيح");
 
     const list = [...(installments || [])];
     const existing = list.find((s: any) => s.name === newStudentName);
@@ -264,6 +264,116 @@ export default function InstallmentsTab() {
     return { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
   };
 
+  const generateAccountStatement = (row: any, year: number) => {
+    const months = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+    const today_date = today();
+    
+    let html = `
+      <html dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { font-family: 'Arial', sans-serif; margin: 20px; text-align: right; background: #f5f5f5; }
+            .container { background: white; padding: 30px; border-radius: 8px; max-width: 800px; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+            .header h1 { margin: 0; color: #333; }
+            .header p { margin: 5px 0; color: #666; font-size: 14px; }
+            .info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 4px; }
+            .info-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+            .info-item:last-child { border-bottom: none; }
+            .info-label { font-weight: bold; color: #333; }
+            .info-value { color: #666; }
+            .table { width: 100%; border-collapse: collapse; margin: 30px 0; }
+            .table th { background: #f5f5f5; padding: 12px; text-align: right; border-bottom: 2px solid #ddd; font-weight: bold; }
+            .table td { padding: 10px 12px; border-bottom: 1px solid #ddd; text-align: center; }
+            .table tr:nth-child(even) { background: #f9f9f9; }
+            .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #ddd; padding-top: 15px; }
+            .positive { color: #27ae60; font-weight: bold; }
+            .negative { color: #e74c3c; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>كشف حساب متدرب</h1>
+              <p>تاريخ الطباعة: ${today_date}</p>
+            </div>
+            
+            <div class="info">
+              <div>
+                <div class="info-item">
+                  <span class="info-label">الاسم:</span>
+                  <span class="info-value">${row.name}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">ال��فعة:</span>
+                  <span class="info-value">${row.batch || "—"}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">المساق:</span>
+                  <span class="info-value">${row.specialty || "—"}</span>
+                </div>
+              </div>
+              <div>
+                <div class="info-item">
+                  <span class="info-label">الرسوم:</span>
+                  <span class="info-value">${fmt(row.fees)}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">المسدد:</span>
+                  <span class="info-value positive">${fmt(row.totalPaid)}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">المتبقي:</span>
+                  <span class="info-value ${row.remaining > 0 ? 'negative' : 'positive'}">${fmt(row.remaining)}</span>
+                </div>
+              </div>
+            </div>
+            
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>الشهر</th>
+                  <th>المبلغ</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${months.map((month, idx) => {
+                  const paid = Number(row.payments?.[month]) || 0;
+                  return `
+                    <tr>
+                      <td>${idx + 1}</td>
+                      <td>${month}</td>
+                      <td>${paid > 0 ? `<span class="positive">${fmt(paid)}</span>` : "—"}</td>
+                    </tr>
+                  `;
+                }).join("")}
+              </tbody>
+            </table>
+            
+            <div class="footer">
+              <p>تم إنشاء هذا الكشف بواسطة نظام إدارة الأقساط</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+    return html;
+  };
+
+  const printStatement = (row: any, year: number) => {
+    const html = generateAccountStatement(row, year);
+    const printWindow = window.open("", "", "width=900,height=700");
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 100);
+    }
+  };
+
   const stats2025 = [
     { label: "رسوم الدراسة", value: fmt(totals2025.fees), bgClass: "bg-slate-50", borderClass: "border-slate-200" },
     { label: "المسدد", value: fmt(totals2025.paid), bgClass: "bg-emerald-50", borderClass: "border-emerald-200" },
@@ -278,9 +388,9 @@ export default function InstallmentsTab() {
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-0 w-full" dir="rtl">
+    <div className="w-full space-y-4 sm:space-y-6 p-0" dir="rtl">
       {/* ========== جدول 2025 ========== */}
-      <div className="bg-gradient-to-b from-teal-50 to-white shadow border border-teal-200 rounded-xl overflow-hidden">
+      <div className="w-full bg-gradient-to-b from-teal-50 to-white shadow border border-teal-200 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-teal-600 to-teal-700 px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex justify-between items-start gap-2 flex-wrap">
             <div className="flex-1 min-w-0">
@@ -293,9 +403,9 @@ export default function InstallmentsTab() {
             </label>
           </div>
         </div>
-        <div className="p-3 sm:p-4">
+        <div className="w-full p-3 sm:p-4">
           <StatsGrid stats={stats2025} columns={3} />
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-xs sm:text-sm">
               <thead className="bg-slate-100 font-bold border-b border-slate-300 sticky top-0">
                 <tr>
@@ -306,12 +416,13 @@ export default function InstallmentsTab() {
                   <th className="p-2 sm:p-3 text-center text-slate-700">رسوم</th>
                   <th className="p-2 sm:p-3 text-center text-emerald-700">مسدد</th>
                   <th className="p-2 sm:p-3 text-center text-rose-700">متبقي</th>
+                  <th className="p-2 sm:p-3 text-center text-slate-700">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {controls2025.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-4 text-center text-slate-400 text-sm">
+                    <td colSpan={8} className="p-4 text-center text-slate-400 text-sm">
                       لا توجد بيانات
                     </td>
                   </tr>
@@ -325,6 +436,16 @@ export default function InstallmentsTab() {
                       <td className="p-2 sm:p-3 text-center font-mono text-slate-900 text-xs">{fmt(r.fees)}</td>
                       <td className="p-2 sm:p-3 text-center font-mono text-emerald-700 font-bold text-xs">{fmt(r.totalPaid)}</td>
                       <td className="p-2 sm:p-3 text-center font-mono text-rose-700 font-bold text-xs">{fmt(r.remaining)}</td>
+                      <td className="p-2 sm:p-3 text-center">
+                        <button
+                          onClick={() => printStatement(r, 2025)}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition"
+                          title="طباعة كشف الحساب"
+                        >
+                          <Printer className="w-3 h-3" />
+                          <span className="hidden sm:inline">طباعة</span>
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -335,7 +456,7 @@ export default function InstallmentsTab() {
       </div>
 
       {/* ========== جدول 2026 ========== */}
-      <div className="bg-gradient-to-b from-purple-50 to-white shadow border border-purple-200 rounded-xl overflow-hidden">
+      <div className="w-full bg-gradient-to-b from-purple-50 to-white shadow border border-purple-200 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-purple-600 to-purple-700 px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex justify-between items-start gap-2 flex-wrap">
             <div className="flex-1 min-w-0">
@@ -353,9 +474,9 @@ export default function InstallmentsTab() {
             </div>
           </div>
         </div>
-        <div className="p-3 sm:p-4">
+        <div className="w-full p-3 sm:p-4">
           <StatsGrid stats={stats2026} columns={4} />
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-xs">
               <thead className="bg-slate-100 font-bold border-b border-slate-300 sticky top-0">
                 <tr>
@@ -370,12 +491,13 @@ export default function InstallmentsTab() {
                   <th className="p-1.5 sm:p-2 text-center text-emerald-700 w-10">مسدد</th>
                   <th className="p-1.5 sm:p-2 text-center text-rose-700 w-10">رصيد</th>
                   <th className="p-1.5 sm:p-2 text-center text-slate-700 w-10">حالة</th>
+                  <th className="p-1.5 sm:p-2 text-center text-slate-700 w-10">إجراء</th>
                 </tr>
               </thead>
               <tbody>
                 {controls2026.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={16} className="p-4 text-center text-slate-400 text-sm">
+                    <td colSpan={17} className="p-4 text-center text-slate-400 text-sm">
                       لا توجد بيانات
                     </td>
                   </tr>
@@ -438,6 +560,15 @@ export default function InstallmentsTab() {
                             {status.text}
                           </span>
                         </td>
+                        <td className="p-1.5 sm:p-2 text-center">
+                          <button
+                            onClick={() => printStatement(r, 2026)}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition"
+                            title="طباعة كشف الحساب"
+                          >
+                            <Printer className="w-3 h-3" />
+                          </button>
+                        </td>
                       </tr>
                     );
                   })
@@ -450,7 +581,7 @@ export default function InstallmentsTab() {
 
       {/* ========== نافذة إضافة قسط جديد ========== */}
       <Modal title="➕ إضافة قسط جديد - 2026" isOpen={newPaymentModal} onClose={() => setNewPaymentModal(false)}>
-        <form onSubmit={addNewPayment} className="space-y-3">
+        <form onSubmit={addNewPayment} className="w-full space-y-3">
           <div className="relative">
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">اسم المتدرب *</label>
             <input
@@ -474,7 +605,7 @@ export default function InstallmentsTab() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">المبلغ *</label>
-            <input type="number" required placeholder="0.00" value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white" />
+            <input type="number" required placeholder="0.00" value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white" step="0.01" min="0" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">الشهر *</label>
@@ -502,7 +633,7 @@ export default function InstallmentsTab() {
               <p className="text-sm text-emerald-900"><b>المتدرب:</b> {paymentModal.row.name}</p>
               <p className="text-sm text-emerald-900"><b>الشهر:</b> {paymentModal.month}</p>
             </div>
-            <form onSubmit={addPayment} className="space-y-3">
+            <form onSubmit={addPayment} className="w-full space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">المبلغ *</label>
                 <input
@@ -538,7 +669,7 @@ export default function InstallmentsTab() {
               <p className="text-sm font-bold text-blue-900">{editPaymentModal.row.name}</p>
               <p className="text-sm text-blue-900">{editPaymentModal.month}</p>
             </div>
-            <form onSubmit={editPayment} className="space-y-3">
+            <form onSubmit={editPayment} className="w-full space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">المبلغ الجديد *</label>
                 <input
