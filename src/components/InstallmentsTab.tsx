@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useStore, INSTALLMENT_MONTHS } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import { fmt, today } from "@/lib/format";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -8,1197 +8,325 @@ import { toast } from "sonner";
 import EditModal, { type EditField } from "./EditModal";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 
-// الأشهر المحددة لعام 2025
-const MONTHS_2025 = [
-  "يونيو 2024", "يوليو 2024", "أغسطس 2024", 
-  "مارس 2025", "ابريل 2025", "مايو 2025", 
-  "يونيو 2025", "يوليو 2025", "أغسطس 2025", 
-  "سبتمبر 2025", "أكتوبر 2025", "نوفمبر2025", "ديسمبر2025"
-];
+const MONTHS_2025 = ["يونيو 2024", "يوليو 2024", "أغسطس 2024", "مارس 2025", "ابريل 2025", "مايو 2025", "يونيو 2025", "يوليو 2025", "أغسطس 2025", "سبتمبر 2025", "أكتوبر 2025", "نوفمبر2025", "ديسمبر2025"];
+const MONTHS_2026 = ["يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", "يوليو", "اغسطس", "سبتمبر", "اكتوبر ", "نوفمبر", "ديسمبر"];
+const BASE_COLS = [{ key: "name", label: "الاسم" }, { key: "batch", label: "الدفعة" }, { key: "specialty", label: "المساق" }, { key: "fees", label: "مبلغ الرسوم" }, { key: "totalPaid", label: "الإجمالي المسدد" }, { key: "remaining", label: "المتبقي" }, { key: "notes", label: "ملاحظات" }, { key: "phone", label: "رقم الهاتف" }];
 
-// شهور عام 2026
-const MONTHS_2026_CLEAN = [
-  "يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", 
-  "يوليو", "اغسطس", "سبتمبر", "اكتوبر ", "نوفمبر", "ديسمبر"
-];
+const cleanNumber = (val: any): number => {
+  if (!val) return 0;
+  const str = String(val).replace(/[,،\s\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "").trim();
+  return Number(str) || 0;
+};
 
-const BASE_COLS = [
-  { key: "name", label: "الاسم" },
-  { key: "batch", label: "الدفعة" },
-  { key: "specialty", label: "المساق" },
-  { key: "fees", label: "مبلغ الرسوم" },
-  { key: "totalPaid", label: "الإجمالي المسدد" },
-  { key: "remaining", label: "المتبقي" },
-  { key: "notes", label: "ملاحظات" },
-  { key: "phone", label: "رقم الهاتف" },
-];
-
-// دالة مساعدة لتحميل خط Google Fonts إلى jsPDF
-async function loadGoogleFont(pdf: jsPDF): Promise<boolean> {
-  try {
-    const fontUrl = 'https://fonts.gstatic.com/s/cairo/v28/SLXVc1nY6HkvangtZmpcWmhzfH5lWWgcRiySJg.ttf';
-    const response = await fetch(fontUrl);
-    if (!response.ok) throw new Error("فشل تحميل الخط");
-    
-    const fontBuffer = await response.arrayBuffer();
-    const fontBase64 = arrayBufferToBase64(fontBuffer);
-    
-    pdf.addFileToVFS('Cairo-Regular.ttf', fontBase64);
-    pdf.addFont('Cairo-Regular.ttf', 'Cairo', 'normal');
-    
-    return true;
-  } catch (error) {
-    console.error('خطأ في تحميل الخط:', error);
-    return false;
-  }
-}
-
-// دالة مساعدة لتحويل ArrayBuffer إلى base64
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
+const toBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-// دالة حساب المبلغ المستحق للشهر
-function calculateMonthlyRequired(totalFees: number, prevDue: number = 0, totalMonths: number): number {
-  const totalAmount = totalFees + prevDue;
-  return Math.round(totalAmount / totalMonths);
-}
-
-// دالة حساب الحالة (له/عليه) للشهر
-function calculateMonthStatus(
-  paidAmount: number, 
-  requiredAmount: number,
-  accumulatedPaid: number,
-  accumulatedRequired: number
-): { status: 'له' | 'عليه' | 'متوازن', amount: number } {
-  const difference = paidAmount - requiredAmount;
-  
-  if (Math.abs(difference) < 1) {
-    return { status: 'متوازن', amount: 0 };
-  } else if (difference > 0) {
-    return { status: 'له', amount: difference };
-  } else {
-    return { status: 'عليه', amount: Math.abs(difference) };
-  }
-}
+  return btoa(bytes.reduce((data, byte) => data + String.fromCharCode(byte), ''));
+};
 
 export default function InstallmentsTab() {
-  const { 
-    installments,       
-    installments2025,   
-  } = useStore() as any;
-
+  const { installments, installments2025 } = useStore() as any;
   const [editingRow, setEditingRow] = useState<{ row: any; year: 2025 | 2026 } | null>(null);
   const [paymentModal, setPaymentModal] = useState<{ row: any; year: 2025 | 2026 } | null>(null);
-  const [payAmount, setPayAmount] = useState<string>("");
-  const [payMonth, setPayMonth] = useState<string>("");
-  
-  // حالة نافذة المعاينة
-  const [previewModal, setPreviewModal] = useState<{
-    studentName: string;
-    htmlContent: string;
-  } | null>(null);
-  
-  // حالة تحميل PDF
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState<{
-    studentName: string;
-    type: 'preview' | 'download';
-  } | null>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMonth, setPayMonth] = useState("");
+  const [previewModal, setPreviewModal] = useState<{ name: string; html: string } | null>(null);
 
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining", "notes", "phone"]);
   const controls2025 = useTableControls(installments2025 || [], BASE_COLS.map(c => c.key));
 
-  // دالة تطهير الأرقام من الفواصل والفراغات المخفية
-  const superCleanNumber = (val: any): number => {
-    if (val === undefined || val === null) return 0;
-    let str = String(val);
-    str = str.replace(/,/g, "").replace(/\s+/g, "").replace(/[\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "").trim();
-    return Number(str) || 0;
-  };
+  const totals = (list: any[]) => ({
+    fees: list.reduce((s, r) => s + cleanNumber(r.fees), 0),
+    paid: list.reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
+    remaining: list.reduce((s, r) => s + cleanNumber(r.remaining), 0),
+    prevDue: list.reduce((s, r) => s + cleanNumber(r.prevDue), 0),
+  });
 
-  const cleanKey = (str: any): string => {
-    if (!str) return "";
-    return String(str).replace(/\s+/g, "").replace(/[\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "").trim();
-  };
+  const totals2025 = useMemo(() => totals(controls2025.rows), [controls2025.rows]);
+  const totals2026 = useMemo(() => totals(controls2026.rows), [controls2026.rows]);
 
-  const totals2025 = useMemo(() => {
-    const list = controls2025.rows || [];
-    return {
-      fees: list.reduce((s, r) => s + superCleanNumber(r.fees), 0),
-      paid: list.reduce((s, r) => s + superCleanNumber(r.totalPaid), 0),
-      remaining: list.reduce((s, r) => s + superCleanNumber(r.remaining), 0),
-    };
-  }, [controls2025.rows]);
-
-  const totals2026 = useMemo(() => {
-    const list = controls2026.rows || [];
-    return {
-      fees: list.reduce((s, r) => s + superCleanNumber(r.fees), 0),
-      prevDue: list.reduce((s, r) => s + superCleanNumber(r.prevDue), 0),
-      paid: list.reduce((s, r) => s + superCleanNumber(r.totalPaid), 0),
-      remaining: list.reduce((s, r) => s + superCleanNumber(r.remaining), 0),
-    };
-  }, [controls2026.rows]);
-
-  const handleAddManualPayment = (e: React.FormEvent) => {
+  const addPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paymentModal || !payAmount || !payMonth) {
-      toast.error("يرجى إدخال مبلغ القسط واختيار الشهر");
-      return;
-    }
-
-    const amountNum = Number(payAmount) || 0;
+    if (!paymentModal || !payAmount || !payMonth) return toast.error("يرجى إدخال المبلغ واختيار الشهر");
+    
+    const amount = Number(payAmount) || 0;
     const is2025 = paymentModal.year === 2025;
-    const currentList = is2025 ? (installments2025 || []) : (installments || []);
+    const list = is2025 ? installments2025 : installments;
+    const months = is2025 ? MONTHS_2025 : MONTHS_2026;
 
-    const updatedList = currentList.map((student: any) => {
-      if (student.name === paymentModal.row.name) {
-        const updatedPayments = { ...student.payments };
-        updatedPayments[payMonth] = (Number(updatedPayments[payMonth]) || 0) + amountNum;
-
-        let newTotalPaid = 0;
-        const targetMonths = is2025 ? MONTHS_2025 : MONTHS_2026_CLEAN;
-        targetMonths.forEach(m => {
-          newTotalPaid += Number(updatedPayments[m]) || 0;
-        });
-
-        let newRemaining = 0;
-        if (is2025) {
-          newRemaining = superCleanNumber(student.fees) - newTotalPaid;
-        } else {
-          newRemaining = (superCleanNumber(student.fees) + superCleanNumber(student.prevDue)) - newTotalPaid;
-        }
-
-        return {
-          ...student,
-          payments: updatedPayments,
-          totalPaid: newTotalPaid,
-          remaining: newRemaining < 0 ? 0 : newRemaining
-        };
-      }
-      return student;
+    const updated = list.map((s: any) => {
+      if (s.name !== paymentModal.row.name) return s;
+      const payments = { ...s.payments, [payMonth]: (Number(s.payments[payMonth]) || 0) + amount };
+      const totalPaid = months.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
+      const remaining = is2025 ? cleanNumber(s.fees) - totalPaid : (cleanNumber(s.fees) + cleanNumber(s.prevDue)) - totalPaid;
+      return { ...s, payments, totalPaid, remaining: Math.max(0, remaining) };
     });
 
-    if (is2025) {
-      useStore.setState({ installments2025: updatedList });
-    } else {
-      useStore.setState({ installments: updatedList });
-    }
-
-    toast.success(`تم تسجيل قسط بقيمة ${fmt(amountNum)} لشهر (${payMonth}) بنجاح`);
-    setPaymentModal(null);
-    setPayAmount("");
-    setPayMonth("");
+    useStore.setState(is2025 ? { installments2025: updated } : { installments: updated });
+    toast.success(`تم تسجيل قسط ${fmt(amount)} لشهر ${payMonth}`);
+    setPaymentModal(null); setPayAmount(""); setPayMonth("");
   };
 
-  // ================== استيراد ملف 2025 ==================
-  const handleImport2025 = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const importFile = (e: React.ChangeEvent<HTMLInputElement>, year: 2025 | 2026) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[];
-        
-        const headerIndex = rows.findIndex(row => row && row.some((cell: any) => {
-          const cStr = String(cell);
-          return cStr.includes("متدرب") || cStr.includes("الاسم") || cStr.includes("المساق");
-        }));
-        
-        if (headerIndex === -1) {
-          toast.error("لم يتم العثور على سطر العناوين في ملف 2025");
-          return;
-        }
+        const wb = XLSX.read(new Uint8Array(evt.target?.result as ArrayBuffer), { type: "array" });
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" }) as any[];
+        const headerIdx = rows.findIndex(r => r?.some((c: any) => ["متدرب", "الاسم", "المساق"].some(k => String(c).includes(k))));
+        if (headerIdx === -1) return toast.error("لم يتم العثور على العناوين");
 
-        const rawHeaders = rows[headerIndex].map((h: any) => String(h || "").trim());
-        const dataRows = rows.slice(headerIndex + 1);
-
-        const cleanJson = dataRows
-          .map(row => {
-            const rowData: any = {};
-            rawHeaders.forEach((header, index) => {
-              if (header) rowData[header] = row[index];
-            });
-            return rowData;
+        const headers = rows[headerIdx].map((h: any) => String(h || "").trim());
+        const data = rows.slice(headerIdx + 1)
+          .map(r => headers.reduce((obj: any, h, i) => (obj[h] = r[i], obj), {}))
+          .filter(r => {
+            const name = String(Object.values(r).find((v: any) => String(v).includes("اسم") || String(v).includes("الاسم")) || "").trim();
+            return name && name !== "الإجمالي" && !name.includes("كشف");
           })
-          .filter(row => {
-            const actualNameKey = Object.keys(row).find(k => k.includes("اسم") || k.includes("الاسم"));
-            const nameVal = actualNameKey ? String(row[actualNameKey]).trim() : "";
-            return nameVal !== "" && nameVal !== "الإجمالي" && !nameVal.includes("كشف");
-          })
-          .map(row => {
-            const findVal = (keywords: string[]) => {
-              const foundKey = Object.keys(row).find(k => keywords.some(kw => k.includes(kw)));
-              return foundKey ? row[foundKey] : "";
-            };
-
-            const name = String(findVal(["اسم", "الاسم"])).trim();
-            const batch = String(findVal(["دفعة", "الدفعة"])).trim();
-            const specialty = String(findVal(["مساق", "المساق"])).trim();
-            const fees = superCleanNumber(findVal(["رسوم", "الرسوم", "مبلغ"]));
-            const totalPaidFromExcel = superCleanNumber(findVal(["المسدد", "الإجمالي", "المدفوع"]));
-            const remaining = superCleanNumber(findVal(["المتبقي"]));
-            const notes = String(findVal(["ملاحظات"])).trim();
-            const phone = String(findVal(["هاتف", "تلفون"])).trim();
-
-            const payments = MONTHS_2025.reduce((acc, m) => {
-              const exactMonthKey = Object.keys(row).find(k => cleanKey(k) === cleanKey(m));
-              acc[m] = exactMonthKey ? superCleanNumber(row[exactMonthKey]) : 0;
+          .map(r => {
+            const find = (keys: string[]) => Object.entries(r).find(([k]) => keys.some(kw => k.includes(kw)))?.[1] || "";
+            const name = String(find(["اسم", "الاسم"])).trim();
+            const batch = String(find(["دفعة", "الدفعة"])).trim();
+            const specialty = String(find(["مساق", "المساق"])).trim();
+            const fees = cleanNumber(find(["رسوم", "مبلغ"]));
+            const prevDue = year === 2026 ? cleanNumber(find(["2025", "السابق", "متبقي"])) : 0;
+            const totalPaid = cleanNumber(find(["المسدد", "الإجمالي", "المدفوع"]));
+            const remaining = cleanNumber(find(["المتبقي"]));
+            const notes = String(find(["ملاحظات"])).trim();
+            const phone = String(find(["هاتف", "تلفون"])).trim();
+            const months = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+            const payments = months.reduce((acc: any, m) => {
+              const key = Object.keys(r).find(k => String(k).replace(/\s/g, "") === m.replace(/\s/g, ""));
+              acc[m] = key ? cleanNumber(r[key]) : 0;
               return acc;
-            }, {} as any);
-
-            let totalPaid = totalPaidFromExcel;
-            if (!totalPaid) {
-              MONTHS_2025.forEach(m => { totalPaid += payments[m]; });
-            }
-
-            return { name, batch, specialty, fees, totalPaid, remaining, notes, phone, payments };
+            }, {});
+            return { name, batch, specialty, fees, ...(year === 2026 && { prevDue }), totalPaid, remaining, notes, phone, payments };
           });
 
-        if (cleanJson.length === 0) {
-          toast.error("لم يتم استيراد أي بيانات، يرجى التحقق من صياغة ملف 2025");
-          return;
-        }
-
-        useStore.setState({ installments2025: cleanJson });
-        toast.success(`تم استيراد ${cleanJson.length} سجل بنجاح لعام 2025م`);
-      } catch (error) {
-        toast.error("حدث خطأ أثناء معالجة ملف 2025");
-      }
+        useStore.setState(year === 2025 ? { installments2025: data } : { installments: data });
+        toast.success(`تم استيراد ${data.length} سجل لعام ${year}`);
+      } catch { toast.error("خطأ في معالجة الملف"); }
     };
     reader.readAsArrayBuffer(file);
     e.target.value = "";
   };
 
-  // ================== استيراد ملف 2026 ==================
-  const handleImport2026 = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[];
-        
-        const headerIndex = rows.findIndex(row => row && row.some((cell: any) => {
-          const cStr = String(cell);
-          return cStr.includes("متدرب") || cStr.includes("الاسم") || cStr.includes("المساق");
-        }));
-        
-        if (headerIndex === -1) {
-          toast.error("لم يتم العثور على سطر العناوين في ملف 2026");
-          return;
-        }
+  const generatePreview = (name: string) => {
+    const r2025 = (installments2025 || []).find((i: any) => i.name === name);
+    const r2026 = (installments || []).find((i: any) => i.name === name);
+    const monthlyRequired = (total: number, months = 12) => Math.round(total / months);
 
-        const rawHeaders = rows[headerIndex].map((h: any) => String(h || "").trim());
-        const dataRows = rows.slice(headerIndex + 1);
+    const buildTable = (r: any, months: string[], year: string, color: string) => {
+      if (!r) return "";
+      const total = cleanNumber(r.fees) + (year === "2026" ? cleanNumber(r.prevDue) : 0);
+      const monthly = monthlyRequired(total);
+      let accPaid = 0, accReq = 0;
+      
+      const rows = months.map(m => {
+        const paid = Number(r.payments?.[m]) || 0;
+        accPaid += paid; accReq += monthly;
+        const diff = paid - monthly;
+        const status = Math.abs(diff) < 1 ? ["متوازن", "#6b7280", "#f3f4f6"] : diff > 0 ? ["💰 له", "#059669", "#d1fae5"] : ["⚠️ عليه", "#dc2626", "#fee2e2"];
+        return `<tr><td>${m}</td><td>${fmt(monthly)}</td><td>${fmt(paid)}</td><td><span style="background:${status[2]};color:${status[1]};padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700">${status[0]}</span></td><td style="color:${status[1]}">${fmt(Math.abs(diff))}</td></tr>`;
+      }).join("");
 
-        const cleanJson = dataRows
-          .map(row => {
-            const rowData: any = {};
-            rawHeaders.forEach((header, index) => {
-              if (header) rowData[header] = row[index];
-            });
-            return rowData;
-          })
-          .filter(row => {
-            const actualNameKey = Object.keys(row).find(k => k.includes("اسم") || k.includes("الاسم"));
-            const nameVal = actualNameKey ? String(row[actualNameKey]).trim() : "";
-            return nameVal !== "" && nameVal !== "الإجمالي" && !nameVal.includes("كشف");
-          })
-          .map(row => {
-            const findVal = (keywords: string[]) => {
-              const foundKey = Object.keys(row).find(k => keywords.some(kw => k.includes(kw)));
-              return foundKey ? row[foundKey] : "";
-            };
-
-            const name = String(findVal(["اسم", "الاسم"])).trim();
-            const batch = String(findVal(["دفعة", "الدفعة"])).trim();
-            const specialty = String(findVal(["مساق", "المساق"])).trim();
-            const fees = superCleanNumber(findVal(["رسوم", "الرسوم", "مبلغ الرسوم"]));
-            const prevDue = superCleanNumber(findVal(["2025", "السابق", "متبقي عليهم"]));
-            const totalPaid = superCleanNumber(findVal(["المسدد", "الإجمالي"]));
-            const remaining = superCleanNumber(findVal(["المتبقي"]));
-            const notes = String(findVal(["ملاحظات"])).trim();
-            const phone = String(findVal(["هاتف", "تلفون"])).trim();
-
-            const payments = MONTHS_2026_CLEAN.reduce((acc, m) => {
-              const exactMonthKey = Object.keys(row).find(k => cleanKey(k) === cleanKey(m));
-              acc[m] = exactMonthKey ? superCleanNumber(row[exactMonthKey]) : 0;
-              return acc;
-            }, {} as any);
-
-            return { name, batch, specialty, fees, prevDue, totalPaid, remaining, notes, phone, payments };
-          });
-
-        if (cleanJson.length === 0) {
-          toast.error("لم يتم استيراد أي بيانات، يرجى التحقق من صياغة ملف 2026");
-          return;
-        }
-
-        useStore.setState({ installments: cleanJson });
-        toast.success(`تم استيراد ${cleanJson.length} سجل بنجاح لعام 2026م`);
-      } catch (error) {
-        toast.error("حدث خطأ أثناء معالجة ملف 2026");
-      }
+      return `
+        <div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden">
+          <div style="background:${color};color:white;padding:12px;text-align:center;font-size:18px;font-weight:700">📅 ${year}</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;background:#f8fafc">
+            <div style="text-align:center"><small>الإجمالي</small><br><b>${fmt(total)}</b></div>
+            <div style="text-align:center"><small>القسط الشهري</small><br><b>${fmt(monthly)}</b></div>
+            <div style="text-align:center"><small>المتبقي</small><br><b style="color:#dc2626">${fmt(r.remaining)}</b></div>
+          </div>
+          <table width="100%" style="border-collapse:collapse">
+            <thead><tr style="background:#f1f5f9">${["الشهر","القسط","المدفوع","الحالة","الفرق"].map(h => `<th style="padding:10px">${h}</th>`).join("")}</tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
     };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
+
+    const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet"><style>
+      body{font-family:'Cairo',sans-serif;background:#f0f9ff;padding:20px;direction:rtl}.container{max-width:1200px;margin:0 auto;background:white;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.08);overflow:hidden}
+      .header{background:linear-gradient(135deg,#0891b2,#0e7490);color:white;padding:25px;text-align:center}.header h1{font-size:24px;margin:0}.header h2{font-size:14px;opacity:0.9}
+      .info{background:#f8fafc;padding:15px 25px;display:flex;justify-content:space-between;border-bottom:2px solid #e2e8f0}
+      .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px}
+      .btn{padding:10px 25px;border:none;border-radius:8px;font-family:'Cairo';font-size:14px;font-weight:700;cursor:pointer;color:white;margin:0 5px}
+      @media print{body{background:white;padding:0}.container{box-shadow:none}}</style></head><body><div class="container">
+      <div class="header"><h1>المجلس اليمني للاختصاصات الطبية</h1><h2>كشف الأقساط الشهرية التفصيلي</h2></div>
+      <div class="info"><b>👨‍⚕️ ${name}</b><span>📅 ${today()}</span></div>
+      <div class="grid">${buildTable(r2025, MONTHS_2025, "2025", "#0891b2")}${buildTable(r2026, MONTHS_2026, "2026", "#7c3aed")}</div>
+      <div style="text-align:center;padding:20px;background:#f8fafc">
+        <button class="btn" style="background:#0891b2" onclick="window.print()">🖨️ طباعة</button>
+        <button class="btn" style="background:#7c3aed" onclick="window.parent.postMessage('download','*')">📥 PDF</button>
+      </div></div></body></html>`;
+
+    setPreviewModal({ name, html });
   };
 
-  // ================== إنشاء HTML للمعاينة بالتنسيق الجديد ==================
-  const generatePreviewHTML = (studentName: string): string => {
-    const r2025 = (installments2025 || []).find((i: any) => i.name === studentName);
-    const r2026 = (installments || []).find((i: any) => i.name === studentName);
-
-    // تجميع بيانات 2025
-    let months2025HTML = '';
-    let totalRequired2025 = 0;
-    let totalPaid2025 = 0;
-    let accumulatedPaid2025 = 0;
-    let accumulatedRequired2025 = 0;
-    
-    if (r2025) {
-      const monthlyRequired = calculateMonthlyRequired(r2025.fees, 0, 12);
-      totalRequired2025 = monthlyRequired * 12;
-      totalPaid2025 = r2025.totalPaid || 0;
-      
-      months2025HTML = MONTHS_2025.map((month, index) => {
-        const paidAmount = r2025.payments?.[month] || 0;
-        accumulatedPaid2025 += paidAmount;
-        accumulatedRequired2025 += monthlyRequired;
-        const status = calculateMonthStatus(paidAmount, monthlyRequired, accumulatedPaid2025, accumulatedRequired2025);
-        
-        const statusColor = status.status === 'له' ? '#059669' : status.status === 'عليه' ? '#dc2626' : '#6b7280';
-        const statusBG = status.status === 'له' ? '#d1fae5' : status.status === 'عليه' ? '#fee2e2' : '#f3f4f6';
-        const statusText = status.status === 'له' ? '💰 له' : status.status === 'عليه' ? '⚠️ عليه' : '✅ متوازن';
-        
-        return `
-          <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600;">${month}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-family: monospace; font-weight: 600;">${fmt(monthlyRequired)}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-family: monospace; font-weight: 600;">${fmt(paidAmount)}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">
-              <span style="background: ${statusBG}; color: ${statusColor}; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block;">
-                ${statusText}
-              </span>
-            </td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-family: monospace; font-weight: 700; color: ${status.status === 'عليه' ? '#dc2626' : '#059669'};">
-              ${status.status === 'متوازن' ? '0' : fmt(status.amount)}
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // تجميع بيانات 2026
-    let months2026HTML = '';
-    let totalRequired2026 = 0;
-    let totalPaid2026 = 0;
-    let accumulatedPaid2026 = 0;
-    let accumulatedRequired2026 = 0;
-    
-    if (r2026) {
-      const totalAmount = (r2026.fees || 0) + (r2026.prevDue || 0);
-      const monthlyRequired = calculateMonthlyRequired(r2026.fees || 0, r2026.prevDue || 0, 12);
-      totalRequired2026 = monthlyRequired * 12;
-      totalPaid2026 = r2026.totalPaid || 0;
-      
-      months2026HTML = MONTHS_2026_CLEAN.map((month, index) => {
-        const paidAmount = r2026.payments?.[month] || 0;
-        accumulatedPaid2026 += paidAmount;
-        accumulatedRequired2026 += monthlyRequired;
-        const status = calculateMonthStatus(paidAmount, monthlyRequired, accumulatedPaid2026, accumulatedRequired2026);
-        
-        const statusColor = status.status === 'له' ? '#059669' : status.status === 'عليه' ? '#dc2626' : '#6b7280';
-        const statusBG = status.status === 'له' ? '#d1fae5' : status.status === 'عليه' ? '#fee2e2' : '#f3f4f6';
-        const statusText = status.status === 'له' ? '💰 له' : status.status === 'عليه' ? '⚠️ عليه' : '✅ متوازن';
-        
-        return `
-          <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; font-weight: 600;">${month}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-family: monospace; font-weight: 600;">${fmt(monthlyRequired)}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-family: monospace; font-weight: 600;">${fmt(paidAmount)}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">
-              <span style="background: ${statusBG}; color: ${statusColor}; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block;">
-                ${statusText}
-              </span>
-            </td>
-            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center; font-family: monospace; font-weight: 700; color: ${status.status === 'عليه' ? '#dc2626' : '#059669'};">
-              ${status.status === 'متوازن' ? '0' : fmt(status.amount)}
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    return `
-      <!DOCTYPE html>
-      <html lang="ar" dir="rtl">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>كشف حساب الأقساط الشهرية - ${studentName}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: 'Cairo', sans-serif;
-            background: #f0f9ff;
-            padding: 20px;
-            direction: rtl;
-          }
-          .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-            overflow: hidden;
-          }
-          .header {
-            background: linear-gradient(135deg, #0891b2, #0e7490);
-            color: white;
-            padding: 30px 40px;
-            position: relative;
-            overflow: hidden;
-          }
-          .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -20%;
-            width: 300px;
-            height: 300px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 50%;
-          }
-          .header h1 {
-            font-size: 26px;
-            font-weight: 800;
-            margin-bottom: 5px;
-            position: relative;
-          }
-          .header h2 {
-            font-size: 16px;
-            font-weight: 400;
-            opacity: 0.9;
-            position: relative;
-          }
-          .student-info {
-            background: #f8fafc;
-            padding: 20px 40px;
-            border-bottom: 2px solid #e2e8f0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-          }
-          .student-name {
-            font-size: 20px;
-            font-weight: 700;
-            color: #1e293b;
-          }
-          .date {
-            font-size: 14px;
-            color: #64748b;
-            background: #f1f5f9;
-            padding: 8px 16px;
-            border-radius: 8px;
-          }
-          
-          /* تنسيق العامودين */
-          .years-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            padding: 20px 40px;
-          }
-          
-          .year-section {
-            background: #ffffff;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            overflow: hidden;
-          }
-          .year-header {
-            background: linear-gradient(135deg, #06b6d4, #0891b2);
-            color: white;
-            padding: 15px 20px;
-            font-size: 18px;
-            font-weight: 700;
-            text-align: center;
-          }
-          .year-header.second {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-          }
-          
-          .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            padding: 15px;
-            background: #f8fafc;
-          }
-          .summary-card {
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid #e2e8f0;
-          }
-          .summary-card .label {
-            font-size: 11px;
-            color: #64748b;
-            margin-bottom: 4px;
-          }
-          .summary-card .value {
-            font-size: 16px;
-            font-weight: 700;
-            font-family: monospace;
-          }
-          .summary-card .value.green { color: #059669; }
-          .summary-card .value.red { color: #dc2626; }
-          .summary-card .value.blue { color: #0891b2; }
-          
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          thead th {
-            background: #f1f5f9;
-            color: #334155;
-            padding: 12px 10px;
-            font-weight: 700;
-            font-size: 13px;
-            border-bottom: 2px solid #cbd5e1;
-          }
-          tbody tr:hover {
-            background: #f0f9ff;
-          }
-          tfoot td {
-            background: #f8fafc;
-            font-weight: 800;
-            padding: 12px 10px;
-            border-top: 2px solid #cbd5e1;
-          }
-          
-          .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-            display: inline-block;
-          }
-          
-          .footer {
-            background: #1e293b;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            font-size: 13px;
-          }
-          .actions {
-            padding: 20px 40px;
-            background: #f8fafc;
-            border-top: 2px solid #e2e8f0;
-            text-align: center;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-          }
-          .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-family: 'Cairo', sans-serif;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          .btn-print {
-            background: #0891b2;
-            color: white;
-          }
-          .btn-print:hover {
-            background: #0e7490;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(8,145,178,0.3);
-          }
-          .btn-download {
-            background: #7c3aed;
-            color: white;
-          }
-          .btn-download:hover {
-            background: #6d28d9;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(124,58,237,0.3);
-          }
-          .btn-close {
-            background: #64748b;
-            color: white;
-          }
-          .btn-close:hover {
-            background: #475569;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(100,116,139,0.3);
-          }
-          
-          @media print {
-            body { background: white; padding: 0; }
-            .container { box-shadow: none; border-radius: 0; }
-            .actions { display: none; }
-            .years-container { gap: 10px; padding: 10px 20px; }
-          }
-          
-          @media (max-width: 768px) {
-            .years-container {
-              grid-template-columns: 1fr;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>📊 المجلس اليمني للاختصاصات الطبية</h1>
-            <h2>كشف حساب الأقساط الشهرية التفصيلي</h2>
-          </div>
-          
-          <div class="student-info">
-            <div class="student-name">👨‍⚕️ الطبيب المتدرب: ${studentName}</div>
-            <div class="date">📅 ${today()}</div>
-          </div>
-
-          <div class="years-container">
-            
-            ${r2025 ? `
-            <!-- عام 2025 -->
-            <div class="year-section">
-              <div class="year-header">
-                📅 الأقساط الشهرية لعام 2025
-                ${r2025.batch ? `<div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">الدفعة: ${r2025.batch} | المساق: ${r2025.specialty || ''}</div>` : ''}
-              </div>
-              
-              <div class="summary-cards">
-                <div class="summary-card">
-                  <div class="label">إجمالي الرسوم</div>
-                  <div class="value blue">${fmt(r2025.fees)}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="label">القسط الشهري</div>
-                  <div class="value">${fmt(Math.round(r2025.fees / 12))}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="label">عدد الأشهر</div>
-                  <div class="value">12 شهر</div>
-                </div>
-              </div>
-              
-              <table>
-                <thead>
-                  <tr>
-                    <th>الشهر</th>
-                    <th>القسط المطلوب</th>
-                    <th>المدفوع</th>
-                    <th>الحالة</th>
-                    <th>الفرق</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${months2025HTML}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td>الإجمالي</td>
-                    <td style="text-align: center; font-family: monospace;">${fmt(totalRequired2025)}</td>
-                    <td style="text-align: center; font-family: monospace; color: #059669;">${fmt(totalPaid2025)}</td>
-                    <td style="text-align: center;">
-                      <span class="status-badge" style="background: ${r2025.remaining > 0 ? '#fee2e2' : '#d1fae5'}; color: ${r2025.remaining > 0 ? '#dc2626' : '#059669'};">
-                        ${r2025.remaining > 0 ? '⚠️ متبقي' : '✅ مكتمل'}
-                      </span>
-                    </td>
-                    <td style="text-align: center; font-family: monospace; font-weight: 800; color: ${r2025.remaining > 0 ? '#dc2626' : '#059669'};">
-                      ${fmt(r2025.remaining)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            ` : ''}
-
-            ${r2026 ? `
-            <!-- عام 2026 -->
-            <div class="year-section">
-              <div class="year-header second">
-                📅 الأقساط الشهرية لعام 2026
-                ${r2026.batch ? `<div style="font-size: 12px; opacity: 0.9; margin-top: 4px;">الدفعة: ${r2026.batch} | المساق: ${r2026.specialty || ''}</div>` : ''}
-              </div>
-              
-              <div class="summary-cards">
-                <div class="summary-card">
-                  <div class="label">رسوم 2026</div>
-                  <div class="value blue">${fmt(r2026.fees)}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="label">متبقي 2025</div>
-                  <div class="value" style="color: #d97706;">${fmt(r2026.prevDue || 0)}</div>
-                </div>
-                <div class="summary-card">
-                  <div class="label">القسط الشهري</div>
-                  <div class="value">${fmt(Math.round(((r2026.fees || 0) + (r2026.prevDue || 0)) / 12))}</div>
-                </div>
-              </div>
-              
-              <table>
-                <thead>
-                  <tr>
-                    <th>الشهر</th>
-                    <th>القسط المطلوب</th>
-                    <th>المدفوع</th>
-                    <th>الحالة</th>
-                    <th>الفرق</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${months2026HTML}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td>الإجمالي</td>
-                    <td style="text-align: center; font-family: monospace;">${fmt(totalRequired2026)}</td>
-                    <td style="text-align: center; font-family: monospace; color: #059669;">${fmt(totalPaid2026)}</td>
-                    <td style="text-align: center;">
-                      <span class="status-badge" style="background: ${r2026.remaining > 0 ? '#fee2e2' : '#d1fae5'}; color: ${r2026.remaining > 0 ? '#dc2626' : '#059669'};">
-                        ${r2026.remaining > 0 ? '⚠️ متبقي' : '✅ مكتمل'}
-                      </span>
-                    </td>
-                    <td style="text-align: center; font-family: monospace; font-weight: 800; color: ${r2026.remaining > 0 ? '#dc2626' : '#059669'};">
-                      ${fmt(r2026.remaining)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            ` : ''}
-
-            ${!r2025 && !r2026 ? `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #64748b; font-size: 18px;">
-              ⚠️ لا توجد بيانات متاحة لهذا المتدرب
-            </div>
-            ` : ''}
-
-          </div>
-
-          <div class="actions">
-            <button class="btn btn-print" onclick="window.print()">
-              🖨️ طباعة الكشف
-            </button>
-            <button class="btn btn-download" onclick="window.parent.postMessage('download-pdf', '*')">
-              📥 تحميل PDF
-            </button>
-            <button class="btn btn-close" onclick="window.parent.postMessage('close-preview', '*')">
-              ✕ إغلاق
-            </button>
-          </div>
-
-          <div class="footer">
-            © ${new Date().getFullYear()} المجلس اليمني للاختصاصات الطبية - جميع الحقوق محفوظة
-          </div>
-        </div>
-        
-        <script>
-          // الاستماع للرسائل من النافذة الأم
-          window.addEventListener('message', function(event) {
-            if (event.data === 'download-pdf') {
-              window.parent.postMessage('trigger-download', '*');
-            }
-          });
-        </script>
-      </body>
-      </html>
-    `;
-  };
-
-  // ================== تصدير كشف حساب PDF ==================
-  const downloadComprehensivePDF = async (studentName: string) => {
-    setIsGeneratingPDF({ studentName, type: 'download' });
-    
+  const downloadPDF = async (name: string) => {
     try {
-      const r2025 = (installments2025 || []).find((i: any) => i.name === studentName);
-      const r2026 = (installments || []).find((i: any) => i.name === studentName);
+      const pdf = new jsPDF({ orientation: "portrait", format: "a4" });
+      try {
+        const res = await fetch('https://fonts.gstatic.com/s/cairo/v28/SLXVc1nY6HkvangtZmpcWmhzfH5lWWgcRiySJg.ttf');
+        const buf = await res.arrayBuffer();
+        pdf.addFileToVFS('Cairo.ttf', toBase64(buf));
+        pdf.addFont('Cairo.ttf', 'Cairo', 'normal');
+        pdf.setFont('Cairo');
+      } catch {}
 
-      if (!r2025 && !r2026) {
-        toast.error("لا توجد سجلات مالية متوفرة لهذا الاسم");
-        setIsGeneratingPDF(null);
-        return;
-      }
+      const r = (installments2025 || []).find((i: any) => i.name === name) || (installments || []).find((i: any) => i.name === name);
+      if (!r) return toast.error("لا توجد بيانات");
+      
+      pdf.setFontSize(16);
+      pdf.text(`كشف حساب - ${name}`, 105, 15, { align: 'center' });
+      pdf.setFontSize(10);
+      pdf.text(today(), 105, 22, { align: 'center' });
 
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
+      const months = MONTHS_2025.includes(Object.keys(r.payments || {})[0]) ? MONTHS_2025 : MONTHS_2026;
+      const monthly = Math.round(cleanNumber(r.fees) / 12);
+      const data = months.map(m => {
+        const paid = Number(r.payments?.[m]) || 0;
+        const diff = paid - monthly;
+        return [m, fmt(monthly), fmt(paid), diff > 0 ? `له ${fmt(diff)}` : diff < 0 ? `عليه ${fmt(-diff)}` : "متوازن"];
       });
 
-      // تحميل الخط من Google Fonts
-      const fontLoaded = await loadGoogleFont(pdf);
-      
-      if (!fontLoaded) {
-        toast.warning("تعذر تحميل الخط العربي، جاري التصدير بالخط الافتراضي");
-      }
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      let yPos = 10;
-
-      // العنوان
-      if (fontLoaded) pdf.setFont('Cairo', 'bold');
-      pdf.setFontSize(16);
-      pdf.text('المجلس اليمني للاختصاصات الطبية', pageWidth / 2, yPos, { align: 'center' });
-      yPos += 8;
-      pdf.setFontSize(12);
-      pdf.text('كشف حساب الأقساط الشهرية', pageWidth / 2, yPos, { align: 'center' });
-      yPos += 8;
-      
-      if (fontLoaded) pdf.setFont('Cairo', 'normal');
-      pdf.setFontSize(10);
-      pdf.text(`الطبيب: ${studentName}`, 190, yPos, { align: 'right' });
-      pdf.text(`التاريخ: ${today()}`, 20, yPos, { align: 'left' });
-      yPos += 10;
-
-      // جدول 2025
-      if (r2025) {
-        const monthlyRequired = calculateMonthlyRequired(r2025.fees, 0, 12);
-        let accumulatedPaid = 0;
-        let accumulatedRequired = 0;
-        
-        const tableData = MONTHS_2025.map(month => {
-          const paidAmount = r2025.payments?.[month] || 0;
-          accumulatedPaid += paidAmount;
-          accumulatedRequired += monthlyRequired;
-          const status = calculateMonthStatus(paidAmount, monthlyRequired, accumulatedPaid, accumulatedRequired);
-          
-          return [
-            month,
-            fmt(monthlyRequired),
-            fmt(paidAmount),
-            status.status === 'له' ? `له ${fmt(status.amount)}` : 
-            status.status === 'عليه' ? `عليه ${fmt(status.amount)}` : 'متوازن',
-            fmt(status.amount)
-          ];
-        });
-
-        const tableConfig: any = {
-          head: [['الشهر', 'القسط', 'المدفوع', 'الحالة', 'الفرق']],
-          body: tableData,
-          startY: yPos,
-          theme: 'grid',
-          styles: {
-            fontSize: 8,
-            halign: 'right',
-            cellPadding: 2,
-          },
-          headStyles: {
-            fillColor: [8, 145, 178],
-            textColor: 255,
-            fontStyle: 'bold',
-          },
-        };
-
-        if (fontLoaded) tableConfig.styles.font = 'Cairo';
-        autoTable(pdf, tableConfig);
-        yPos = (pdf as any).lastAutoTable.finalY + 10;
-      }
-
-      // جدول 2026
-      if (r2026) {
-        if (yPos > 200) {
-          pdf.addPage();
-          yPos = 10;
-        }
-        
-        const totalAmount = (r2026.fees || 0) + (r2026.prevDue || 0);
-        const monthlyRequired = calculateMonthlyRequired(r2026.fees || 0, r2026.prevDue || 0, 12);
-        let accumulatedPaid = 0;
-        let accumulatedRequired = 0;
-        
-        const tableData = MONTHS_2026_CLEAN.map(month => {
-          const paidAmount = r2026.payments?.[month] || 0;
-          accumulatedPaid += paidAmount;
-          accumulatedRequired += monthlyRequired;
-          const status = calculateMonthStatus(paidAmount, monthlyRequired, accumulatedPaid, accumulatedRequired);
-          
-          return [
-            month,
-            fmt(monthlyRequired),
-            fmt(paidAmount),
-            status.status === 'له' ? `له ${fmt(status.amount)}` : 
-            status.status === 'عليه' ? `عليه ${fmt(status.amount)}` : 'متوازن',
-            fmt(status.amount)
-          ];
-        });
-
-        const tableConfig: any = {
-          head: [['الشهر', 'القسط', 'المدفوع', 'الحالة', 'الفرق']],
-          body: tableData,
-          startY: yPos,
-          theme: 'grid',
-          styles: {
-            fontSize: 8,
-            halign: 'right',
-            cellPadding: 2,
-          },
-          headStyles: {
-            fillColor: [124, 58, 237],
-            textColor: 255,
-            fontStyle: 'bold',
-          },
-        };
-
-        if (fontLoaded) tableConfig.styles.font = 'Cairo';
-        autoTable(pdf, tableConfig);
-      }
-
-      pdf.save(`كشف_الأقساط_الشهرية_${studentName}_${today()}.pdf`);
-      toast.success('تم تحميل كشف الحساب بنجاح');
-    } catch (error) {
-      console.error('خطأ في التصدير:', error);
-      toast.error('فشل تصدير كشف الحساب');
-    } finally {
-      setIsGeneratingPDF(null);
-    }
+      autoTable(pdf, { head: [['الشهر', 'القسط', 'المدفوع', 'الحالة']], body: data, startY: 25, styles: { fontSize: 9, halign: 'right' } });
+      pdf.save(`كشف_${name}.pdf`);
+      toast.success("تم التحميل");
+    } catch { toast.error("فشل التحميل"); }
   };
 
-  // ================== عرض المعاينة ==================
-  const handlePreview = (studentName: string) => {
-    const htmlContent = generatePreviewHTML(studentName);
-    setPreviewModal({ studentName, htmlContent });
-  };
-
-  const handlePrint = (studentName: string) => {
-    handlePreview(studentName);
-  };
+  const renderTable = (controls: any, year: 2025 | 2026) => (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs md:text-sm">
+        <thead className="bg-slate-100 font-bold border-b">
+          <tr>
+            <th className="p-2 w-10">م</th>
+            {BASE_COLS.map(c => (
+              <th key={c.key} className="p-2 text-right cursor-pointer" onClick={() => controls.toggleSort(c.key)}>
+                {c.label} {sortIndicator(controls.sortKey === c.key, controls.sortDir)}
+              </th>
+            ))}
+            <th className="p-2 w-48">الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {controls.rows.map((r: any, i: number) => (
+            <tr key={i} className="border-t hover:bg-slate-50">
+              <td className="p-2 text-center">{i + 1}</td>
+              <td className="p-2 font-semibold">{r.name}</td>
+              <td className="p-2 text-center">{r.batch}</td>
+              <td className="p-2">{r.specialty}</td>
+              <td className="p-2 font-mono">{fmt(r.fees)}</td>
+              <td className="p-2 font-mono text-emerald-600 font-bold">{fmt(r.totalPaid)}</td>
+              <td className="p-2 font-mono text-rose-600 font-bold">{fmt(r.remaining)}</td>
+              <td className="p-2 truncate max-w-xs">{r.notes || "—"}</td>
+              <td className="p-2 font-mono">{r.phone || "—"}</td>
+              <td className="p-2 text-center space-x-1 space-x-reverse whitespace-nowrap">
+                <button onClick={() => setPaymentModal({ row: r, year })} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded font-bold hover:bg-emerald-600 hover:text-white">💵</button>
+                <button onClick={() => setEditingRow({ row: r, year })} className="text-blue-600 hover:underline font-bold px-1">✏️</button>
+                <button onClick={() => generatePreview(r.name)} className="px-2 py-0.5 bg-slate-50 rounded hover:bg-teal-700 hover:text-white">📄</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div className="space-y-8" dir="rtl">
-      
-      {/* ================== عام 2025م ================== */}
-      <div className="bg-card rounded-xl shadow-sm border p-5 bg-white text-right">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3 mb-4">
-          <div>
-            <h2 className="text-base font-bold text-teal-800">أقساط ورسوم عام 2025م</h2>
-            <p className="text-xxs text-slate-500">الأرشيف المستورد والمعدّل لعام 2025</p>
+      {[2025, 2026].map(year => (
+        <div key={year} className="bg-white rounded-xl shadow-sm border p-5">
+          <div className="flex justify-between items-center border-b pb-3 mb-4">
+            <div>
+              <h2 className="text-base font-bold text-teal-800">أقساط {year}</h2>
+              <p className="text-xs text-slate-500">{year === 2025 ? "الأرشيف" : "العام الحالي"}</p>
+            </div>
+            <label className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-emerald-700">
+              📥 استيراد {year}
+              <input type="file" accept=".xlsx,.xls,.csv" onChange={e => importFile(e, year as 2025 | 2026)} className="hidden" />
+            </label>
           </div>
-          <label className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-emerald-700 shadow-sm transition">
-            <span>📥 استيراد ملف إكسل 2025</span>
-            <input type="file" accept=".xlsx, .xls, .csv" onChange={handleImport2025} className="hidden" />
-          </label>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 max-w-xl">
-          <div className="bg-slate-50 p-2 border rounded-lg"><span className="text-xxs text-slate-500 block">إجمالي رسوم 2025</span><span className="text-sm font-mono font-bold text-slate-800">{fmt(totals2025.fees)}</span></div>
-          <div className="bg-emerald-50 p-2 border border-emerald-200 rounded-lg"><span className="text-xxs text-emerald-600 block">إجمالي المسدد 2025</span><span className="text-sm font-mono font-bold text-emerald-700">{fmt(totals2025.paid)}</span></div>
-          <div className="bg-rose-50 p-2 border border-rose-100 rounded-lg"><span className="text-xxs text-rose-600 block">المتبقي الإجمالي 2025</span><span className="text-sm font-mono font-bold text-rose-700">{fmt(totals2025.remaining)}</span></div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs md:text-sm">
-            <thead className="bg-slate-100 text-slate-800 font-bold border-b">
-              <tr>
-                <th className="p-2 text-center w-10">م</th>
-                {BASE_COLS.map(c => (
-                  <th key={c.key} className="p-2 text-right cursor-pointer" onClick={() => controls2025.toggleSort(c.key)}>
-                    {c.label} {sortIndicator(controls2025.sortKey === c.key, controls2025.sortDir)}
-                  </th>
-                ))}
-                <th className="p-2 text-center w-48">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {controls2025.rows.map((r, i) => (
-                <tr key={r.name + i} className="border-t hover:bg-slate-50 transition-colors">
-                  <td className="p-2 text-center text-slate-400">{i + 1}</td>
-                  <td className="p-2 font-semibold text-slate-800">{r.name}</td>
-                  <td className="p-2 text-center">{r.batch}</td>
-                  <td className="p-2">{r.specialty}</td>
-                  <td className="p-2 font-mono">{fmt(r.fees)}</td>
-                  <td className="p-2 font-mono text-emerald-600 font-bold">{fmt(r.totalPaid)}</td>
-                  <td className="p-2 font-mono text-rose-600 font-bold">{fmt(r.remaining)}</td>
-                  <td className="p-2 text-slate-500 truncate max-w-xs">{r.notes || "—"}</td>
-                  <td className="p-2 text-slate-600 font-mono">{r.phone || "—"}</td>
-                  <td className="p-2 text-center space-x-1 space-x-reverse whitespace-nowrap">
-                    <button onClick={() => setPaymentModal({ row: r, year: 2025 })} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold hover:bg-emerald-600 hover:text-white transition">💵 دفعة</button>
-                    <button onClick={() => setEditingRow({ row: r, year: 2025 })} className="text-blue-600 hover:underline font-bold px-1">تعديل</button>
-                    <button onClick={() => handlePrint(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ================== عام 2026م ================== */}
-      <div className="bg-card rounded-xl shadow-sm border p-5 bg-white text-right">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3 mb-4">
-          <div>
-            <h2 className="text-base font-bold text-teal-800">أقساط ورسوم عام 2026م (العام الحالي)</h2>
-            <p className="text-xxs text-slate-500">يتضمن الربط المباشر مع متبقيات 2025 وعمليات الدفع المباشرة</p>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {["إجمالي الرسوم", "المسدد", year === 2026 ? "متبقي 2025" : "المتبقي"].map((label, i) => {
+              const t = year === 2025 ? totals2025 : totals2026;
+              const vals = [t.fees, t.paid, year === 2026 ? t.prevDue : t.remaining];
+              return (
+                <div key={i} className="bg-slate-50 p-2 border rounded-lg">
+                  <span className="text-xs text-slate-500">{label}</span>
+                  <span className="text-sm font-mono font-bold block">{fmt(vals[i])}</span>
+                </div>
+              );
+            })}
           </div>
-          <label className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 text-white rounded-lg text-xs font-bold cursor-pointer hover:bg-slate-800 shadow-sm transition">
-            <span>📥 استيراد ملف إكسل 2026</span>
-            <input type="file" accept=".xlsx, .xls, .csv" onChange={handleImport2026} className="hidden" />
-          </label>
+          {renderTable(year === 2025 ? controls2025 : controls2026, year as 2025 | 2026)}
         </div>
+      ))}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
-          <div className="bg-slate-50 p-2 border rounded-lg"><span className="text-xxs text-slate-500 block">رسوم 2026</span><span className="text-sm font-mono font-bold">{fmt(totals2026.fees)}</span></div>
-          <div className="bg-amber-50 p-2 border border-amber-200 rounded-lg"><span className="text-xxs text-amber-600 block">متبقيات سابقة 2025</span><span className="text-sm font-mono font-bold text-amber-700">{fmt(totals2026.prevDue)}</span></div>
-          <div className="bg-emerald-50 p-2 border border-emerald-200 rounded-lg"><span className="text-xxs text-emerald-600 block">المسدد 2026</span><span className="text-sm font-mono font-bold text-emerald-700">{fmt(totals2026.paid)}</span></div>
-          <div className="bg-rose-50 p-2 border border-rose-100 rounded-lg"><span className="text-xxs text-rose-600 block">إجمالي المتبقي الحالي</span><span className="text-sm font-mono font-bold text-rose-700">{fmt(totals2026.remaining)}</span></div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs md:text-sm">
-            <thead className="bg-slate-100 text-slate-800 font-bold border-b">
-              <tr>
-                <th className="p-2 text-center w-10">م</th>
-                <th className="p-2 text-right">الاسم</th>
-                <th className="p-2 text-center">الدفعة</th>
-                <th className="p-2">المساق</th>
-                <th className="p-2 text-right">رسوم الدراسة</th>
-                <th className="p-2 text-right">متبقي 2025</th>
-                <th className="p-2 text-right">المسدد 2026</th>
-                <th className="p-2 text-right">المتبقي الحالي</th>
-                <th className="p-2">ملاحظات</th>
-                <th className="p-2 text-center w-48">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {controls2026.rows.map((r, i) => (
-                <tr key={r.name + i} className="border-t hover:bg-slate-50 transition-colors">
-                  <td className="p-2 text-center text-slate-400">{i + 1}</td>
-                  <td className="p-2 font-semibold text-slate-800">{r.name}</td>
-                  <td className="p-2 text-center">{r.batch}</td>
-                  <td className="p-2">{r.specialty}</td>
-                  <td className="p-2 font-mono">{fmt(r.fees)}</td>
-                  <td className="p-2 font-mono text-amber-600 font-bold">{fmt(r.prevDue || 0)}</td>
-                  <td className="p-2 font-mono text-emerald-600 font-bold">{fmt(r.totalPaid)}</td>
-                  <td className="p-2 font-mono text-rose-600 font-bold">{fmt(r.remaining)}</td>
-                  <td className="p-2 text-slate-500 truncate max-w-xs">{r.notes || "—"}</td>
-                  <td className="p-2 text-center space-x-1 space-x-reverse whitespace-nowrap">
-                    <button onClick={() => setPaymentModal({ row: r, year: 2026 })} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold hover:bg-emerald-600 hover:text-white transition">💵 دفعة</button>
-                    <button onClick={() => setEditingRow({ row: r, year: 2026 })} className="text-blue-600 hover:underline font-bold px-1">تعديل</button>
-                    <button onClick={() => handlePrint(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ================== نافذة تسجيل قسط يدوي ================== */}
       {paymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl border p-6 max-w-md w-full text-right" dir="rtl">
-            <h3 className="text-md font-bold text-slate-900 border-b pb-2 mb-4">
-              ➕ تسجيل دفعة/قسط يدوياً لعام {paymentModal.year}
-            </h3>
-            <p className="text-xs text-slate-600 mb-4">
-              المتدرب: <span className="font-bold text-slate-800">{paymentModal.row.name}</span>
-            </p>
-
-            <form onSubmit={handleAddManualPayment} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">مبلغ القسط (ريال)</label>
-                <input 
-                  type="number" 
-                  required
-                  placeholder="مثال: 30000"
-                  value={payAmount}
-                  onChange={(e) => setPayAmount(e.target.value)}
-                  className="w-full px-0 py-2 border rounded-lg text-sm bg-slate-50 text-left font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">الشهر المستهدف بالسداد</label>
-                <select 
-                  required
-                  value={payMonth}
-                  onChange={(e) => setPayMonth(e.target.value)}
-                  className="w-full px-0 py-2 border rounded-lg text-sm bg-slate-50"
-                >
-                  <option value="">-- اختر الشهر المالي --</option>
-                  {(paymentModal.year === 2025 ? MONTHS_2025 : MONTHS_2026_CLEAN).map(m => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <button 
-                  type="button" 
-                  onClick={() => { setPaymentModal(null); setPayAmount(""); setPayMonth(""); }}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold"
-                >
-                  إلغاء
-                </button>
-                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-sm">
-                  حفظ القسط وتحديث الحساب
-                </button>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full" dir="rtl">
+            <h3 className="font-bold border-b pb-2 mb-4">➕ تسجيل دفعة - {paymentModal.year}</h3>
+            <p className="text-sm mb-4">المتدرب: <b>{paymentModal.row.name}</b></p>
+            <form onSubmit={addPayment} className="space-y-4">
+              <input type="number" required placeholder="المبلغ" value={payAmount} onChange={e => setPayAmount(e.target.value)} className="w-full p-2 border rounded bg-slate-50" />
+              <select required value={payMonth} onChange={e => setPayMonth(e.target.value)} className="w-full p-2 border rounded bg-slate-50">
+                <option value="">اختر الشهر</option>
+                {(paymentModal.year === 2025 ? MONTHS_2025 : MONTHS_2026).map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={() => setPaymentModal(null)} className="px-4 py-2 bg-slate-100 rounded">إلغاء</button>
+                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded">حفظ</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* ================== نافذة معاينة الكشف ================== */}
       {previewModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl border w-full max-w-7xl h-[95vh] flex flex-col text-right" dir="rtl">
-            {/* شريط العنوان */}
-            <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-              <h3 className="text-lg font-bold text-slate-900">
-                📊 معاينة كشف الأقساط الشهرية - {previewModal.studentName}
-              </h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-full max-w-7xl h-[95vh] flex flex-col" dir="rtl">
+            <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+              <h3 className="font-bold">📊 معاينة - {previewModal.name}</h3>
               <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    const printWindow = window.open('', '_blank', 'width=1200,height=800');
-                    if (printWindow) {
-                      printWindow.document.write(previewModal.htmlContent);
-                      printWindow.document.close();
-                      setTimeout(() => printWindow.print(), 500);
-                    }
-                  }}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-bold hover:bg-teal-700 transition"
-                >
-                  🖨️ طباعة
-                </button>
-                <button
-                  onClick={() => downloadComprehensivePDF(previewModal.studentName)}
-                  disabled={isGeneratingPDF !== null}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 transition disabled:opacity-50"
-                >
-                  {isGeneratingPDF?.studentName === previewModal.studentName && isGeneratingPDF?.type === 'download' 
-                    ? '⏳ جاري التحميل...' 
-                    : '📥 تحميل PDF'}
-                </button>
-                <button
-                  onClick={() => setPreviewModal(null)}
-               
+                <button onClick={() => { const w = window.open('', '', 'width=1200,height=800'); w?.document.write(previewModal.html); w?.document.close(); setTimeout(() => w?.print(), 500); }} className="px-4 py-2 bg-teal-600 text-white rounded">🖨️</button>
+                <button onClick={() => downloadPDF(previewModal.name)} className="px-4 py-2 bg-purple-600 text-white rounded">📥</button>
+                <button onClick={() => setPreviewModal(null)} className="px-4 py-2 bg-slate-500 text-white rounded">✕</button>
+              </div>
+            </div>
+            <iframe srcDoc={previewModal.html} className="flex-1 w-full border-0" />
+          </div>
+        </div>
+      )}
+
+      {editingRow && (
+        <EditModal 
+          title={`تعديل - ${editingRow.row.name}`}
+          fields={[
+            { key: "name", label: "الاسم", colSpan: 2 },
+            { key: "batch", label: "الدفعة" },
+            { key: "specialty", label: "المساق" },
+            { key: "fees", label: "الرسوم", type: "number" },
+            ...(editingRow.year === 2026 ? [{ key: "prevDue", label: "متبقي 2025", type: "number" as const }] : []),
+            { key: "totalPaid", label: "المسدد", type: "number" },
+            { key: "remaining", label: "المتبقي", type: "number" },
+            { key: "phone", label: "الهاتف" },
+            { key: "notes", label: "ملاحظات", colSpan: 3 },
+          ]}
+          values={editingRow.row}
+          onClose={() => setEditingRow(null)}
+          onSave={(updated) => {
+            const cleaned = { ...updated };
+            ["fees", "prevDue", "totalPaid", "remaining"].forEach(k => { if (cleaned[k]) cleaned[k] = cleanNumber(cleaned[k]); });
+            const key = editingRow.year === 2025 ? "installments2025" : "installments";
+            useStore.setState({ [key]: (useStore.getState() as any)[key].map((i: any) => i.name === editingRow.row.name ? cleaned : i) });
+            toast.success("تم التحديث");
+            setEditingRow(null);
+          }}
+        />
+      )}
+    </div>
+  );
+          }
