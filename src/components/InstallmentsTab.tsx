@@ -4,10 +4,10 @@ import { fmt, today } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
-import { X, ChevronDown, Printer } from "lucide-react";
+import { X, ChevronDown, Printer, AlertCircle } from "lucide-react";
 
-const MONTHS_2025 = ["يونيو 2024", "يوليو 2024", "أغسطس 2024", "مارس 2025", "ابريل 2025", "مايو 2025", "يونيو 2025", "يوليو 2025", "أغسطس 2025", "سبتمبر 2025", "اكتوبر 2025", "نوفمبر 2025", "ديسمبر 2025"];
-const MONTHS_2026 = ["يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", "يوليو", "اغسطس", "سبتمبر", "اكتوبر", "نوفمبر", "د��سمبر"];
+const MONTHS_2025 = ["يونيو 2024", "يوليو 2024", "أغسطس 2024", "مارس 2025", "ابريل 2025", "مايو 2025", "يونيو 2025", "يوليو 2025", "أغسطس 2025", "سبتمبر 2025", "اكتوبر 2025", "نوفمبر 2025"];
+const MONTHS_2026 = ["يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", "يوليو", "اغسطس", "سبتمبر", "اكتوبر", "نوفمبر", "ديسمبر"];
 
 const cleanNumber = (val: any): number => {
   if (!val) return 0;
@@ -22,7 +22,7 @@ const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) =
       {stats.map((stat, idx) => (
         <div key={idx} className={`${stat.bgClass} p-2 sm:p-3 rounded-lg text-center border ${stat.borderClass} shadow-sm`}>
           <div className="text-xs sm:text-sm font-medium text-slate-600">{stat.label}</div>
-          <div className="text-sm sm:text-base font-mono font-bold mt-1 text-slate-900 break-words">{stat.value}</div>
+          <div className="text-sm sm:text-lg font-mono font-bold mt-1 text-slate-900 break-words">{stat.value}</div>
         </div>
       ))}
     </div>
@@ -36,7 +36,6 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
   return (
     <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-2 sm:p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
-        {/* رأس النافذة */}
         <div className="flex justify-between items-center p-4 border-b bg-gradient-to-l from-blue-50 to-slate-50 sticky top-0">
           <h3 className="font-bold text-base sm:text-lg text-slate-900">{title}</h3>
           <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-lg transition">
@@ -44,7 +43,6 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
           </button>
         </div>
         
-        {/* محتوى النافذة */}
         <div className="p-4 space-y-3">
           {children}
         </div>
@@ -57,7 +55,6 @@ export default function InstallmentsTab() {
   const { installments, installments2025 } = useStore() as any;
   const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
   const [payAmount, setPayAmount] = useState("");
-  const [previewModal, setPreviewModal] = useState<{ name: string; html: string } | null>(null);
   const [newPaymentModal, setNewPaymentModal] = useState(false);
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentAmount, setNewStudentAmount] = useState("");
@@ -67,6 +64,7 @@ export default function InstallmentsTab() {
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining", "notes", "phone"]);
   const controls2025 = useTableControls(installments2025 || [], ["name", "batch", "specialty", "fees", "totalPaid", "remaining", "notes", "phone"]);
@@ -213,48 +211,115 @@ export default function InstallmentsTab() {
   const importFile = (e: React.ChangeEvent<HTMLInputElement>, year: 2025 | 2026) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    setImportError(null);
     const reader = new FileReader();
+    
     reader.onload = (evt) => {
       try {
-        const wb = XLSX.read(new Uint8Array(evt.target?.result as ArrayBuffer), { type: "array" });
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" }) as any[];
-        const headerIdx = rows.findIndex(r => r?.some((c: any) => ["متدرب", "الاسم", "المساق"].some(k => String(c).includes(k))));
-        if (headerIdx === -1) return toast.error("لم يتم العثور على العناوين");
+        const arrayBuffer = evt.target?.result as ArrayBuffer;
+        if (!arrayBuffer) throw new Error("فشل في قراءة الملف");
+
+        const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
+        if (wb.SheetNames.length === 0) throw new Error("الملف فارغ");
+
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }) as any[];
+
+        if (!rows || rows.length === 0) throw new Error("لم يتم العثور على بيانات في الملف");
+
+        const headerIdx = rows.findIndex(r => 
+          r?.some((c: any) => {
+            const cell = String(c || "").trim();
+            return ["متدرب", "الاسم", "المساق", "اسم", "الدفعة"].some(k => cell.includes(k));
+          })
+        );
+
+        if (headerIdx === -1) throw new Error("لم يتم العثور على صف العناوين في الملف");
 
         const headers = rows[headerIdx].map((h: any) => String(h || "").trim());
-        const data = rows.slice(headerIdx + 1)
-          .map(r => headers.reduce((obj: any, h, i) => (obj[h] = r[i], obj), {}))
-          .filter(r => {
-            const name = String(Object.values(r).find((v: any) => String(v).includes("اسم") || String(v).includes("الاسم")) || "").trim();
+        const dataRows = rows.slice(headerIdx + 1);
+
+        const data = dataRows
+          .filter((r: any[]) => r && r.length > 0)
+          .map((r: any[]) => {
+            const rowObj: any = {};
+            headers.forEach((h, i) => {
+              rowObj[h] = r[i];
+            });
+            return rowObj;
+          })
+          .filter((r: any) => {
+            const nameValue = Object.entries(r)
+              .find(([k]) => k.toLowerCase().includes("اسم"))
+              ?.[1];
+            const name = String(nameValue || "").trim();
             return name && name !== "الإجمالي" && !name.includes("كشف");
           })
-          .map(r => {
-            const find = (keys: string[]) => Object.entries(r).find(([k]) => keys.some(kw => k.includes(kw)))?.[1] || "";
-            const name = String(find(["اسم", "الاسم"])).trim();
-            const batch = String(find(["دفعة", "الدفعة"])).trim();
-            const specialty = String(find(["مساق", "المساق"])).trim();
-            const fees = cleanNumber(find(["رسوم", "مبلغ"]));
-            const prevDue = year === 2026 ? cleanNumber(find(["2025", "السابق", "متبقي"])) : 0;
-            const totalPaid = cleanNumber(find(["المسدد", "الإجمالي", "المدفوع"]));
-            const remaining = cleanNumber(find(["المتبقي"]));
-            const notes = String(find(["ملاحظات"])).trim();
-            const phone = String(find(["هاتف", "تلفون"])).trim();
+          .map((r: any) => {
+            const findByKey = (keys: string[]) => {
+              const entry = Object.entries(r).find(([k]) => 
+                keys.some(kw => k.toLowerCase().includes(kw.toLowerCase()))
+              );
+              return entry ? String(entry[1] || "").trim() : "";
+            };
+
+            const name = findByKey(["اسم", "الاسم", "متدرب"]);
+            const batch = findByKey(["دفعة", "الدفعة"]);
+            const specialty = findByKey(["مساق", "المساق"]);
+            const fees = cleanNumber(findByKey(["رسوم", "مبلغ", "الرسوم"]));
+            const prevDue = year === 2026 ? cleanNumber(findByKey(["2025", "السابق", "متبقي", "متبقي 2025"])) : 0;
+            const totalPaid = cleanNumber(findByKey(["المسدد", "الإجمالي", "المدفوع", "المبلغ المسدد"]));
+            const remaining = cleanNumber(findByKey(["المتبقي", "الرصيد", "المتبقية"]));
+            const notes = findByKey(["ملاحظات", "ملاحظة"]);
+            const phone = findByKey(["هاتف", "تلفون", "الهاتف"]);
+
             const months = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-            const payments = months.reduce((acc: any, m) => {
-              const key = Object.keys(r).find(k => String(k).replace(/\s/g, "") === m.replace(/\s/g, ""));
-              acc[m] = key ? cleanNumber(r[key]) : 0;
-              return acc;
-            }, {});
-            return { name, batch, specialty, fees, ...(year === 2026 && { prevDue }), totalPaid, remaining, notes, phone, payments };
+            const payments: any = {};
+            
+            months.forEach((m) => {
+              const monthKey = Object.keys(r).find(k => {
+                const cleanedKey = String(k).replace(/\s/g, "").trim();
+                const cleanedMonth = m.replace(/\s/g, "").trim();
+                return cleanedKey === cleanedMonth || cleanedKey.includes(cleanedMonth);
+              });
+              payments[m] = monthKey ? cleanNumber(r[monthKey]) : 0;
+            });
+
+            if (!name) throw new Error(`صف بدون اسم متدرب`);
+
+            return {
+              name,
+              batch: batch || "",
+              specialty: specialty || "",
+              fees,
+              ...(year === 2026 && { prevDue }),
+              totalPaid,
+              remaining,
+              notes: notes || "",
+              phone: phone || "",
+              payments
+            };
           });
 
+        if (data.length === 0) throw new Error("لم يتم العثور على سجلات صحيحة في الملف");
+
         useStore.setState(year === 2025 ? { installments2025: data } : { installments: data });
-        toast.success(`تم استيراد ${data.length} سجل`);
+        toast.success(`تم استيراد ${data.length} سجل بنجاح`);
+        setImportError(null);
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : "خطأ غير معروف";
         console.error("خطأ في استيراد الملف:", error);
-        toast.error("خطأ في معالجة الملف");
+        setImportError(errorMsg);
+        toast.error(errorMsg);
       }
     };
+
+    reader.onerror = () => {
+      setImportError("فشل في ق��اءة الملف");
+      toast.error("فشل في قراءة الملف");
+    };
+
     reader.readAsArrayBuffer(file);
     e.target.value = "";
   };
@@ -306,7 +371,7 @@ export default function InstallmentsTab() {
                   <span class="info-value">${row.name}</span>
                 </div>
                 <div class="info-item">
-                  <span class="info-label">ال��فعة:</span>
+                  <span class="info-label">الدفعة:</span>
                   <span class="info-value">${row.batch || "—"}</span>
                 </div>
                 <div class="info-item">
@@ -394,8 +459,8 @@ export default function InstallmentsTab() {
         <div className="bg-gradient-to-l from-teal-600 to-teal-700 px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex justify-between items-start gap-2 flex-wrap">
             <div className="flex-1 min-w-0">
-              <h2 className="text-sm sm:text-base font-bold text-white">📊 أقساط 2025</h2>
-              <p className="text-xs text-teal-100 mt-1">الأرشيف</p>
+              <h2 className="text-sm sm:text-base md:text-lg font-bold text-white">📊 أقساط 2025</h2>
+              <p className="text-xs sm:text-sm text-teal-100 mt-1">الأرشيف</p>
             </div>
             <label className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white text-teal-700 rounded-lg text-xs sm:text-sm font-bold cursor-pointer hover:bg-teal-50 transition active:scale-95 flex-shrink-0">
               📥 استيراد
@@ -403,47 +468,55 @@ export default function InstallmentsTab() {
             </label>
           </div>
         </div>
+        {importError && (
+          <div className="bg-red-50 border-b border-red-200 p-3 sm:p-4 flex gap-2 items-start">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-red-700">
+              <p className="font-semibold">خطأ في الاستيراد:</p>
+              <p className="text-xs mt-1">{importError}</p>
+            </div>
+          </div>
+        )}
         <div className="w-full p-3 sm:p-4">
           <StatsGrid stats={stats2025} columns={3} />
           <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-xs sm:text-sm">
               <thead className="bg-slate-100 font-bold border-b border-slate-300 sticky top-0">
                 <tr>
-                  <th className="p-2 sm:p-3 text-center text-slate-700">#</th>
+                  <th className="p-2 sm:p-3 text-center text-slate-700 min-w-8">#</th>
                   <th className="p-2 sm:p-3 text-right text-slate-700 min-w-24">الاسم</th>
-                  <th className="p-2 sm:p-3 text-center text-slate-700">الدفعة</th>
+                  <th className="p-2 sm:p-3 text-center text-slate-700 min-w-16">الدفعة</th>
                   <th className="p-2 sm:p-3 text-right text-slate-700 min-w-20">المساق</th>
-                  <th className="p-2 sm:p-3 text-center text-slate-700">رسوم</th>
-                  <th className="p-2 sm:p-3 text-center text-emerald-700">مسدد</th>
-                  <th className="p-2 sm:p-3 text-center text-rose-700">متبقي</th>
-                  <th className="p-2 sm:p-3 text-center text-slate-700">الإجراءات</th>
+                  <th className="p-2 sm:p-3 text-center text-slate-700 min-w-14">رسوم</th>
+                  <th className="p-2 sm:p-3 text-center text-emerald-700 min-w-14">مسدد</th>
+                  <th className="p-2 sm:p-3 text-center text-rose-700 min-w-14">متبقي</th>
+                  <th className="p-2 sm:p-3 text-center text-slate-700 min-w-14">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {controls2025.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-4 text-center text-slate-400 text-sm">
+                    <td colSpan={8} className="p-4 text-center text-slate-400 text-xs sm:text-sm">
                       لا توجد بيانات
                     </td>
                   </tr>
                 ) : (
                   controls2025.rows.map((r: any, i: number) => (
                     <tr key={i} className="border-t border-slate-200 hover:bg-slate-50 transition">
-                      <td className="p-2 sm:p-3 text-center text-slate-400 font-medium">{i + 1}</td>
-                      <td className="p-2 sm:p-3 font-semibold text-slate-900 truncate">{r.name}</td>
+                      <td className="p-2 sm:p-3 text-center text-slate-400 font-medium text-xs">{i + 1}</td>
+                      <td className="p-2 sm:p-3 font-semibold text-slate-900 truncate text-xs sm:text-sm">{r.name}</td>
                       <td className="p-2 sm:p-3 text-center text-slate-600 text-xs">{r.batch || "—"}</td>
                       <td className="p-2 sm:p-3 text-slate-700 text-xs truncate">{r.specialty || "—"}</td>
-                      <td className="p-2 sm:p-3 text-center font-mono text-slate-900 text-xs">{fmt(r.fees)}</td>
+                      <td className="p-2 sm:p-3 text-center font-mono text-slate-900 text-xs font-semibold">{fmt(r.fees)}</td>
                       <td className="p-2 sm:p-3 text-center font-mono text-emerald-700 font-bold text-xs">{fmt(r.totalPaid)}</td>
                       <td className="p-2 sm:p-3 text-center font-mono text-rose-700 font-bold text-xs">{fmt(r.remaining)}</td>
                       <td className="p-2 sm:p-3 text-center">
                         <button
                           onClick={() => printStatement(r, 2025)}
                           className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition"
-                          title="طباعة كشف الحساب"
+                          title="طباعة"
                         >
                           <Printer className="w-3 h-3" />
-                          <span className="hidden sm:inline">طباعة</span>
                         </button>
                       </td>
                     </tr>
@@ -455,13 +528,13 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* ========== جدول 2026 ========== */}
+      {/* ========== جد��ل 2026 ========== */}
       <div className="w-full bg-gradient-to-b from-purple-50 to-white shadow border border-purple-200 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-purple-600 to-purple-700 px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex justify-between items-start gap-2 flex-wrap">
             <div className="flex-1 min-w-0">
-              <h2 className="text-sm sm:text-base font-bold text-white">📊 أقساط 2026</h2>
-              <p className="text-xs text-purple-100 mt-1">العام الحالي</p>
+              <h2 className="text-sm sm:text-base md:text-lg font-bold text-white">📊 أقساط 2026</h2>
+              <p className="text-xs sm:text-sm text-purple-100 mt-1">العام الحالي</p>
             </div>
             <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-end flex-shrink-0">
               <button onClick={() => setNewPaymentModal(true)} className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white text-purple-700 rounded-lg text-xs sm:text-sm font-bold hover:bg-purple-50 transition active:scale-95">
@@ -477,27 +550,27 @@ export default function InstallmentsTab() {
         <div className="w-full p-3 sm:p-4">
           <StatsGrid stats={stats2026} columns={4} />
           <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
-            <table className="w-full text-xs">
+            <table className="w-full text-xs sm:text-sm">
               <thead className="bg-slate-100 font-bold border-b border-slate-300 sticky top-0">
                 <tr>
-                  <th className="p-1.5 sm:p-2 text-center text-slate-700">#</th>
-                  <th className="p-1.5 sm:p-2 text-right text-slate-700 min-w-20">الاسم</th>
-                  <th className="p-1.5 sm:p-2 text-center text-slate-700 w-14">دفعة</th>
-                  <th className="p-1.5 sm:p-2 text-center text-slate-700 w-12">2026</th>
-                  <th className="p-1.5 sm:p-2 text-center text-slate-700 w-12">2025</th>
+                  <th className="p-2 text-center text-slate-700 min-w-8">#</th>
+                  <th className="p-2 text-right text-slate-700 min-w-20">الاسم</th>
+                  <th className="p-2 text-center text-slate-700 min-w-14">دفعة</th>
+                  <th className="p-2 text-center text-slate-700 min-w-14">2026</th>
+                  <th className="p-2 text-center text-slate-700 min-w-14">2025</th>
                   {MONTHS_2026.map(m => (
-                    <th key={m} className="p-1 text-center text-slate-700 text-xs w-10 bg-slate-50 border-l border-slate-200 font-semibold">{m.substring(0, 3)}</th>
+                    <th key={m} className="p-1 text-center text-slate-700 text-xs min-w-11 bg-slate-50 border-l border-slate-200 font-semibold">{m.substring(0, 3)}</th>
                   ))}
-                  <th className="p-1.5 sm:p-2 text-center text-emerald-700 w-10">مسدد</th>
-                  <th className="p-1.5 sm:p-2 text-center text-rose-700 w-10">رصيد</th>
-                  <th className="p-1.5 sm:p-2 text-center text-slate-700 w-10">حالة</th>
-                  <th className="p-1.5 sm:p-2 text-center text-slate-700 w-10">إجراء</th>
+                  <th className="p-2 text-center text-emerald-700 min-w-14">مسدد</th>
+                  <th className="p-2 text-center text-rose-700 min-w-14">رصيد</th>
+                  <th className="p-2 text-center text-slate-700 min-w-12">حالة</th>
+                  <th className="p-2 text-center text-slate-700 min-w-12">إجراء</th>
                 </tr>
               </thead>
               <tbody>
                 {controls2026.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={17} className="p-4 text-center text-slate-400 text-sm">
+                    <td colSpan={17} className="p-4 text-center text-slate-400 text-xs sm:text-sm">
                       لا توجد بيانات
                     </td>
                   </tr>
@@ -506,18 +579,18 @@ export default function InstallmentsTab() {
                     const status = getStatusText(r.remaining);
                     return (
                       <tr key={i} className="border-t border-slate-200 hover:bg-slate-50 transition">
-                        <td className="p-1.5 sm:p-2 text-center text-slate-400 font-medium">{i + 1}</td>
-                        <td className="p-1.5 sm:p-2 font-semibold text-slate-900 truncate text-xs">{r.name}</td>
-                        <td className="p-1.5 sm:p-2 text-center text-slate-600 text-xs">{r.batch || "—"}</td>
-                        <td className="p-1.5 sm:p-2 text-center font-mono text-slate-900 text-xs">{fmt(r.fees)}</td>
-                        <td className="p-1.5 sm:p-2 text-center font-mono text-amber-700 font-bold text-xs">{fmt(r.prevDue || 0)}</td>
+                        <td className="p-2 text-center text-slate-400 font-medium text-xs">{i + 1}</td>
+                        <td className="p-2 font-semibold text-slate-900 truncate text-xs">{r.name}</td>
+                        <td className="p-2 text-center text-slate-600 text-xs">{r.batch || "—"}</td>
+                        <td className="p-2 text-center font-mono text-slate-900 text-xs font-semibold">{fmt(r.fees)}</td>
+                        <td className="p-2 text-center font-mono text-amber-700 font-bold text-xs">{fmt(r.prevDue || 0)}</td>
                         {MONTHS_2026.map(m => {
                           const paid = Number(r.payments?.[m]) || 0;
                           const cellId = `${r.name}-${m}`;
                           return (
                             <td
                               key={m}
-                              className="p-1 text-center relative bg-slate-50 border-l border-slate-200 hover:bg-slate-100 transition cursor-pointer group"
+                              className="p-1 text-center relative bg-slate-50 border-l border-slate-200 hover:bg-slate-100 transition cursor-pointer group min-w-11"
                               onMouseEnter={() => setHoveredCell(cellId)}
                               onMouseLeave={() => setHoveredCell(null)}
                             >
@@ -544,7 +617,7 @@ export default function InstallmentsTab() {
                               ) : (
                                 <button
                                   onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }}
-                                  className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-100 rounded-full w-4 h-4 flex items-center justify-center font-bold transition text-xs"
+                                  className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-100 rounded-full w-4 h-4 flex items-center justify-center font-bold transition text-xs mx-auto"
                                   title="إضافة"
                                 >
                                   +
@@ -553,18 +626,18 @@ export default function InstallmentsTab() {
                             </td>
                           );
                         })}
-                        <td className="p-1.5 sm:p-2 text-center font-mono text-emerald-700 font-bold text-xs">{fmt(r.totalPaid)}</td>
-                        <td className="p-1.5 sm:p-2 text-center font-mono text-rose-700 font-bold text-xs">{fmt(r.remaining)}</td>
-                        <td className="p-1.5 sm:p-2 text-center">
+                        <td className="p-2 text-center font-mono text-emerald-700 font-bold text-xs">{fmt(r.totalPaid)}</td>
+                        <td className="p-2 text-center font-mono text-rose-700 font-bold text-xs">{fmt(r.remaining)}</td>
+                        <td className="p-2 text-center">
                           <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color} block truncate`}>
                             {status.text}
                           </span>
                         </td>
-                        <td className="p-1.5 sm:p-2 text-center">
+                        <td className="p-2 text-center">
                           <button
                             onClick={() => printStatement(r, 2026)}
                             className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition"
-                            title="طباعة كشف الحساب"
+                            title="طباعة"
                           >
                             <Printer className="w-3 h-3" />
                           </button>
@@ -605,7 +678,7 @@ export default function InstallmentsTab() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">المبلغ *</label>
-            <input type="number" required placeholder="0.00" value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white" step="0.01" min="0" />
+            <input type="number" required placeholder="0.00" value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white" min="0" step="0.01" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">الشهر *</label>
