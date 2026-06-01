@@ -26,6 +26,7 @@ export default function InstallmentsTab() {
   const [editAmount, setEditAmount] = useState("");
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [hoveredCell, setHoveredCell] = useState<string | null>(null); // تتبع الخلية النشطة
 
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining", "notes", "phone"]);
   const controls2025 = useTableControls(installments2025 || [], ["name", "batch", "specialty", "fees", "totalPaid", "remaining", "notes", "phone"]);
@@ -59,7 +60,6 @@ export default function InstallmentsTab() {
     }
   };
 
-  // تحديث البيانات بعد أي تغيير في المدفوعات
   const updateInstallments = (updatedList: any[]) => {
     useStore.setState({ installments: updatedList });
   };
@@ -230,7 +230,7 @@ export default function InstallmentsTab() {
         const status = balance <= 0 ? "له" : "عليه";
         const sc = balance <= 0 ? "#059669" : "#dc2626";
         const bg = balance <= 0 ? "#d1fae5" : "#fee2e2";
-        return `<tr><td style="padding:4px 8px;font-size:9px">${m}</td><td style="padding:4px 8px;font-size:9px;text-align:center;font-family:monospace">${fmt(paid)}</td><td style="padding:4px 8px;font-size:9px;text-align:center;font-family:monospace;color:${sc}">${fmt(Math.max(0, balance))}</td><td style="padding:4px 8px;text-align:center"><span style="background:${bg};color:${sc};padding:1px 8px;border-radius:8px;font-size:8px;font-weight:700">${status}</span></td></tr>`;
+        return `<tr><td style="padding:4px 8px;font-size:9px">${m}</td><td style="padding:4px 8px;font-size:9px;text-align:center">${fmt(paid)}</td><td style="padding:4px 8px;font-size:9px;text-align:center;color:${sc}">${fmt(Math.max(0, balance))}</td><td style="padding:4px 8px;text-align:center"><span style="background:${bg};color:${sc};padding:1px 8px;border-radius:8px;font-size:8px;font-weight:700">${status}</span></td></tr>`;
       }).join("");
 
       const finalBalance = Math.max(0, balance);
@@ -331,7 +331,7 @@ export default function InstallmentsTab() {
                 <th className="p-2 text-center">رسوم 2026</th>
                 <th className="p-2 text-center">متبقي 2025</th>
                 {MONTHS_2026.map(m => (
-                  <th key={m} className="p-1 text-center text-[9px] w-[70px]">{m}</th>
+                  <th key={m} className="p-1 text-center text-[9px] w-[75px]">{m}</th>
                 ))}
                 <th className="p-2 text-center">المسدد</th>
                 <th className="p-2 text-center">الرصيد</th>
@@ -352,30 +352,40 @@ export default function InstallmentsTab() {
                     <td className="p-2 font-mono text-amber-600 font-bold text-center">{fmt(r.prevDue || 0)}</td>
                     {MONTHS_2026.map(m => {
                       const paid = Number(r.payments?.[m]) || 0;
+                      const cellId = `${r.name}-${m}`;
                       return (
-                        <td key={m} className="p-1 text-center relative">
+                        <td 
+                          key={m} 
+                          className="p-1 text-center relative"
+                          onMouseEnter={() => setHoveredCell(cellId)}
+                          onMouseLeave={() => setHoveredCell(null)}
+                        >
                           {paid > 0 ? (
-                            <div className="group relative inline-block">
-                              <span className="font-mono text-[10px] text-emerald-600 font-bold cursor-pointer">{fmt(paid)}</span>
-                              <div className="absolute hidden group-hover:flex -top-7 left-1/2 -translate-x-1/2 bg-white shadow-lg border rounded p-0.5 gap-0.5 z-10 whitespace-nowrap">
-                                <button 
-                                  onClick={() => { setEditPaymentModal({ row: r, month: m, amount: paid }); setEditAmount(String(paid)); }} 
-                                  className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] hover:bg-blue-100 font-bold"
-                                >
-                                  ✏️
-                                </button>
-                                <button 
-                                  onClick={() => deletePayment(r, m)} 
-                                  className="px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-[9px] hover:bg-red-100 font-bold"
-                                >
-                                  🗑️
-                                </button>
-                              </div>
+                            <div className="relative">
+                              <span className="font-mono text-[10px] text-emerald-600 font-bold cursor-pointer">
+                                {fmt(paid)}
+                              </span>
+                              {hoveredCell === cellId && (
+                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 bg-white shadow-lg border rounded px-1 py-0.5 z-20">
+                                  <button 
+                                    onClick={() => { setEditPaymentModal({ row: r, month: m, amount: paid }); setEditAmount(String(paid)); setHoveredCell(null); }} 
+                                    className="px-1.5 py-0.5 bg-blue-500 text-white rounded text-[9px] hover:bg-blue-600 font-bold whitespace-nowrap"
+                                  >
+                                    ✏️ تعديل
+                                  </button>
+                                  <button 
+                                    onClick={() => { deletePayment(r, m); setHoveredCell(null); }} 
+                                    className="px-1.5 py-0.5 bg-red-500 text-white rounded text-[9px] hover:bg-red-600 font-bold whitespace-nowrap"
+                                  >
+                                    🗑️ حذف
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <button 
                               onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }} 
-                              className="text-[10px] text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded px-1 py-0.5"
+                              className="text-[11px] text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded w-6 h-6 flex items-center justify-center font-bold"
                             >
                               +
                             </button>
@@ -488,4 +498,4 @@ export default function InstallmentsTab() {
       )}
     </div>
   );
-                                       }
+    }
