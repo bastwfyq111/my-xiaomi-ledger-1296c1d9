@@ -79,7 +79,8 @@ export default function InstallmentsTab() {
     fees: controls2026.rows.reduce((s, r) => s + cleanNumber(r.fees), 0),
     prevDue: controls2026.rows.reduce((s, r) => s + cleanNumber(r.prevDue), 0),
     paid: controls2026.rows.reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
-    remaining: controls2026.rows.reduce((s, r) => s + cleanNumber(r.remaining), 0),
+    // المتبقي = متبقي 2025 - المسدد في 2026
+    remaining: controls2026.rows.reduce((s, r) => s + Math.max(0, cleanNumber(r.prevDue) - cleanNumber(r.totalPaid)), 0),
   }), [controls2026.rows]);
 
   const allNames = useMemo(() => {
@@ -115,8 +116,9 @@ export default function InstallmentsTab() {
       if (s.name !== paymentModal.row.name) return s;
       const payments = { ...s.payments, [paymentModal.month]: (Number(s.payments[paymentModal.month]) || 0) + amount };
       const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
-      const remaining = cleanNumber(s.prevDue) - totalPaid;
-      return { ...s, payments, totalPaid, remaining: Math.max(0, remaining) };
+      // المتبقي = متبقي 2025 - المسدد في 2026
+      const remaining = Math.max(0, cleanNumber(s.prevDue) - totalPaid);
+      return { ...s, payments, totalPaid, remaining };
     });
 
     updateInstallments(updated);
@@ -140,8 +142,9 @@ export default function InstallmentsTab() {
         if (s.name !== newStudentName) return s;
         const payments = { ...s.payments, [newStudentMonth]: (Number(s.payments[newStudentMonth]) || 0) + amount };
         const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
-        const remaining = cleanNumber(s.prevDue) - totalPaid;
-        return { ...s, payments, totalPaid, remaining: Math.max(0, remaining) };
+        // المتبقي = متبقي 2025 - المسدد في 2026
+        const remaining = Math.max(0, cleanNumber(s.prevDue) - totalPaid);
+        return { ...s, payments, totalPaid, remaining };
       });
       updateInstallments(updated);
     } else {
@@ -153,7 +156,8 @@ export default function InstallmentsTab() {
         fees: 0,
         prevDue: 0,
         totalPaid: amount,
-        remaining: 0,
+        // المتبقي = متبقي 2025 - المسدد (في الحالة الجديدة prevDue = 0)
+        remaining: Math.max(0, 0 - amount),
         notes: "",
         phone: "",
         payments
@@ -181,8 +185,9 @@ export default function InstallmentsTab() {
       if (s.name !== editPaymentModal.row.name) return s;
       const payments = { ...s.payments, [editPaymentModal.month]: newAmount };
       const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
-      const remaining = cleanNumber(s.prevDue) - totalPaid;
-      return { ...s, payments, totalPaid, remaining: Math.max(0, remaining) };
+      // المتبقي = متبقي 2025 - المسدد في 2026
+      const remaining = Math.max(0, cleanNumber(s.prevDue) - totalPaid);
+      return { ...s, payments, totalPaid, remaining };
     });
 
     updateInstallments(updated);
@@ -199,8 +204,9 @@ export default function InstallmentsTab() {
       if (s.name !== row.name) return s;
       const payments = { ...s.payments, [month]: 0 };
       const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
-      const remaining = cleanNumber(s.prevDue) - totalPaid;
-      return { ...s, payments, totalPaid, remaining: Math.max(0, remaining) };
+      // المتبقي = متبقي 2025 - المسدد في 2026
+      const remaining = Math.max(0, cleanNumber(s.prevDue) - totalPaid);
+      return { ...s, payments, totalPaid, remaining };
     });
 
     updateInstallments(updated);
@@ -270,7 +276,8 @@ export default function InstallmentsTab() {
             const fees = cleanNumber(findByKey(["رسوم", "مبلغ", "الرسوم"]));
             const prevDue = year === 2026 ? cleanNumber(findByKey(["2025", "السابق", "متبقي", "متبقي 2025"])) : 0;
             const totalPaid = cleanNumber(findByKey(["المسدد", "الإجمالي", "المدفوع", "المبلغ المسدد"]));
-            const remaining = cleanNumber(findByKey(["المتبقي", "الرصيد", "المتبقية"]));
+            // المتبقي = متبقي 2025 - المسدد (أثناء الاستيراد)
+            const remaining = Math.max(0, prevDue - totalPaid);
             const notes = findByKey(["ملاحظات", "ملاحظة"]);
             const phone = findByKey(["هاتف", "تلفون", "الهاتف"]);
 
@@ -316,7 +323,7 @@ export default function InstallmentsTab() {
     };
 
     reader.onerror = () => {
-      setImportError("فشل في ق��اءة الملف");
+      setImportError("فشل في قراءة الملف");
       toast.error("فشل في قراءة الملف");
     };
 
@@ -332,6 +339,15 @@ export default function InstallmentsTab() {
   const generateAccountStatement = (row: any, year: number) => {
     const months = year === 2025 ? MONTHS_2025 : MONTHS_2026;
     const today_date = today();
+    
+    // فلترة الأشهر التي تم سدادها فقط
+    const paidMonths = months
+      .map((month, idx) => ({
+        month,
+        idx: idx + 1,
+        paid: Number(row.payments?.[month]) || 0
+      }))
+      .filter(item => item.paid > 0);
     
     let html = `
       <html dir="rtl">
@@ -355,6 +371,7 @@ export default function InstallmentsTab() {
             .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #ddd; padding-top: 15px; }
             .positive { color: #27ae60; font-weight: bold; }
             .negative { color: #e74c3c; font-weight: bold; }
+            .no-payments { text-align: center; padding: 20px; color: #999; font-style: italic; }
           </style>
         </head>
         <body>
@@ -400,20 +417,20 @@ export default function InstallmentsTab() {
                 <tr>
                   <th>#</th>
                   <th>الشهر</th>
-                  <th>المبلغ</th>
+                  <th>المبلغ المسدد</th>
                 </tr>
               </thead>
               <tbody>
-                ${months.map((month, idx) => {
-                  const paid = Number(row.payments?.[month]) || 0;
-                  return `
+                ${paidMonths.length > 0 
+                  ? paidMonths.map(({ month, idx, paid }) => `
                     <tr>
-                      <td>${idx + 1}</td>
+                      <td>${idx}</td>
                       <td>${month}</td>
-                      <td>${paid > 0 ? `<span class="positive">${fmt(paid)}</span>` : "—"}</td>
+                      <td><span class="positive">${fmt(paid)}</span></td>
                     </tr>
-                  `;
-                }).join("")}
+                  `).join("")
+                  : `<tr><td colspan="3" class="no-payments">لا توجد مدفوعات مسجلة</td></tr>`
+                }
               </tbody>
             </table>
             
@@ -528,7 +545,7 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* ========== جد��ل 2026 ========== */}
+      {/* ========== جدول 2026 ========== */}
       <div className="w-full bg-gradient-to-b from-purple-50 to-white shadow border border-purple-200 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-purple-600 to-purple-700 px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex justify-between items-start gap-2 flex-wrap">
