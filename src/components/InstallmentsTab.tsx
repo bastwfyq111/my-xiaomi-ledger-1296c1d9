@@ -2,8 +2,6 @@ import React, { useMemo, useState } from "react";
 import { useStore, INSTALLMENT_MONTHS } from "@/lib/store";
 import { fmt, today } from "@/lib/format";
 import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 import EditModal, { type EditField } from "./EditModal";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
@@ -32,16 +30,6 @@ const BASE_COLS = [
   { key: "notes", label: "ملاحظات" },
   { key: "phone", label: "رقم الهاتف" },
 ];
-
-// دالة مساعدة لتحويل ArrayBuffer إلى base64
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
 
 export default function InstallmentsTab() {
   const { 
@@ -300,8 +288,8 @@ export default function InstallmentsTab() {
     e.target.value = "";
   };
 
-  // ================== تصدير كشف حساب PDF مع دعم العربية ==================
-  const printComprehensiveStatement = async (studentName: string) => {
+  // ================== تصدير كشف حساب PDF باستخدام نافذة الطباعة ==================
+  const printComprehensiveStatement = (studentName: string) => {
     const r2025 = (installments2025 || []).find((i: any) => i.name === studentName);
     const r2026 = (installments || []).find((i: any) => i.name === studentName);
 
@@ -310,131 +298,227 @@ export default function InstallmentsTab() {
       return;
     }
 
-    // إنشاء مستند A4 أفقي
-    const pdf = new jsPDF({
-      orientation: "landscape",
-      unit: "mm",
-      format: "a4",
-    });
-
-    // تحميل وتضمين خط عربي (تأكد من وجود الملف في public/fonts/Cairo-Regular.ttf)
-    try {
-      const fontUrl = '/fonts/Cairo-Regular.ttf'; // يجب وضع ملف الخط في public/fonts/
-      const response = await fetch(fontUrl);
-      if (!response.ok) throw new Error("فشل تحميل الخط");
-      
-      const fontBuffer = await response.arrayBuffer();
-      const fontBase64 = arrayBufferToBase64(fontBuffer);
-      
-      pdf.addFileToVFS('Cairo-Regular.ttf', fontBase64);
-      pdf.addFont('Cairo-Regular.ttf', 'Cairo', 'normal');
-      pdf.setFont('Cairo');
-    } catch (error) {
-      console.error('خطأ في تحميل الخط العربي:', error);
-      // المتابعة بدون خط مخصص - قد لا تظهر العربية بشكل صحيح
+    const w = window.open("", "_blank", "width=900,height=700");
+    if (!w) {
+      toast.error("يرجى السماح بالنوافذ المنبثقة للمتصفح");
+      return;
     }
 
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    
-    // العنوان الرئيسي
-    pdf.setFontSize(18);
-    pdf.text('المجلس اليمني للاختصاصات الطبية', pageWidth / 2, 15, { align: 'center' });
-    pdf.setFontSize(14);
-    pdf.text('كشف حساب مالي موحد', pageWidth / 2, 22, { align: 'center' });
-    
-    // معلومات الطالب
-    pdf.setFontSize(11);
-    pdf.text(`اسم الطبيب المتدرب: ${studentName}`, 190, 32, { align: 'right' });
-    pdf.text(`تاريخ الاستخراج: ${today()}`, 190, 38, { align: 'right' });
-    
-    let startY = 45;
+    let body = `
+    <div style="text-align: center; margin-bottom: 30px;">
+      <h1 style="color: #0f766e; margin-bottom: 5px;">كشف الحساب المالي الموحد</h1>
+      <div style="color: #64748b; font-size: 14px;">المجلس اليمني للاختصاصات الطبية — فرع صعدة</div>
+      <div style="color: #94a3b8; font-size: 12px; margin-top: 5px;">تاريخ الاستخراج: ${today()}</div>
+    </div>
+    <div class="student-info">
+      <div><strong>الاسم:</strong> ${studentName}</div>
+      <div><strong>التخصص:</strong> ${r2026?.specialty || r2025?.specialty || "—"}</div>
+      <div><strong>الدفعة:</strong> ${r2026?.batch || r2025?.batch || "—"}</div>
+      ${(r2026?.phone || r2025?.phone) ? `<div><strong>الهاتف:</strong> ${r2026?.phone || r2025?.phone}</div>` : ""}
+    </div>
+    `;
 
-    // جدول 2025
     if (r2025) {
-      pdf.setFontSize(12);
-      pdf.text('بيانات عام 2025:', 190, startY, { align: 'right' });
-      startY += 5;
-
-      autoTable(pdf, {
-        head: [['الدفعة', 'المساق', 'الرسوم', 'المسدد', 'المتبقي', 'الهاتف', 'ملاحظات']],
-        body: [[
-          r2025.batch || '',
-          r2025.specialty || '',
-          fmt(r2025.fees),
-          fmt(r2025.totalPaid),
-          fmt(r2025.remaining),
-          r2025.phone || '',
-          r2025.notes || ''
-        ]],
-        startY: startY,
-        theme: 'grid',
-        styles: {
-          font: 'Cairo',
-          fontSize: 10,
-          halign: 'right',
-          cellPadding: 3,
-        },
-        headStyles: {
-          fillColor: [41, 128, 185],
-          textColor: 255,
-          fontStyle: 'bold',
-          halign: 'center',
-        },
-        margin: { right: 15 },
-        tableWidth: 'auto',
-      });
+      body += `
+      <h3>📋 بيان أقساط ورسوم عام 2025م</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>مبلغ الرسوم</th>
+            <th>الإجمالي المسدد</th>
+            <th>المتبقي</th>
+            ${r2025.notes ? '<th>ملاحظات</th>' : ''}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="amount">${fmt(r2025.fees)}</td>
+            <td class="amount paid">${fmt(r2025.totalPaid)}</td>
+            <td class="amount remaining">${fmt(r2025.remaining)}</td>
+            ${r2025.notes ? `<td>${r2025.notes}</td>` : ''}
+          </tr>
+        </tbody>
+      </table>
       
-      startY = (pdf as any).lastAutoTable.finalY + 10;
+      ${r2025.payments ? `
+      <h4 style="margin-top: 15px; color: #475569;">تفاصيل الأقساط الشهرية 2025:</h4>
+      <table>
+        <thead>
+          <tr>${MONTHS_2025.map(m => `<th>${m}</th>`).join('')}</tr>
+        </thead>
+        <tbody>
+          <tr>${MONTHS_2025.map(m => `<td class="amount">${fmt(r2025.payments[m] || 0)}</td>`).join('')}</tr>
+        </tbody>
+      </table>
+      ` : ''}
+      `;
     }
 
-    // جدول 2026
     if (r2026) {
-      pdf.setFontSize(12);
-      pdf.text('بيانات عام 2026:', 190, startY, { align: 'right' });
-      startY += 5;
-
-      autoTable(pdf, {
-        head: [['الدفعة', 'المساق', 'رسوم 2026', 'متبقي 2025', 'المسدد', 'المتبقي', 'الهاتف', 'ملاحظات']],
-        body: [[
-          r2026.batch || '',
-          r2026.specialty || '',
-          fmt(r2026.fees),
-          fmt(r2026.prevDue || 0),
-          fmt(r2026.totalPaid),
-          fmt(r2026.remaining),
-          r2026.phone || '',
-          r2026.notes || ''
-        ]],
-        startY: startY,
-        theme: 'grid',
-        styles: {
-          font: 'Cairo',
-          fontSize: 10,
-          halign: 'right',
-          cellPadding: 3,
-        },
-        headStyles: {
-          fillColor: [39, 174, 96],
-          textColor: 255,
-          fontStyle: 'bold',
-          halign: 'center',
-        },
-        margin: { right: 15 },
-        tableWidth: 'auto',
-      });
+      body += `
+      <h3>📋 بيان أقساط ورسوم عام 2026م</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>رسوم الدراسة</th>
+            <th>متبقي من 2025</th>
+            <th>المسدد في 2026</th>
+            <th>المتبقي الحالي</th>
+            ${r2026.notes ? '<th>ملاحظات</th>' : ''}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="amount">${fmt(r2026.fees)}</td>
+            <td class="amount prev-due">${fmt(r2026.prevDue || 0)}</td>
+            <td class="amount paid">${fmt(r2026.totalPaid)}</td>
+            <td class="amount remaining">${fmt(r2026.remaining)}</td>
+            ${r2026.notes ? `<td>${r2026.notes}</td>` : ''}
+          </tr>
+        </tbody>
+      </table>
+      
+      ${r2026.payments ? `
+      <h4 style="margin-top: 15px; color: #475569;">تفاصيل الأقساط الشهرية 2026:</h4>
+      <table>
+        <thead>
+          <tr>${MONTHS_2026_CLEAN.map(m => `<th>${m}</th>`).join('')}</tr>
+        </thead>
+        <tbody>
+          <tr>${MONTHS_2026_CLEAN.map(m => `<td class="amount">${fmt(r2026.payments[m] || 0)}</td>`).join('')}</tr>
+        </tbody>
+      </table>
+      ` : ''}
+      `;
     }
 
-    pdf.save(`كشف_حساب_${studentName}_${today()}.pdf`);
-    toast.success('تم استخراج كشف الحساب بنجاح');
-  };
+    // تذييل الصفحة
+    body += `
+    <div style="margin-top: 40px; text-align: center; color: #94a3b8; font-size: 11px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+      <div>تم استخراج هذا الكشف آلياً من نظام إدارة الأقساط والرسوم</div>
+      <div>المجلس اليمني للاختصاصات الطبية © ${new Date().getFullYear()}</div>
+    </div>
+    `;
 
-  // زر يستدعي الدالة async مع إشعار
-  const handlePrint = (studentName: string) => {
-    toast.promise(printComprehensiveStatement(studentName), {
-      loading: "جاري تجهيز التقرير...",
-      success: "تم الحفظ",
-      error: "فشل التصدير",
-    });
+    const head = `
+    <meta charset="utf-8">
+    <title>كشف حساب - ${studentName}</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+      
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      
+      body { 
+        font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; 
+        direction: rtl; 
+        padding: 30px; 
+        color: #1e293b;
+        background: white;
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+      
+      table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        margin-bottom: 25px; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        page-break-inside: avoid;
+      }
+      
+      th { 
+        background: #0f766e; 
+        color: white; 
+        padding: 10px 8px; 
+        font-weight: 600;
+        font-size: 13px;
+        text-align: center;
+        border: 1px solid #0d6b63;
+      }
+      
+      td { 
+        border: 1px solid #e2e8f0; 
+        padding: 8px; 
+        text-align: center; 
+        font-size: 13px;
+      }
+      
+      tr:nth-child(even) { background: #f8fafc; }
+      
+      h1 { 
+        color: #0f766e; 
+        text-align: center; 
+        margin-bottom: 5px;
+        font-size: 22px;
+      }
+      
+      h3 { 
+        color: #0f766e; 
+        margin: 25px 0 10px 0; 
+        padding-bottom: 8px;
+        border-bottom: 2px solid #0f766e;
+        font-size: 16px;
+      }
+      
+      h4 {
+        color: #475569;
+        margin: 15px 0 8px 0;
+        font-size: 13px;
+      }
+      
+      .student-info { 
+        display: flex; 
+        justify-content: space-around; 
+        flex-wrap: wrap;
+        background: #f1f5f9; 
+        padding: 15px; 
+        margin-bottom: 25px; 
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+      }
+      
+      .student-info div {
+        padding: 5px 15px;
+        font-size: 14px;
+      }
+      
+      .amount {
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      
+      .paid {
+        color: #059669;
+      }
+      
+      .remaining {
+        color: #dc2626;
+      }
+      
+      .prev-due {
+        color: #d97706;
+      }
+      
+      @media print {
+        body { padding: 15px; }
+        @page { margin: 15mm; }
+        table { page-break-inside: avoid; }
+        h3 { page-break-after: avoid; }
+      }
+    </style>`;
+
+    w.document.write(`<html><head>${head}</head><body>${body}<script>
+      window.onload = function() {
+        // انتظار تحميل الخط من Google Fonts ثم الطباعة
+        document.fonts.ready.then(function() {
+          window.print();
+        });
+      }
+    </script></body></html>`);
+    w.document.close();
+    
+    toast.success("تم فتح نافذة الطباعة");
   };
 
   return (
@@ -487,7 +571,7 @@ export default function InstallmentsTab() {
                   <td className="p-2 text-center space-x-1 space-x-reverse whitespace-nowrap">
                     <button onClick={() => setPaymentModal({ row: r, year: 2025 })} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold hover:bg-emerald-600 hover:text-white transition">💵 دفعة</button>
                     <button onClick={() => setEditingRow({ row: r, year: 2025 })} className="text-blue-600 hover:underline font-bold px-1">تعديل</button>
-                    <button onClick={() => handlePrint(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
+                    <button onClick={() => printComprehensiveStatement(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">🖨️ كشف</button>
                   </td>
                 </tr>
               ))}
@@ -547,7 +631,7 @@ export default function InstallmentsTab() {
                   <td className="p-2 text-center space-x-1 space-x-reverse whitespace-nowrap">
                     <button onClick={() => setPaymentModal({ row: r, year: 2026 })} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold hover:bg-emerald-600 hover:text-white transition">💵 دفعة</button>
                     <button onClick={() => setEditingRow({ row: r, year: 2026 })} className="text-blue-600 hover:underline font-bold px-1">تعديل</button>
-                    <button onClick={() => handlePrint(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">كشف موحد</button>
+                    <button onClick={() => printComprehensiveStatement(r.name)} className="px-1.5 py-0.5 bg-slate-50 border rounded hover:bg-teal-700 hover:text-white transition">🖨️ كشف</button>
                   </td>
                 </tr>
               ))}
@@ -576,7 +660,7 @@ export default function InstallmentsTab() {
                   placeholder="مثال: 30000"
                   value={payAmount}
                   onChange={(e) => setPayAmount(e.target.value)}
-                  className="w-full px-0 py-2 border rounded-lg text-sm bg-slate-50 text-left font-mono"
+                  className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50 text-left font-mono"
                 />
               </div>
 
@@ -586,7 +670,7 @@ export default function InstallmentsTab() {
                   required
                   value={payMonth}
                   onChange={(e) => setPayMonth(e.target.value)}
-                  className="w-full px-0 py-2 border rounded-lg text-sm bg-slate-50"
+                  className="w-full px-3 py-2 border rounded-lg text-sm bg-slate-50"
                 >
                   <option value="">-- اختر الشهر المالي --</option>
                   {(paymentModal.year === 2025 ? MONTHS_2025 : MONTHS_2026_CLEAN).map(m => (
@@ -654,4 +738,4 @@ export default function InstallmentsTab() {
       })()}
     </div>
   );
-        }
+                                                                  }
