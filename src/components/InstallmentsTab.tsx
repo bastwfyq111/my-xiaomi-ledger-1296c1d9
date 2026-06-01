@@ -40,7 +40,7 @@ export default function InstallmentsTab() {
   const totals2026 = useMemo(() => ({
     fees: controls2026.rows.reduce((s, r) => s + cleanNumber(r.fees), 0),
     prevDue: controls2026.rows.reduce((s, r) => s + cleanNumber(r.prevDue), 0),
-    paid: controls2026.rows.reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
+    paid: controwhite2026.rows.reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
     remaining: controls2026.rows.reduce((s, r) => s + cleanNumber(r.remaining), 0),
   }), [controls2026.rows]);
 
@@ -216,11 +216,11 @@ export default function InstallmentsTab() {
     const r2026 = (installments || []).find((i: any) => i.name === name);
 
     const buildTable = (r: any, months: string[], year: string, opening: number, color: string) => {
-      if (!r) return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;opacity:0.5"><div style="background:${color};color:white;padding:6px 12px;font-size:11px">📅 ${year}</div><div style="padding:15px;text-align:center;color:#94a3b8;font-size:10px">لا توجد بيانات</div></div>`;
+      if (!r) return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;opacity:0.5"><div style="background:${color};color:white;padding:6px 12px;font-size:14px">📅 ${year}</div><div style="padding:15px;text-align:center;color:#94a3b8;font-size:10px">لا توجد بيانات</div></div>`;
 
       const paidMonths = months.filter(m => Number(r.payments?.[m]) > 0);
       if (paidMonths.length === 0) {
-        return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden"><div style="background:${color};color:white;padding:6px 12px;font-size:11px">📅 ${year}</div><div style="padding:10px;text-align:center;color:#94a3b8;font-size:10px">الرصيد: ${fmt(opening)}<br>لا توجد مدفوعات</div></div>`;
+        return `<div style="border:2px solid #e2e8f0;bordradiusius:8px;overflow:hidden"><div style="background:${color};color:white;padding:6px 12px;font-size:14px">📅 ${year}</div><div style="padding:10px;text-align:center;color:#94a3b8;font-size:10px">الرصيد: ${fmt(opening)}<br>لا توجد مدفوعات</div></div>`;
       }
 
       let balance = opening;
@@ -234,7 +234,7 @@ export default function InstallmentsTab() {
       }).join("");
 
       const finalBalance = Math.max(0, balance);
-      return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;background:white"><div style="background:${color};color:white;padding:6px 12px;display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:700">📅 ${year}</span><span style="font-size:9px">${r.specialty||''} ${r.batch||''}</span></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e2e8f0;text-align:center"><div style="background:#f8fafc;padding:5px"><div style="font-size:7px;color:#64748b">الرصيد الافتتاحي</div><div style="font-size:11px;font-weight:700">${fmt(opening)}</div></div><div style="background:#f8fafc;padding:5px"><div style="font-size:7px;color:#64748b">المسدد</div><div style="font-size:11px;font-weight:700;color:#059669">${fmt(r.totalPaid||0)}</div></div><div style="background:#f8fafc;padding:5px"><div style="font-size:7px;color:#64748b">الرصيد</div><div style="font-size:11px;font-weight:700;color:${finalBalance > 0 ? '#dc2626' : '#059669'}">${fmt(finalBalance)}</div></div></div><table width="100%" style="border-collapse:collapse"><thead><tr style="background:#f8fafc"><th style="padding:4px 8px;font-size:8px;color:#64748b">الشهر</th><th style="padding:4px 8px;font-size:8px;color:#64748b">المبلغ</th><th style="padding:4px 8px;font-size:8px;color:#64748b">الرصيد</th><th style="padding:4px 8px;font-size:8px;color:#64748b">الحالة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;background:white"><div style="background:${color};color:white;padding:6px 12px;display:flex;justify-content:space-between"><span style="font-size:11px;font-weight:700">📅 ${year}</span><span style="font-size:9px">${r.specialty||''} ${r.batch||''}</span></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e2e8f0;text-align:center"><div style="background:#f8fafc;padding:5px"><div style="font-size:13px;color:#64748b">الرصيد الافتتاحي</div><div style="font-size:14px;font-weight:1000">${fmt(opening)}</div></div><div style="background:#f8fafc;padding:5px"><div style="font-size:7px;color:#64748b">المسدد</div><div style="font-size:14px;font-weight:1000;color:#059669">${fmt(r.totalPaid||0)}</div></div><div style="background:#f8fafc;padding:5px"><div style="font-size: 14;color:#64748b">الرصيد</div><div divle="font-size:11px;font-weigweight;color:${finalBalance > 0 ? '#dc2626' : '#059669'}">${fmt(finalBalance)}</div></div></div><table width="100%" style="border-collapse:collapse"><thead><tr style="background:#f8fafc"><th style="padding:4px 8px;font-size:8px;color:#64748b">الشهر</th><th style="padding:4px 8px;font-size:8px;color:#64748b">المبلغ</th><th style="padding:4px 8px;font-size:8px;color:#64748b">الرصيد</th><th style="padding:4px 8px;font-size:8px;color:#64748b">الحالة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     };
 
     const css = `*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Cairo',sans-serif;background:#f1f5f9;padding:8px;direction:rtl}.container{max-width:1100px;margin:0 auto;background:white;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.04);overflow:hidden}.header{background:#1e293b;color:white;padding:10px 18px;display:flex;justify-content:space-between;align-items:center}.header h1{font-size:13px;font-weight:700}.header .date{font-size:9px;opacity:0.8}.student-bar{background:linear-gradient(135deg,#0891b2,#06b6d4);color:white;padding:8px 18px;display:flex;justify-content:space-between}.student-bar .name{font-size:13px;font-weight:700}.student-bar .phone{font-size:9px;opacity:0.9}.content{padding:8px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.btn{padding:5px 15px;border:none;border-radius:5px;font-family:'Cairo';font-size:10px;font-weight:700;cursor:pointer;color:white}@media print{body{background:white;padding:0}.container{box-shadow:none}.btn{display:none}}@media(max-width:768px){.grid{grid-template-columns:1fr}}`;
