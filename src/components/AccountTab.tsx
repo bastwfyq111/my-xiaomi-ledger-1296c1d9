@@ -54,7 +54,7 @@ const emptyEntry = (): EntryForm => ({
 export default function AccountTab() {
   const { accounts, openingBalance, setOpeningBalance, deleteAccount, addAccount, updateAccount } = useStore();
   const [showForm, setShowForm] = useState(false);
-  const [entry, setEntry] = useState<EntryForm>(emptyEntry);
+  const [entry, setEntry] = useState<EntryForm>(emptyEntry());
   const [editing, setEditing] = useState<string | null>(null);
 
   const submitEntry = () => {
@@ -87,26 +87,26 @@ export default function AccountTab() {
   const finalBalance = openingBalance + totalIn - totalOut;
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-3 sm:space-y-4 text-sm sm:text-base">
       <div className="flex justify-end">
         <ImportButton kind="account" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         <Stat label="الرصيد الافتتاحي" value={openingBalance} editable onChange={setOpeningBalance} />
         <Stat label="إجمالي الإيرادات" value={totalIn} className="bg-success/10 border-success/30" />
         <Stat label="إجمالي المصروفات" value={totalOut} className="bg-destructive/10 border-destructive/30" />
         <Stat label="الرصيد النهائي" value={finalBalance} className="bg-primary/10 border-primary/30" />
       </div>
 
-      <div className="bg-card rounded-xl shadow-sm border p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <h2 className="text-lg font-bold text-primary">حساب المجلس ({accounts.length})</h2>
+      <div className="bg-card rounded-xl shadow-sm border p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
+          <h2 className="text-base sm:text-lg font-bold text-primary">حساب المجلس ({accounts.length})</h2>
           <div className="flex gap-2 flex-wrap">
-            <button onClick={clearFilters} className="px-3 py-1.5 border rounded-lg text-sm">مسح التصفية</button>
-            <button onClick={() => setShowForm((v) => !v)} className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-semibold">
+            <button onClick={clearFilters} className="px-3 py-1.5 border rounded-lg text-xs sm:text-sm">مسح التصفية</button>
+            <button onClick={() => setShowForm((v) => !v)} className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs sm:text-sm font-semibold">
               {showForm ? "إغلاق" : "+ إضافة قيد خارجي"}
             </button>
-            <button onClick={() => accountsPdf(accounts, openingBalance)} className="px-3 py-1.5 bg-accent text-accent-foreground rounded-lg text-sm font-semibold">
+            <button onClick={() => accountsPdf(accounts, openingBalance)} className="px-3 py-1.5 bg-accent text-accent-foreground rounded-lg text-xs sm:text-sm font-semibold">
               طباعة / PDF
             </button>
           </div>
@@ -115,7 +115,7 @@ export default function AccountTab() {
         {showForm && (
           <div className="border rounded-lg p-3 mb-3 bg-muted/30">
             <h3 className="font-bold text-sm mb-2 text-primary">قيد خارجي جديد</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               <FormField label="التاريخ" type="date" v={entry.date} on={(v) => setEntry({ ...entry, date: v })} />
               <FormField label="رقم الحافظة" v={entry.hafizaNo} on={(v) => setEntry({ ...entry, hafizaNo: v })} />
               <FormField label="رقم الاشعار" v={entry.notifyNo} on={(v) => setEntry({ ...entry, notifyNo: v })} />
@@ -124,7 +124,7 @@ export default function AccountTab() {
               <FormField label="تاريخ الشيك" type="date" v={entry.checkDate} on={(v) => setEntry({ ...entry, checkDate: v })} />
               <FormField label="التخصص" v={entry.specialty} on={(v) => setEntry({ ...entry, specialty: v })} />
               <FormField label="الاسم" v={entry.name} on={(v) => setEntry({ ...entry, name: v })} />
-              <div className="col-span-2 md:col-span-4">
+              <div className="col-span-1 sm:col-span-2 lg:col-span-4">
                 <FormField label="البيان" v={entry.description} on={(v) => setEntry({ ...entry, description: v })} />
               </div>
               <FormField label="مبلغ الحافظة" type="number" v={entry.hafizaAmount} on={(v) => setEntry({ ...entry, hafizaAmount: v })} />
@@ -132,13 +132,13 @@ export default function AccountTab() {
               <FormField label="المصروفات" type="number" v={entry.expense} on={(v) => setEntry({ ...entry, expense: v })} />
             </div>
             <div className="mt-3 flex gap-2">
-              <button onClick={submitEntry} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold">حفظ القيد</button>
-              <button onClick={() => setEntry(emptyEntry())} className="px-3 py-2 border rounded-lg">مسح</button>
+              <button onClick={submitEntry} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-semibold text-sm">حفظ القيد</button>
+              <button onClick={() => setEntry(emptyEntry())} className="px-3 py-2 border rounded-lg text-sm">مسح</button>
             </div>
           </div>
         )}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs sm:text-sm">
             <thead className="bg-secondary text-secondary-foreground">
               <tr>
                 <th className="px-2 py-2 text-right">م</th>
@@ -174,7 +174,7 @@ export default function AccountTab() {
                 <td></td>
               </tr>
               {rows.map((a, i) => (
-                <tr key={a.id} className="border-t hover:bg-muted/40">
+                <tr key={a.id} className="border-t hover:bg-muted/40 text-xs sm:text-sm">
                   <td className="px-2 py-1.5">{i + 2}</td>
                   <td className="px-2 py-1.5 whitespace-nowrap">{a.date}</td>
                   <td className="px-2 py-1.5">{a.hafizaNo}</td>
@@ -194,7 +194,7 @@ export default function AccountTab() {
                   </td>
                 </tr>
               ))}
-              {rows.length === 0 && <tr><td colSpan={14} className="text-center py-8 text-muted-foreground">لا توجد حركات</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={14} className="text-center py-8 text-muted-foreground text-sm">لا توجد حركات</td></tr>}
             </tbody>
           </table>
         </div>
@@ -237,17 +237,17 @@ export default function AccountTab() {
 
 function Stat({ label, value, className = "", editable, onChange }: { label: string; value: number; className?: string; editable?: boolean; onChange?: (n: number) => void }) {
   return (
-    <div className={`bg-card border rounded-xl p-3 ${className}`}>
+    <div className={`bg-card border rounded-xl p-2 sm:p-3 ${className}`}>
       <div className="text-xs text-muted-foreground">{label}</div>
       {editable ? (
         <input
           type="number"
           value={value}
           onChange={(e) => onChange?.(Number(e.target.value) || 0)}
-          className="text-lg font-bold font-mono w-full bg-transparent focus:outline-none"
+          className="text-base sm:text-lg font-bold font-mono w-full bg-transparent focus:outline-none"
         />
       ) : (
-        <div className="text-lg font-bold font-mono">{fmt(value)}</div>
+        <div className="text-base sm:text-lg font-bold font-mono">{fmt(value)}</div>
       )}
     </div>
   );
@@ -257,7 +257,7 @@ function FormField({ label, v, on, type = "text" }: { label: string; v: string; 
   return (
     <div>
       <label className="text-xs text-muted-foreground">{label}</label>
-      <input type={type} value={v} onChange={(e) => on(e.target.value)} className="w-full px-2 py-1.5 border rounded-lg bg-input/30 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+      <input type={type} value={v} onChange={(e) => on(e.target.value)} className="w-full px-2 py-1.5 text-sm border rounded-lg bg-input/30 focus:outline-none focus:ring-2 focus:ring-ring" />
     </div>
   );
 }

@@ -83,14 +83,14 @@ export default function HafizaTab() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-4 sm:space-y-6 text-sm sm:text-base">
       <div className="flex justify-end">
         <ImportButton kind="hafiza" />
       </div>
-      <div className="bg-card rounded-xl shadow-sm border p-4">
-        <h2 className="text-lg font-bold mb-4 text-primary">إضافة حافظة توريد جديدة</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          <div className="relative md:col-span-2">
+      <div className="bg-card rounded-xl shadow-sm border p-3 sm:p-4">
+        <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-primary">إضافة حافظة توريد جديدة</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+          <div className="relative sm:col-span-2">
             <label className="text-xs text-muted-foreground">الاسم *</label>
             <input
               value={nameQuery}
@@ -98,13 +98,13 @@ export default function HafizaTab() {
               onFocus={() => setShowSugg(true)}
               onBlur={() => setTimeout(() => setShowSugg(false), 200)}
               placeholder="ابحث أو اكتب اسم المتدرب..."
-              className="w-full px-3 py-0 border rounded-lg bg-input/30 focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full px-3 py-2 text-sm border rounded-lg bg-input/30 focus:outline-none focus:ring-2 focus:ring-ring"
             />
             {showSugg && nameSuggestions.length > 0 && (
               <ul className="absolute z-20 left-0 right-0 mt-1 bg-popover border rounded-lg shadow-lg max-h-60 overflow-y-auto">
                 {nameSuggestions.map((t) => (
                   <li key={t.name}>
-                    <button type="button" onMouseDown={() => pickName(t)} className="w-full text-right px-3 py-2 hover:bg-accent/30">
+                    <button type="button" onMouseDown={() => pickName(t)} className="w-full text-right px-3 py-2 hover:bg-accent/30 text-sm">
                       <div className="font-medium">{t.name}</div>
                       <div className="text-xs text-muted-foreground">{t.specialty} — {t.batch}</div>
                     </button>
@@ -125,7 +125,7 @@ export default function HafizaTab() {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="اكتب أو اختر..."
-              className="w-full px-3 py-2 border rounded-lg bg-input/30 focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full px-3 py-2 text-sm border rounded-lg bg-input/30 focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <datalist id="hafiza-descriptions">
               {Array.from(new Set([...DESCRIPTIONS, ...hafiza.map((h) => h.description).filter(Boolean)])).map((d) => (
@@ -137,28 +137,28 @@ export default function HafizaTab() {
           <Field label="رقم الاشعار" v={form.notifyNo} on={(v) => setForm({ ...form, notifyNo: v })} />
           <Field label="مبلغ التوريد" type="number" v={form.notifyAmount} on={(v) => setForm({ ...form, notifyAmount: v })} />
         </div>
-        <div className="mt-4 flex gap-2 flex-wrap">
-          <button onClick={submit} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 active:scale-95 transition">
+        <div className="mt-3 sm:mt-4 flex gap-2 flex-wrap">
+          <button onClick={submit} className="px-4 sm:px-5 py-2 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 active:scale-95 transition text-sm">
             حفظ + ترحيل تلقائي
           </button>
-          <button onClick={() => { setForm(empty); setNameQuery(""); }} className="px-4 py-2 border rounded-lg hover:bg-secondary">
+          <button onClick={() => { setForm(empty); setNameQuery(""); }} className="px-4 py-2 border rounded-lg hover:bg-secondary text-sm">
             مسح
           </button>
         </div>
       </div>
 
-      <div className="bg-card rounded-xl shadow-sm border p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <h2 className="text-lg font-bold text-primary">حوافظ التوريد ({hafiza.length})</h2>
+      <div className="bg-card rounded-xl shadow-sm border p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
+          <h2 className="text-base sm:text-lg font-bold text-primary">حوافظ التوريد ({hafiza.length})</h2>
           <div className="flex gap-2 flex-wrap">
-            <button onClick={clearFilters} className="px-3 py-1.5 border rounded-lg text-sm">مسح التصفية</button>
-            <button onClick={() => hafizaPdf(filtered)} className="px-3 py-1.5 bg-accent text-accent-foreground rounded-lg text-sm font-semibold">
+            <button onClick={clearFilters} className="px-3 py-1.5 border rounded-lg text-xs sm:text-sm">مسح التصفية</button>
+            <button onClick={() => hafizaPdf(filtered)} className="px-3 py-1.5 bg-accent text-accent-foreground rounded-lg text-xs sm:text-sm font-semibold">
               طباعة / PDF
             </button>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs sm:text-sm">
             <thead className="bg-secondary text-secondary-foreground">
               <tr>
                 <th className="px-2 py-2 text-right">م</th>
@@ -182,7 +182,7 @@ export default function HafizaTab() {
             </thead>
             <tbody>
               {filtered.map((h, i) => (
-                <tr key={h.id} className="border-t hover:bg-muted/40">
+                <tr key={h.id} className="border-t hover:bg-muted/40 text-xs sm:text-sm">
                   <td className="px-2 py-1.5">{i + 1}</td>
                   <td className="px-2 py-1.5 font-medium">{h.name}</td>
                   <td className="px-2 py-1.5">{h.batch}</td>
@@ -200,7 +200,7 @@ export default function HafizaTab() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={11} className="text-center py-8 text-muted-foreground">لا توجد بيانات</td></tr>
+                <tr><td colSpan={11} className="text-center py-8 text-muted-foreground text-sm">لا توجد بيانات</td></tr>
               )}
             </tbody>
           </table>
@@ -215,7 +215,7 @@ export default function HafizaTab() {
           { key: "batch", label: "الدفعة" },
           { key: "specialty", label: "التخصص" },
           { key: "date", label: "التاريخ", type: "date" },
-          { key: "hafizaNo", label: "رقم الحافظة" },
+          { key: "hafizaNo", label: "رقم ال��افظة" },
           { key: "hafizaAmount", label: "مبلغ الحافظة", type: "number" },
           { key: "description", label: "البيان", colSpan: 3 },
           { key: "notifyDate", label: "تاريخ التوريد", type: "date" },
@@ -247,7 +247,7 @@ function Field({ label, v, on, type = "text" }: { label: string; v: string; on: 
         type={type}
         value={v}
         onChange={(e) => on(e.target.value)}
-        className="w-full px-3 py-2 border rounded-lg bg-input/30 focus:outline-none focus:ring-2 focus:ring-ring"
+        className="w-full px-3 py-2 text-sm border rounded-lg bg-input/30 focus:outline-none focus:ring-2 focus:ring-ring"
       />
     </div>
   );

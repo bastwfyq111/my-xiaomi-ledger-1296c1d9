@@ -34,8 +34,7 @@ import { exportToExcel, importFromExcel } from "@/lib/exportImport";
 import { canInstall, onInstallAvailability, promptInstall } from "@/lib/pwa";
 
 // إعداد مسار التوجيه والبيانات التعريفية للمتصفح
-export const Route = createFileRoute("/")({
-  component: Index,
+export const Route = createFileRoute("/")({  component: Index,
   head: () => ({
     meta: [
       { title: "قيادة النظام المالي - المجلس اليمني للاختصاصات الطبية" },
@@ -103,54 +102,54 @@ function Index() {
 
   return (
     // الحاوية الرئيسية ممتدة بالكامل من الحافة إلى الحافة وباتجاه عربي أصيل (RTL)
-    <div className="w-full min-h-screen bg-[#f3f7fa] p-0 sm:p-4 md:p-6 space-y-4 sm:space-y-6 font-tajawal selection:bg-[#10528e]/20" dir="rtl">
+    <div className="w-full min-h-screen bg-[#f3f7fa] p-2 sm:p-4 md:p-6 space-y-3 sm:space-y-6 font-tajawal selection:bg-[#10528e]/20 text-sm sm:text-base" dir="rtl">
       
       {/* قسم الهيدر العلوي والأزرار السريعة بالألوان الزرقاء الملكية */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-gradient-to-r from-[#10528e] to-[#0b3d6d] p-5 sm:rounded-2xl border-b sm:border border-slate-200/40 shadow-md text-white">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-white/10 rounded-xl text-white hidden sm:block">
-            <FileSpreadsheet className="w-6 h-6" />
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-gradient-to-r from-[#10528e] to-[#0b3d6d] p-3 sm:p-5 sm:rounded-2xl border-b sm:border border-slate-200/40 shadow-md text-white">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="p-2 bg-white/10 rounded-xl text-white hidden sm:block">
+            <FileSpreadsheet className="w-5 h-5" />
           </div>
           <div className="flex flex-col gap-0.5">
-            <h1 className="text-lg md:text-2xl font-bold tracking-wide font-cairo">
+            <h1 className="text-base sm:text-lg md:text-2xl font-bold tracking-wide font-cairo">
               المجلس اليمني للاختصاصات الطبية
             </h1>
-            <p className="text-[11px] md:text-sm opacity-85 font-medium flex items-center gap-1.5">
+            <p className="text-[10px] sm:text-xs md:text-sm opacity-85 font-medium flex items-center gap-1.5">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
               نظام الإدارة المالية وحوافظ التوريد - صعدة • 2026م
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 px-1 sm:px-0">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 px-1 sm:px-0">
           {pwaInstallable && (
             <button
               onClick={handlePWAInstall}
-              className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[11px] sm:text-xs px-3 py-2 rounded-lg transition-all shadow-sm"
+              className="flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[10px] sm:text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all shadow-sm"
             >
-              <DownloadCloud className="w-3.5 h-3.5" />
-              <span>تثبيت النظام</span>
+              <DownloadCloud className="w-3 h-3" />
+              <span>تثبيت</span>
             </button>
           )}
 
-          <label className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-[#10528e] border-2 border-[#10528e] font-bold text-[11px] sm:text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all shadow-sm">
-            <Upload className="w-3.5 h-3.5" />
-            <span>استيراد Excel</span>
+          <label className="flex items-center gap-1 bg-white hover:bg-slate-50 text-[#10528e] border-2 border-[#10528e] font-bold text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg cursor-pointer transition-all shadow-sm">
+            <Upload className="w-3 h-3" />
+            <span>استيراد</span>
             <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
           </label>
 
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] sm:text-xs px-3 py-2 rounded-lg transition-all shadow-sm"
+            className="flex items-center gap-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[10px] sm:text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all shadow-sm"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>تصدير Excel</span>
+            <Download className="w-3 h-3" />
+            <span>تصدير</span>
           </button>
         </div>
       </div>
 
       {/* نظام التبويبات الرئيسي الممتد */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-3 sm:space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-2 sm:space-y-3">
         
         {/* شريط التبويبات: تم صف التبويبات كعناصر مباشرة دون دالة loop لضمان الترتيب الصارم من اليمين لليسار */}
         <div className="w-full overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -159,71 +158,78 @@ function Index() {
             {/* 1. الأقساط (في أول اليمين) */}
             <TabsTrigger 
               value="installments" 
-              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <WalletCards className="w-3.5 h-3.5" />
-              <span>كشف الأقساط</span>
+              <WalletCards className="w-3 h-3" />
+              <span className="hidden sm:inline">كشف الأقساط</span>
+              <span className="sm:hidden">أقساط</span>
             </TabsTrigger>
 
             {/* 2. حوافظ التوريد */}
             <TabsTrigger 
               value="hafiza" 
-              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <FileBox className="w-3.5 h-3.5" />
-              <span>حوافظ التوريد</span>
+              <FileBox className="w-3 h-3" />
+              <span className="hidden sm:inline">حوافظ التوريد</span>
+              <span className="sm:hidden">حوافظ</span>
             </TabsTrigger>
 
             {/* 3. الحساب الجاري */}
             <TabsTrigger 
               value="account" 
-              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>الحساب الجاري</span>
+              <FileSpreadsheet className="w-3 h-3" />
+              <span className="hidden sm:inline">الحساب الجاري</span>
+              <span className="sm:hidden">حساب</span>
             </TabsTrigger>
 
             {/* 4. القيود اليومية */}
             <TabsTrigger 
               value="journal" 
-              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <BookOpenText className="w-3.5 h-3.5" />
-              <span>القيود اليومية</span>
+              <BookOpenText className="w-3 h-3" />
+              <span className="hidden sm:inline">القيود اليومية</span>
+              <span className="sm:hidden">قيود</span>
             </TabsTrigger>
 
             {/* 5. كشف حساب شهري */}
             <TabsTrigger 
               value="monthly" 
-              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <PieChart className="w-3.5 h-3.5" />
-              <span>كشف حساب شهري</span>
+              <PieChart className="w-3 h-3" />
+              <span className="hidden sm:inline">كشف حساب شهري</span>
+              <span className="sm:hidden">شهري</span>
             </TabsTrigger>
 
             {/* 6. حركة الإيرادات */}
             <TabsTrigger 
               value="revenue" 
-              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>حركة الإيرادات</span>
+              <TrendingUp className="w-3 h-3" />
+              <span className="hidden sm:inline">حركة الإيرادات</span>
+              <span className="sm:hidden">إيرادات</span>
             </TabsTrigger>
 
             {/* 7. جدول المصروفات (في أقصى اليسار) */}
             <TabsTrigger 
               value="expenses-table" 
-              className="flex items-center gap-1.5 px-4 py-3 sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-[115px] sm:min-w-[125px] lg:min-w-0"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <ReceiptText className="w-3.5 h-3.5" />
-              <span>جدول المصروفات</span>
+              <ReceiptText className="w-3 h-3" />
+              <span className="hidden sm:inline">جدول المصروفات</span>
+              <span className="sm:hidden">مصروفات</span>
             </TabsTrigger>
 
           </TabsList>
         </div>
 
         {/* وعاء عرض المحتوى الداخلي الممتد بالكامل من الحافة إلى الحافة */}
-        <div className="w-full bg-white p-3 sm:p-5 md:p-6 sm:rounded-2xl border-y sm:border border-slate-200/60 shadow-sm min-h-[450px]">
+        <div className="w-full bg-white p-2 sm:p-4 md:p-6 sm:rounded-2xl border-y sm:border border-slate-200/60 shadow-sm min-h-[450px]">
           <TabsContent value="installments" className="focus-visible:outline-none mt-0"><InstallmentsTab /></TabsContent>
           <TabsContent value="hafiza" className="focus-visible:outline-none mt-0"><HafizaTab /></TabsContent>
           <TabsContent value="account" className="focus-visible:outline-none mt-0"><AccountTab /></TabsContent>
