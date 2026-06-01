@@ -241,11 +241,11 @@ export default function InstallmentsTab() {
     const r2026 = (installments || []).find((i: any) => i.name === name);
 
     const buildTable = (r: any, months: string[], year: string, opening: number, color: string) => {
-      if (!r) return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;opacity:0.5"><div style="background:${color};color:white;padding:8px 12px;font-size:14px;font-weight:bold">📅 ${year}</div><div style="padding:12px;text-align:center;color:#9ca3af">لا توجد بيانات</div></div>`;
+      if (!r) return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;opacity:0.5"><div style="background:${color};color:white;padding:8px 12px;font-size:14px;font-weight:bold">📅 ${year}</div><div style="padding:12px;text-align:center;color:#94a3b8">لا توجد بيانات</div></div>`;
 
       const paidMonths = months.filter(m => Number(r.payments?.[m]) > 0);
       if (paidMonths.length === 0) {
-        return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden"><div style="background:${color};color:white;padding:8px 12px;font-size:14px;font-weight:bold">📅 ${year}</div><div style="padding:12px;text-align:center;color:#9ca3af">لم يتم تسجيل دفعات</div></div>`;
+        return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden"><div style="background:${color};color:white;padding:8px 12px;font-size:14px;font-weight:bold">📅 ${year}</div><table style="width:100%;border-collapse:collapse"><tr style="border-bottom:1px solid #e5e7eb"><td style="padding:12px;font-size:12px;text-align:center;color:#94a3b8">لم يتم تسجيل أي دفعات</td></tr></table></div>`;
       }
 
       let balance = opening;
@@ -255,21 +255,21 @@ export default function InstallmentsTab() {
         const status = balance <= 0 ? "له" : "عليه";
         const sc = balance <= 0 ? "#059669" : "#dc2626";
         const bg = balance <= 0 ? "#d1fae5" : "#fee2e2";
-        return `<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 8px;font-size:12px;text-align:right;background:#f9fafb">${m}</td><td style="padding:6px 8px;font-size:12px;text-align:center;font-weight:bold">${fmt(paid)}</td><td style="padding:6px 8px;font-size:12px;text-align:center;font-weight:bold">${fmt(Math.abs(balance))}</td><td style="padding:6px 8px;font-size:12px;text-align:center;color:white;background:${bg};color:${sc};font-weight:bold">${status}</td></tr>`;
+        return `<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 8px;font-size:12px;text-align:right;background:#f9fafb">${m}</td><td style="padding:6px 8px;font-size:12px;text-align:center">${fmt(paid)}</td><td style="padding:6px 8px;font-size:12px;text-align:center">${fmt(Math.abs(balance))}</td><td style="padding:6px 8px;font-size:12px;text-align:center;color:${sc};font-weight:bold;background:${bg}">${status}</td></tr>`;
       }).join("");
 
       const finalBalance = Math.max(0, balance);
-      return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;background:white"><div style="background:${color};color:white;padding:8px 12px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:bold">📅 ${year}</span><span style="font-size:12px">الرصيد الافتتاحي: ${fmt(opening)}</span></div><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f3f4f6;border-bottom:2px solid #e5e7eb"><th style="padding:6px 8px;font-size:12px;font-weight:bold;text-align:right">الشهر</th><th style="padding:6px 8px;font-size:12px;font-weight:bold;text-align:center">المبلغ</th><th style="padding:6px 8px;font-size:12px;font-weight:bold;text-align:center">الرصيد</th><th style="padding:6px 8px;font-size:12px;font-weight:bold;text-align:center">الحالة</th></tr></thead><tbody>${rows}</tbody></table><div style="background:#f9fafb;padding:8px 12px;border-top:2px solid #e5e7eb;display:flex;justify-content:space-between;font-weight:bold"><span>الرصيد النهائي:</span><span style="color:${finalBalance > 0 ? "#dc2626" : "#059669"}">${fmt(finalBalance)}</span></div></div>`;
+      return `<div style="border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;background:white"><div style="background:${color};color:white;padding:8px 12px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:bold">📅 ${year}</span><span style="font-size:12px">الرصيد: ${fmt(finalBalance)}</span></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead style="background:#f1f5f9;font-weight:bold"><tr><th style="padding:6px 8px;text-align:right;border-bottom:1px solid #e5e7eb">الشهر</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e5e7eb">المبلغ</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e5e7eb">الرصيد</th><th style="padding:6px 8px;text-align:center;border-bottom:1px solid #e5e7eb">الحالة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     };
 
-    const css = `*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Cairo','Segoe UI',sans-serif;background:#f1f5f9;padding:12px;direction:rtl;line-height:1.6}.container{max-width:1100px;margin:0 auto;background:white;padding:16px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}.header{border-bottom:3px solid #0f766e;padding:12px 0;margin-bottom:16px;text-align:center}.header h1{font-size:18px;color:#0f766e;margin-bottom:4px}.header p{font-size:12px;color:#64748b}.content{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:800px){.content{grid-template-columns:1fr}}.table-wrapper{background:#fff}`;
+    const css = `*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Cairo','Segoe UI',sans-serif;background:#f1f5f9;padding:12px;direction:rtl;line-height:1.6}.container{max-width:1100px;margin:0 auto}h1{text-align:center;color:#0f172a;margin-bottom:20px;font-size:18px}h2{color:#64748b;font-size:14px;margin:16px 0 8px 0}.tables{display:grid;grid-template-columns:1fr 1fr;gap:16px}.single{grid-column:1/-1}@media(max-width:768px){.tables{grid-template-columns:1fr}.single{grid-column:auto}}`;
 
     const opening2025 = r2025?.fees || 0;
     const opening2026 = r2026?.prevDue || 0;
     const table2025 = buildTable(r2025, MONTHS_2025, "أقساط ورسوم 2025", opening2025, "#0d9488");
     const table2026 = buildTable(r2026, MONTHS_2026, "أقساط ورسوم 2026", opening2026, "#7c3aed");
 
-    const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet"><style>${css}</style></head><body><div class="container"><div class="header"><h1>📊 كشف حساب المتدرب</h1><p>${name} - ${today()}</p></div><div class="content"><div class="table-wrapper">${table2025}</div><div class="table-wrapper">${table2026}</div></div></div></body></html>`;
+    const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet"><style>${css}</style></head><body><div class="container"><h1>📊 كشف حساب مالي - ${name}</h1><div class="tables">${table2025}${table2026}</div></div></body></html>`;
 
     setPreviewModal({ name, html });
   };
@@ -288,9 +288,9 @@ export default function InstallmentsTab() {
   ];
 
   return (
-    <div className="space-y-6 p-4" dir="rtl">
+    <div className="space-y-6 p-0 min-h-screen" dir="rtl">
       {/* ========== جدول 2025 ========== */}
-      <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+      <div className="bg-white shadow-md border border-slate-200 overflow-hidden">
         <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4">
           <div className="flex justify-between items-start">
             <div>
@@ -349,7 +349,7 @@ export default function InstallmentsTab() {
       </div>
 
       {/* ========== جدول 2026 ========== */}
-      <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+      <div className="bg-white shadow-md border border-slate-200 overflow-hidden">
         <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
           <div className="flex justify-between items-start">
             <div>
@@ -441,7 +441,7 @@ export default function InstallmentsTab() {
                               ) : (
                                 <button
                                   onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }}
-                                  className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-100 rounded-full w-5 h-5 flex items-center justify-center font-bold transition duration-200 text-xs"
+                                  className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-100 rounded-full w-5 h-5 flex items-center justify-center font-bold transition duration-200 text-base"
                                   title="إضافة قسط"
                                 >
                                   +
@@ -505,7 +505,7 @@ export default function InstallmentsTab() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ *</label>
-                <input type="number" required placeholder="0.00" value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition bg-white" min="0" step="0.01" />
+                <input type="number" required placeholder="0.00" value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition bg-white" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">الشهر *</label>
@@ -610,7 +610,7 @@ export default function InstallmentsTab() {
             <div className="flex justify-between items-center p-4 border-b bg-gradient-to-r from-slate-100 to-slate-50">
               <h3 className="font-bold text-sm text-slate-900">📊 كشف حساب - {previewModal.name}</h3>
               <div className="flex gap-2">
-                <button onClick={() => { const w = window.open('', '', 'width=1000,height=700'); if (w) { w.document.write(previewModal.html); w.document.close(); setTimeout(() => w.print(), 500); } }} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition">
+                <button onClick={() => { const w = window.open('', '', 'width=1000,height=700'); if (w) { w.document.write(previewModal.html); w.document.close(); setTimeout(() => w.print(), 500); } }} className="px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-bold hover:bg-teal-700 transition">
                   🖨️ طباعة
                 </button>
                 <button onClick={() => setPreviewModal(null)} className="px-3 py-1.5 bg-slate-500 text-white rounded-lg text-xs font-bold hover:bg-slate-600 transition">
