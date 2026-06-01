@@ -115,51 +115,132 @@ export default function InstallmentsTab() {
   const generatePreview = (name: string) => {
     const r2025 = (installments2025 || []).find((i: any) => i.name === name);
     const r2026 = (installments || []).find((i: any) => i.name === name);
-    const monthlyRequired = (total: number, months = 12) => Math.round(total / months);
 
-    const buildTable = (r: any, months: string[], year: string, color: string) => {
+    const buildDynamicTable = (r: any, months: string[], year: string, color: string) => {
       if (!r) return "";
       const total = cleanNumber(r.fees) + (year === "2026" ? cleanNumber(r.prevDue) : 0);
-      const monthly = monthlyRequired(total);
-      let accPaid = 0, accReq = 0;
+      const monthlyRequired = Math.round(total / 12);
       
-      const rows = months.map(m => {
+      // تصفية الأشهر التي لها مدفوعات فقط
+      const activeMonths = months.filter(m => Number(r.payments?.[m]) > 0);
+      
+      if (activeMonths.length === 0) {
+        return `<div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;opacity:0.7">
+          <div style="background:${color};color:white;padding:8px 15px;font-size:14px;font-weight:700">📅 ${year}</div>
+          <div style="padding:20px;text-align:center;color:#94a3b8;font-size:12px">لا توجد مدفوعات مسجلة</div>
+        </div>`;
+      }
+
+      let runningBalance = 0;
+      
+      const rows = activeMonths.map((m, idx) => {
         const paid = Number(r.payments?.[m]) || 0;
-        accPaid += paid; accReq += monthly;
-        const diff = paid - monthly;
-        const status = Math.abs(diff) < 1 ? ["متوازن", "#6b7280", "#f3f4f6"] : diff > 0 ? ["💰 له", "#059669", "#d1fae5"] : ["⚠️ عليه", "#dc2626", "#fee2e2"];
-        return `<tr><td>${m}</td><td>${fmt(monthly)}</td><td>${fmt(paid)}</td><td><span style="background:${status[2]};color:${status[1]};padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700">${status[0]}</span></td><td style="color:${status[1]}">${fmt(Math.abs(diff))}</td></tr>`;
+        runningBalance += paid;
+        const requiredToDate = monthlyRequired * (months.indexOf(m) + 1);
+        const balance = runningBalance - requiredToDate;
+        const status = balance >= 0 ? "له" : "عليه";
+        const statusColor = balance >= 0 ? "#059669" : "#dc2626";
+        
+        return `
+          <tr style="border-bottom:1px solid #f1f5f9">
+            <td style="padding:6px 10px;font-size:11px;color:#475569">${m}</td>
+            <td style="padding:6px 10px;font-size:11px;text-align:center;font-family:monospace;font-weight:600;color:#0891b2">${fmt(paid)}</td>
+            <td style="padding:6px 10px;font-size:10px;text-align:center">
+              <span style="background:${balance >= 0 ? '#d1fae5' : '#fee2e2'};color:${statusColor};padding:2px 10px;border-radius:12px;font-weight:700;font-size:10px">
+                ${status} ${fmt(Math.abs(balance))}
+              </span>
+            </td>
+          </tr>`;
       }).join("");
 
+      const finalBalance = runningBalance - total;
+      const finalStatus = finalBalance >= 0 ? "له" : "عليه";
+
       return `
-        <div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden">
-          <div style="background:${color};color:white;padding:12px;text-align:center;font-size:18px;font-weight:700">📅 ${year}</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;background:#f8fafc">
-            <div style="text-align:center"><small>الإجمالي</small><br><b>${fmt(total)}</b></div>
-            <div style="text-align:center"><small>القسط الشهري</small><br><b>${fmt(monthly)}</b></div>
-            <div style="text-align:center"><small>المتبقي</small><br><b style="color:#dc2626">${fmt(r.remaining)}</b></div>
+        <div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;background:white">
+          <div style="background:${color};color:white;padding:8px 15px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:14px;font-weight:700">📅 ${year}</span>
+            <span style="font-size:11px;opacity:0.9">${r.specialty || ''} - ${r.batch || ''}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e2e8f0;text-align:center">
+            <div style="background:#f8fafc;padding:8px">
+              <div style="font-size:9px;color:#64748b">الإجمالي</div>
+              <div style="font-size:13px;font-weight:700;color:#1e293b">${fmt(total)}</div>
+            </div>
+            <div style="background:#f8fafc;padding:8px">
+              <div style="font-size:9px;color:#64748b">القسط الشهري</div>
+              <div style="font-size:13px;font-weight:700;color:#0891b2">${fmt(monthlyRequired)}</div>
+            </div>
+            <div style="background:#f8fafc;padding:8px">
+              <div style="font-size:9px;color:#64748b">المسدد</div>
+              <div style="font-size:13px;font-weight:700;color:#059669">${fmt(runningBalance)}</div>
+            </div>
+            <div style="background:#f8fafc;padding:8px">
+              <div style="font-size:9px;color:#64748b">${finalStatus}</div>
+              <div style="font-size:13px;font-weight:700;color:${finalBalance >= 0 ? '#059669' : '#dc2626'}">${fmt(Math.abs(finalBalance))}</div>
+            </div>
           </div>
           <table width="100%" style="border-collapse:collapse">
-            <thead><tr style="background:#f1f5f9">${["الشهر","القسط","المدفوع","الحالة","الفرق"].map(h => `<th style="padding:10px">${h}</th>`).join("")}</tr></thead>
+            <thead>
+              <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
+                <th style="padding:6px 10px;font-size:10px;color:#64748b;text-align:right">الشهر</th>
+                <th style="padding:6px 10px;font-size:10px;color:#64748b;text-align:center">المدفوع</th>
+                <th style="padding:6px 10px;font-size:10px;color:#64748b;text-align:center">الرصيد</th>
+              </tr>
+            </thead>
             <tbody>${rows}</tbody>
           </table>
         </div>`;
     };
 
-    const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet"><style>
-      body{font-family:'Cairo',sans-serif;background:#f0f9ff;padding:20px;direction:rtl}.container{max-width:1200px;margin:0 auto;background:white;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.08);overflow:hidden}
-      .header{background:linear-gradient(135deg,#0891b2,#0e7490);color:white;padding:25px;text-align:center}.header h1{font-size:24px;margin:0}.header h2{font-size:14px;opacity:0.9}
-      .info{background:#f8fafc;padding:15px 25px;display:flex;justify-content:space-between;border-bottom:2px solid #e2e8f0}
-      .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px}
-      .btn{padding:10px 25px;border:none;border-radius:8px;font-family:'Cairo';font-size:14px;font-weight:700;cursor:pointer;color:white;margin:0 5px}
-      @media print{body{background:white;padding:0}.container{box-shadow:none}}</style></head><body><div class="container">
-      <div class="header"><h1>المجلس اليمني للاختصاصات الطبية</h1><h2>كشف الأقساط الشهرية التفصيلي</h2></div>
-      <div class="info"><b>👨‍⚕️ ${name}</b><span>📅 ${today()}</span></div>
-      <div class="grid">${buildTable(r2025, MONTHS_2025, "2025", "#0891b2")}${buildTable(r2026, MONTHS_2026, "2026", "#7c3aed")}</div>
-      <div style="text-align:center;padding:20px;background:#f8fafc">
-        <button class="btn" style="background:#0891b2" onclick="window.print()">🖨️ طباعة</button>
-        <button class="btn" style="background:#7c3aed" onclick="window.parent.postMessage('download','*')">📥 PDF</button>
-      </div></div></body></html>`;
+    const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; background: #f8fafc; padding: 15px; direction: rtl; }
+    .container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow: hidden; }
+    .header { background: linear-gradient(135deg, #0f172a, #1e293b); color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 16px; font-weight: 700; }
+    .header .date { font-size: 11px; opacity: 0.8; }
+    .student-info { background: linear-gradient(135deg, #0891b2, #06b6d4); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; }
+    .student-info .name { font-size: 15px; font-weight: 700; }
+    .student-info .details { font-size: 10px; opacity: 0.9; }
+    .content { padding: 15px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .btn { padding: 8px 20px; border: none; border-radius: 8px; font-family: 'Cairo'; font-size: 12px; font-weight: 700; cursor: pointer; color: white; margin: 0 4px; transition: all 0.3s; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    @media print { body { background: white; padding: 0; } .container { box-shadow: none; border-radius: 0; } .actions { display: none; } }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📊 المجلس اليمني للاختصاصات الطبية</h1>
+      <span class="date">📅 ${today()}</span>
+    </div>
+    <div class="student-info">
+      <span class="name">👨‍⚕️ ${name}</span>
+      <span class="details">كشف الأقساط والمدفوعات الشهرية</span>
+    </div>
+    <div class="content">
+      <div class="grid">
+        ${buildDynamicTable(r2025, MONTHS_2025, "2025", "#0891b2")}
+        ${buildDynamicTable(r2026, MONTHS_2026, "2026", "#7c3aed")}
+      </div>
+      ${!r2025 && !r2026 ? '<div style="text-align:center;padding:40px;color:#94a3b8">⚠️ لا توجد بيانات متاحة</div>' : ''}
+    </div>
+    <div class="actions" style="padding:15px 25px;background:#f8fafc;border-top:2px solid #e2e8f0;text-align:center">
+      <button class="btn" style="background:#0891b2" onclick="window.print()">🖨️ طباعة</button>
+      <button class="btn" style="background:#7c3aed" onclick="window.parent.postMessage('download','*')">📥 تحميل PDF</button>
+    </div>
+  </div>
+</body>
+</html>`;
 
     setPreviewModal({ name, html });
   };
@@ -178,20 +259,33 @@ export default function InstallmentsTab() {
       const r = (installments2025 || []).find((i: any) => i.name === name) || (installments || []).find((i: any) => i.name === name);
       if (!r) return toast.error("لا توجد بيانات");
       
-      pdf.setFontSize(16);
-      pdf.text(`كشف حساب - ${name}`, 105, 15, { align: 'center' });
-      pdf.setFontSize(10);
-      pdf.text(today(), 105, 22, { align: 'center' });
+      pdf.setFontSize(14);
+      pdf.text(`كشف حساب - ${name}`, 105, 12, { align: 'center' });
+      pdf.setFontSize(8);
+      pdf.text(today(), 105, 18, { align: 'center' });
 
       const months = MONTHS_2025.includes(Object.keys(r.payments || {})[0]) ? MONTHS_2025 : MONTHS_2026;
       const monthly = Math.round(cleanNumber(r.fees) / 12);
-      const data = months.map(m => {
-        const paid = Number(r.payments?.[m]) || 0;
-        const diff = paid - monthly;
-        return [m, fmt(monthly), fmt(paid), diff > 0 ? `له ${fmt(diff)}` : diff < 0 ? `عليه ${fmt(-diff)}` : "متوازن"];
-      });
+      let balance = 0;
+      
+      const data = months
+        .filter(m => Number(r.payments?.[m]) > 0)
+        .map(m => {
+          const paid = Number(r.payments?.[m]) || 0;
+          balance += paid;
+          return [m, fmt(paid), `${balance >= 0 ? 'له' : 'عليه'} ${fmt(Math.abs(balance))}`];
+        });
 
-      autoTable(pdf, { head: [['الشهر', 'القسط', 'المدفوع', 'الحالة']], body: data, startY: 25, styles: { fontSize: 9, halign: 'right' } });
+      if (data.length > 0) {
+        autoTable(pdf, { 
+          head: [['الشهر', 'المدفوع', 'الرصيد']], 
+          body: data, 
+          startY: 22, 
+          styles: { fontSize: 7, halign: 'right', cellPadding: 2 },
+          headStyles: { fillColor: [15, 23, 42], fontSize: 7 }
+        });
+      }
+      
       pdf.save(`كشف_${name}.pdf`);
       toast.success("تم التحميل");
     } catch { toast.error("فشل التحميل"); }
@@ -287,13 +381,13 @@ export default function InstallmentsTab() {
 
       {previewModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl w-full max-w-7xl h-[95vh] flex flex-col" dir="rtl">
+          <div className="bg-white rounded-xl w-full max-w-5xl h-[90vh] flex flex-col" dir="rtl">
             <div className="flex justify-between items-center p-4 border-b bg-gray-50">
-              <h3 className="font-bold">📊 معاينة - {previewModal.name}</h3>
+              <h3 className="font-bold text-sm">📊 كشف حساب - {previewModal.name}</h3>
               <div className="flex gap-2">
-                <button onClick={() => { const w = window.open('', '', 'width=1200,height=800'); w?.document.write(previewModal.html); w?.document.close(); setTimeout(() => w?.print(), 500); }} className="px-4 py-2 bg-teal-600 text-white rounded">🖨️</button>
-                <button onClick={() => downloadPDF(previewModal.name)} className="px-4 py-2 bg-purple-600 text-white rounded">📥</button>
-                <button onClick={() => setPreviewModal(null)} className="px-4 py-2 bg-slate-500 text-white rounded">✕</button>
+                <button onClick={() => { const w = window.open('', '', 'width=1000,height=700'); w?.document.write(previewModal.html); w?.document.close(); setTimeout(() => w?.print(), 500); }} className="px-3 py-1.5 bg-teal-600 text-white rounded text-xs font-bold">🖨️ طباعة</button>
+                <button onClick={() => downloadPDF(previewModal.name)} className="px-3 py-1.5 bg-purple-600 text-white rounded text-xs font-bold">📥 PDF</button>
+                <button onClick={() => setPreviewModal(null)} className="px-3 py-1.5 bg-slate-500 text-white rounded text-xs font-bold">✕</button>
               </div>
             </div>
             <iframe srcDoc={previewModal.html} className="flex-1 w-full border-0" />
@@ -329,4 +423,4 @@ export default function InstallmentsTab() {
       )}
     </div>
   );
-                                                                    }
+          }
