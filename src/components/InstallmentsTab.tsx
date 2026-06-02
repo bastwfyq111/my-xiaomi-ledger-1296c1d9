@@ -1,31 +1,31 @@
 import React, { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { fmt, today } from "@/lib/format";
+import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls } from "@/hooks/useTableControls";
 import { X, Printer, AlertCircle } from "lucide-react";
 
-// مصفوفات الأشهر مطابقة تماماً للمسميات داخل ملفات الإكسيل المرفقة لضمان دقة الاستيراد
+// مصفوفات الأشهر مطابقة تماماً للمسميات داخل ملفات الإكسيل المرفقة
 const MONTHS_2025 = [
   "يونيو 2024", "يوليو 2024", "أغسطس 2024", 
   "مارس 2025", "ابريل 2025", "مايو 2025", 
   "يونيو 2025", "يوليو 2025", "أغسطس 2025", 
-  "سبتمبر 2025", "أكتوبر 2025", "نوفمبر2025", "ديسمبر2025" // تمت مطابقتها مع الإكسيل بدون مسافات
+  "سبتمبر 2025", "أكتوبر 2025", "نوفمبر2025", "ديسمبر2025"
 ];
 
 const MONTHS_2026 = [
   "يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", 
-  "يوليو", "اغسطس", "سبتمبر", "اكتوبر ", "نوفمبر", "ديسمبر" // "اكتوبر " يحتوي على مسافة مطابقة للملف
+  "يوليو", "اغسطس", "سبتمبر", "اكتوبر ", "نوفمبر", "ديسمبر"
 ];
 
-// دالة لتنظيف وتحويل القيم النصية الفارغة أو الغريبة إلى أرقام صالحة للعمليات الحسابية
+// دالة لتنظيف وتحويل القيم النصية الفارغة إلى أرقام
 const cleanNumber = (val: any): number => {
   if (!val || isNaN(Number(String(val).replace(/[^0-9.-]/g, "")))) return 0;
   return Number(String(val).replace(/[^0-9.-]/g, "")) || 0;
 };
 
-// مكون لعرض الإحصائيات بشكل شبكي منسق ومريح للعين
+// مكون لعرض الإحصائيات
 const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) => {
   const colClass = columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3";
   return (
@@ -40,7 +40,7 @@ const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) =
   );
 };
 
-// مكون النافذة المنبثقة التفاعلية لإدخال وتعديل البيانات
+// مكون النافذة المنبثقة
 const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
   if (!isOpen) return null;
   return (
@@ -57,7 +57,6 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
 };
 
 export default function InstallmentsTab() {
-  // جلب البيانات وإدارتها عبر الستور المركزي للتطبيق
   const { installments, installments2025 } = useStore() as any;
   const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
   const [payAmount, setPayAmount] = useState("");
@@ -72,25 +71,22 @@ export default function InstallmentsTab() {
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
-  // ربط والتحكم بالجداول للبحث والفلترة
+  // ربط أدوات التحكم بالبحث والفلترة
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining"]);
   const controls2025 = useTableControls(installments2025 || [], ["name", "batch", "specialty", "fees", "totalPaid", "remaining"]);
 
-  // احتساب الإجماليات العامة لعام 2025
   const totals2025 = useMemo(() => ({
-    fees: controls2025.rows.reduce((s, r) => s + cleanNumber(r.fees), 0),
-    paid: controls2025.rows.reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
-    remaining: controls2025.rows.reduce((s, r) => s + cleanNumber(r.remaining), 0),
+    fees: (controls2025.rows || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
+    paid: (controls2025.rows || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
+    remaining: (controls2025.rows || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
   }), [controls2025.rows]);
 
-  // احتساب الإجماليات العامة لعام 2026
   const totals2026 = useMemo(() => ({
-    prevDue: controls2026.rows.reduce((s, r) => s + cleanNumber(r.prevDue), 0),
-    paid: controls2026.rows.reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
-    remaining: controls2026.rows.reduce((s, r) => s + cleanNumber(r.remaining), 0),
+    prevDue: (controls2026.rows || []).reduce((s, r) => s + cleanNumber(r.prevDue), 0),
+    paid: (controls2026.rows || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
+    remaining: (controls2026.rows || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
   }), [controls2026.rows]);
 
-  // تجميع الأسماء للمقترحات الذكية عند الكتابة
   const allNames = useMemo(() => {
     const n1 = (installments2025 || []).map((s: any) => s.name);
     const n2 = (installments || []).map((s: any) => s.name);
@@ -105,10 +101,9 @@ export default function InstallmentsTab() {
 
   const updateInstallments = (list: any[]) => useStore.setState({ installments: list });
 
-  // تسجيل دفعة جديدة لشهر محدد في عام 2026
   const addPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paymentModal || !payAmount) return toast.error("يرجى إدخال المبلغ");
+    if (!paymentModal || !payAmount) return toast.error("يرجى إدخل المبلغ");
     const amount = Number(payAmount) || 0;
     if (amount <= 0) return toast.error("مبلغ غير صحيح");
     const list = [...(installments || [])];
@@ -124,7 +119,6 @@ export default function InstallmentsTab() {
     setPayAmount("");
   };
 
-  // إضافة متدرب جديد أو دفعة مستقلة بالكامل
   const addNewPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStudentName || !newStudentAmount || !newStudentMonth) return toast.error("يرجى إدخال جميع البيانات");
@@ -152,7 +146,6 @@ export default function InstallmentsTab() {
     setNewStudentMonth("");
   };
 
-  // تعديل دفعة تم إدخالها مسبقاً
   const editPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editPaymentModal || !editAmount) return;
@@ -170,7 +163,6 @@ export default function InstallmentsTab() {
     setEditAmount("");
   };
 
-  // حذف قسط أو تصفيره
   const deletePayment = (row: any, month: string) => {
     if (!confirm(`حذف قسط شهر ${month}؟`)) return;
     const list = [...(installments || [])];
@@ -185,7 +177,7 @@ export default function InstallmentsTab() {
     if (editPaymentModal) setEditPaymentModal(null);
   };
 
-  // 📥 دالة استيراد الملفات الذكية: تطابق الأعمدة والمسميات العربية بالملفات المرفقة تماماً
+  // 📥 دالة استيراد وتوفيق الملفات المحدثة بالكامل
   const importFile = (e: React.ChangeEvent<HTMLInputElement>, year: 2025 | 2026) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -202,23 +194,36 @@ export default function InstallmentsTab() {
           const payments: any = {};
           let totalPaid = 0;
           
-          // تجميع مبالغ الأشهر بشكل ديناميكي ومطابقتها مع أعمدة الإكسيل
+          // البحث المرن والمطابقة للأعمدة مع إزالة المسافات الزائدة
           monthsList.forEach(m => {
-            const amount = cleanNumber(row[m]);
+            const cleanTarget = m.trim();
+            // البحث عن المفتاح المطابق داخل سطر الإكسيل بشكل مرن
+            const foundKey = Object.keys(row).find(k => k.trim() === cleanTarget || k === m);
+            const amount = foundKey ? cleanNumber(row[foundKey]) : 0;
             payments[m] = amount;
             totalPaid += amount;
           });
 
+          // العثور على المفاتيح الأساسية للبيانات باللغة العربية
+          const nameKey = Object.keys(row).find(k => k.includes("اسم المتدرب")) || "name";
+          const batchKey = Object.keys(row).find(k => k.includes("رقم الدفعة")) || "batch";
+          const specialtyKey = Object.keys(row).find(k => k.includes("المساق")) || "specialty";
+          const feesKey = Object.keys(row).find(k => k.includes("مبلغ الرسوم")) || "fees";
+          const prevDueKey = Object.keys(row).find(k => k.includes("المتبقي عليهم من العام 2025")) || "prevDue";
+          const remainingKey = Object.keys(row).find(k => k.trim() === "المتبقي") || "remaining";
+          const notesKey = Object.keys(row).find(k => k.includes("ملاحظات")) || "notes";
+          const phoneKey = Object.keys(row).find(k => k.includes("رقم الهاتف")) || "phone";
+
           return {
-            name: row['اسم المتدرب'] || row['name'] || "بدون اسم",
-            batch: row['رقم الدفعة'] || row['batch'] || "",
-            specialty: row['المساق'] || row['specialty'] || "",
-            fees: cleanNumber(row['مبلغ الرسوم'] || row['fees']),
-            prevDue: cleanNumber(row['المتبقي عليهم من العام 2025'] || row['prevDue']),
+            name: row[nameKey] || "بدون اسم",
+            batch: row[batchKey] || "",
+            specialty: row[specialtyKey] || "",
+            fees: cleanNumber(row[feesKey]),
+            prevDue: cleanNumber(row[prevDueKey]),
             totalPaid: row['الإجمالي'] ? cleanNumber(row['الإجمالي']) : totalPaid,
-            remaining: cleanNumber(row['المتبقي'] || row['remaining']),
-            notes: row['ملاحظات'] || "",
-            phone: row['رقم الهاتف'] || "",
+            remaining: cleanNumber(row[remainingKey]),
+            notes: row[notesKey] || "",
+            phone: row[phoneKey] || "",
             payments
           };
         });
@@ -229,10 +234,10 @@ export default function InstallmentsTab() {
             useStore.setState({ installments: formattedData });
         }
         
-        toast.success(`تم استيراد بيانات العام ${year} بنجاح من الملف المرفق!`);
+        toast.success(`تم استيراد بيانات العام ${year} بنجاح من ملف التميز!`);
         setImportError(null);
       } catch (error) {
-        setImportError("حدث خطأ أثناء قراءة هيكل الملف، تأكد من صحة الأعمدة والملفات المطابقة.");
+        setImportError("حدث خطأ في قراءة ملف الإكسيل، يرجى مراجعة ترويسة الجدول.");
         toast.error("فشل استيراد الملف");
       }
     };
@@ -241,10 +246,8 @@ export default function InstallmentsTab() {
 
   const getStatusText = (rem: number) => rem <= 0 ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" } : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
 
-  // 🖨️ بناء كشف الحساب التفاعلي لطباعة التقارير المالية للمتدرب
   const generateAccountStatement = (row: any, year: number) => {
     const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-    
     const paymentsRows = monthsList.map(m => {
       const amount = Number(row.payments?.[m]) || 0;
       if (amount > 0) {
@@ -273,21 +276,14 @@ export default function InstallmentsTab() {
           <h2>سند كشف حساب الأقساط والمدفوعات</h2>
           <h3>اسم المتدرب: ${row.name}</h3>
           <p>المساق الدراسي: ${row.specialty || "—"} | الدفعة: ${row.batch || "—"}</p>
-          <p>العام المالي المطبوع: ${year}</p>
+          <p>العام المالي: ${year}</p>
         </div>
         <table>
-          <thead>
-            <tr>
-              <th>البيان (الشهر)</th>
-              <th>المبلغ المدفوع</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${paymentsRows || `<tr><td colspan="2" style="padding: 15px; border: 1px solid #cbd5e1; color: #94a3b8;">لا توجد أقساط مدفوعة مسجلة في هذا العام</td></tr>`}
-          </tbody>
+          <thead><tr><th>البيان (الشهر)</th><th>المبلغ المدفوع</th></tr></thead>
+          <tbody>${paymentsRows || `<tr><td colspan="2" style="padding: 15px; border: 1px solid #cbd5e1; color: #94a3b8;">لا توجد أقساط مسجلة</td></tr>`}</tbody>
         </table>
         <div class="totals-box">
-          ${year === 2025 ? `<p>إجمالي الرسوم: <span>${fmt(row.fees)}</span></p>` : `<p>الرصيد السابق المدور: <span>${fmt(row.prevDue)}</span></p>`}
+          ${year === 2025 ? `<p>إجمالي الرسوم: <span>${fmt(row.fees)}</span></p>` : `<p>الرصيد السابق 2025: <span>${fmt(row.prevDue)}</span></p>`}
           <p>إجمالي المدفوع: <span style="color: #059669;">${fmt(row.totalPaid)}</span></p>
           <p>الرصيد المتبقي: <span style="color: #e11d48;">${fmt(row.remaining)}</span></p>
         </div>
@@ -315,17 +311,17 @@ export default function InstallmentsTab() {
   const stats2026 = [
     { label: "المدور (متبقي 2025)", value: fmt(totals2026.prevDue), bgClass: "bg-amber-50", borderClass: "border-amber-200" },
     { label: "إجمالي مسدد 2026", value: fmt(totals2026.paid), bgClass: "bg-emerald-50", borderClass: "border-emerald-200" },
-    { label: "صافي رصيد المتبقي الحركي", value: fmt(totals2026.remaining), bgClass: "bg-rose-50", borderClass: "border-rose-200" }
+    { label: "صافي رصيد المتبقي", value: fmt(totals2026.remaining), bgClass: "bg-rose-50", borderClass: "border-rose-200" }
   ];
 
   return (
     <div className="w-full space-y-4 sm:space-y-6 p-0" dir="rtl">
-      {/* ========== واجهة جدول 2025 (أرشيف الدفعات الشامل لـ 2024 و 2025) ========== */}
+      {/* ========== واجهة جدول 2025 ========== */}
       <div className="w-full bg-gradient-to-b from-teal-50 to-white shadow border border-teal-200 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-teal-600 to-teal-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
           <div>
             <h2 className="text-sm sm:text-lg font-bold text-white">📊 أقساط ومستندات العام 2025</h2>
-            <p className="text-xs text-teal-100">يشمل جميع الدفعات المقبوضة لعامي 2024 و 2025 من ملف "الاقساط للعام 2025.xlsx"</p>
+            <p className="text-xs text-teal-100">يشمل جميع الدفعات لعامي 2024 و 2025</p>
           </div>
           <label className="px-3 py-1.5 bg-white text-teal-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-teal-50 shadow">
             📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2025)} className="hidden" />
@@ -351,7 +347,7 @@ export default function InstallmentsTab() {
               </thead>
               <tbody>
                 {controls2025.rows.length === 0 ? (
-                  <tr><td colSpan={8 + MONTHS_2025.length} className="p-6 text-center text-slate-400">يرجى الضغط على استيراد لرفع ملف "الاقساط للعام 2025.xlsx"</td></tr>
+                  <tr><td colSpan={8 + MONTHS_2025.length} className="p-6 text-center text-slate-400">يرجى استيراد ملف "الاقساط للعام 2025.xlsx"</td></tr>
                 ) : (
                   <>
                     {controls2025.rows.map((r, i) => (
@@ -393,12 +389,12 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* ========== واجهة جدول 2026 (الحسابات والدفعات الحركية الحالية) ========== */}
+      {/* ========== واجهة جدول 2026 ========== */}
       <div className="w-full bg-gradient-to-b from-purple-50 to-white shadow border border-purple-200 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-purple-600 to-purple-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
           <div>
             <h2 className="text-sm sm:text-lg font-bold text-white">📊 سجل أقساط العام الحالي 2026</h2>
-            <p className="text-xs text-purple-100">بيانات المسدد والرصيد المدور من ملف "الاقساط للعام 2026.xlsx"</p>
+            <p className="text-xs text-purple-100">بيانات المسدد والرصيد المدور لعام 2026</p>
           </div>
           <div className="flex gap-2">
             <button onClick={() => setNewPaymentModal(true)} className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold shadow hover:bg-purple-200 transition-colors">➕ إضافة قسط</button>
@@ -427,7 +423,7 @@ export default function InstallmentsTab() {
               </thead>
               <tbody>
                 {controls2026.rows.length === 0 ? (
-                  <tr><td colSpan={6 + MONTHS_2026.length} className="p-6 text-center text-slate-400">يرجى الضغط على استيراد لرفع ملف "الاقساط للعام 2026.xlsx"</td></tr>
+                  <tr><td colSpan={6 + MONTHS_2026.length} className="p-6 text-center text-slate-400">يرجى استيراد ملف "الاقساط للعام 2026.xlsx"</td></tr>
                 ) : (
                   <>
                     {controls2026.rows.map((r, i) => {
@@ -435,7 +431,7 @@ export default function InstallmentsTab() {
                       return (
                         <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
                           <td className="p-2 text-center text-slate-500">{i + 1}</td>
-                          <td className="p-2 font-semibold text-slate-900"/>{r.name}</td>
+                          <td className="p-2 font-semibold text-slate-900">{r.name}</td>
                           <td className="p-2 text-center text-slate-600">{r.batch || "—"}</td>
                           <td className="p-2 text-slate-600">{r.specialty || "—"}</td>
                           <td className="p-2 text-center font-mono text-amber-700 font-bold bg-amber-50/20">{fmt(r.prevDue)}</td>
@@ -449,14 +445,14 @@ export default function InstallmentsTab() {
                                   <div className="relative">
                                     <span className="font-mono text-emerald-700 font-bold">{fmt(paid)}</span>
                                     {hoveredCell === cellId && (
-                                      <div className="absolute -top-7 right-0 flex gap-0.5 bg-white shadow-xl border rounded px-1 py-1 z-30 animate-in fade-in zoom-in-95 duration-150">
+                                      <div className="absolute -top-7 right-0 flex gap-0.5 bg-white shadow-xl border rounded px-1 py-1 z-30">
                                         <button onClick={() => { setEditPaymentModal({ row: r, month: m, amount: paid }); setEditAmount(String(paid)); setHoveredCell(null); }} className="px-1.5 py-0.5 bg-blue-500 text-white rounded text-[10px]">✏️</button>
                                         <button onClick={() => { deletePayment(r, m); setHoveredCell(null); }} className="px-1.5 py-0.5 bg-red-500 text-white rounded text-[10px]">🗑️</button>
                                       </div>
                                     )}
                                   </div>
                                 ) : (
-                                  <button onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }} className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-full w-5 h-5 flex items-center justify-center font-bold mx-auto transition-colors">+</button>
+                                  <button onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }} className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-full w-5 h-5 flex items-center justify-center font-bold mx-auto">+</button>
                                 )}
                               </td>
                             );
@@ -491,47 +487,45 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* ========== نافذة منبثقة: إضافة قسط جديد لـ 2026 ========== */}
+      {/* ========== النوافذ المنبثقة ========== */}
       <Modal title="➕ إضافة قسط جديد - 2026" isOpen={newPaymentModal} onClose={() => setNewPaymentModal(false)}>
         <form onSubmit={addNewPayment} className="space-y-3">
           <div className="relative">
             <label className="block text-xs font-semibold text-slate-700 mb-1">اسم المتدرب *</label>
-            <input type="text" required placeholder="ابحث أو أدخل الاسم الكامل" value={newStudentName} onChange={e => handleNameChange(e.target.value)} onFocus={() => newStudentName.length > 0 && setShowSuggestions(true)} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none" />
+            <input type="text" required placeholder="ابحث عن الاسم" value={newStudentName} onChange={e => handleNameChange(e.target.value)} onFocus={() => newStudentName.length > 0 && setShowSuggestions(true)} className="w-full p-2 border rounded-lg outline-none" />
             {showSuggestions && nameSuggestions.length > 0 && (
               <div className="absolute top-full right-0 left-0 bg-white border rounded-b-lg shadow-xl z-50 max-h-32 overflow-y-auto">
                 {nameSuggestions.map((n, idx) => <div key={idx} onClick={() => { setNewStudentName(n); setShowSuggestions(false); }} className="p-2 text-sm hover:bg-purple-50 cursor-pointer text-slate-800">{n}</div>)}
               </div>
             )}
           </div>
-          <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المالي *</label><input type="number" required value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none" min="0" step="0.01" /></div>
-          <div><label className="block text-xs font-semibold text-slate-700 mb-1">الشهر المستهدف *</label><select required value={newStudentMonth} onChange={e => setNewStudentMonth(e.target.value)} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none"><option value="">-- اختر الشهر المالي --</option>{MONTHS_2026.map(m => <option key={m} value={m}>{m.trim()}</option>)}</select></div>
+          <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المالي *</label><input type="number" required value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2 border rounded-lg" min="0" step="0.01" /></div>
+          <div><label className="block text-xs font-semibold text-slate-700 mb-1">الشهر المستهدف *</label><select required value={newStudentMonth} onChange={e => setNewStudentMonth(e.target.value)} className="w-full p-2 border rounded-lg"><option value="">-- اختر الشهر --</option>{MONTHS_2026.map(m => <option key={m} value={m}>{m.trim()}</option>)}</select></div>
           <div className="flex justify-end gap-2 pt-3 border-t mt-4">
-            <button type="button" onClick={() => setNewPaymentModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">إلغاء</button>
-            <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition-colors">حفظ البيانات</button>
+            <button type="button" onClick={() => setNewPaymentModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+            <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold">حفظ</button>
           </div>
         </form>
       </Modal>
 
-      {/* ========== نافذة منبثقة: تسجيل دفعة سريعة لخلية فارغة ========== */}
       <Modal title="💵 تسجيل دفعة مالية" isOpen={!!paymentModal} onClose={() => setPaymentModal(null)}>
         {paymentModal && (
           <>
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-slate-800">
-              <p><b>اسم المتدرب:</b> {paymentModal.row.name}</p>
-              <p><b>القسط المستهدف لشهر:</b> {paymentModal.month}</p>
+              <p><b>المتدرب:</b> {paymentModal.row.name}</p>
+              <p><b>شهر:</b> {paymentModal.month}</p>
             </div>
             <form onSubmit={addPayment} className="space-y-3 mt-3">
-              <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المدفوع *</label><input type="number" required value={payAmount} onChange={e => setPayAmount(e.target.value)} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 outline-none" autoFocus min="0" step="0.01" /></div>
+              <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المدفوع *</label><input type="number" required value={payAmount} onChange={e => setPayAmount(e.target.value)} className="w-full p-2 border rounded-lg" autoFocus min="0" step="0.01" /></div>
               <div className="flex justify-end gap-2 pt-3 border-t mt-4">
-                <button type="button" onClick={() => setPaymentModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">إلغاء</button>
-                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors">اعتماد التوريد</button>
+                <button type="button" onClick={() => setPaymentModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold">تأكيد التوريد</button>
               </div>
             </form>
           </>
         )}
       </Modal>
 
-      {/* ========== نافذة منبثقة: تعديل / حذف قسط موجود ========== */}
       <Modal title="✏️ مراجعة وتعديل القسط" isOpen={!!editPaymentModal} onClose={() => setEditPaymentModal(null)}>
         {editPaymentModal && (
           <>
@@ -540,11 +534,11 @@ export default function InstallmentsTab() {
               <p>بيان شهر: {editPaymentModal.month}</p>
             </div>
             <form onSubmit={editPayment} className="space-y-3 mt-3">
-              <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ الجديد المعدل *</label><input type="number" required value={editAmount} onChange={e => setEditAmount(e.target.value)} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none" min="0" step="0.01" /></div>
+              <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المعدل *</label><input type="number" required value={editAmount} onChange={e => setEditAmount(e.target.value)} className="w-full p-2 border rounded-lg" min="0" step="0.01" /></div>
               <div className="flex justify-end gap-2 pt-3 border-t mt-4">
-                <button type="button" onClick={() => setEditPaymentModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">إلغاء</button>
-                <button type="button" onClick={() => deletePayment(editPaymentModal.row, editPaymentModal.month)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">🗑️ حذف القسط</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">حفظ التعديل</button>
+                <button type="button" onClick={() => setEditPaymentModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+                <button type="button" onClick={() => deletePayment(editPaymentModal.row, editPaymentModal.month)} className="px-4 py-2 bg-red-600 text-white rounded-lg">🗑️ حذف القسط</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold">حفظ التعديل</button>
               </div>
             </form>
           </>
