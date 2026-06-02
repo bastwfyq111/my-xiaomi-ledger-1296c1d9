@@ -18,7 +18,7 @@ const ALL_ACCOUNTS = GROUPS.flatMap((g) => g.accounts);
 // تكييف الأسماء العربية لضمان مطابقة الحسابات بالرغم من اختلاف طريقة الكتابة
 const norm = (s: string) => {
   if (!s) return "";
-  let x = s
+  const x = s
     .replace(/[\u064B-\u0652\u0670\u0640]/g, "")
     .replace(/[\u0622\u0623\u0625]/g, "\u0627")
     .replace(/[\u0649\u064A]/g, "\u064A")
@@ -28,6 +28,38 @@ const norm = (s: string) => {
     .replace(/\s+/g, " ")
     .trim();
   return x;
+};
+
+// أزل الكلمات العامة لمقارنة أكثر مرونة
+const STOP_WORDS = new Set(["حساب", "حسابات", "ح", "محلية", "محليه", "عامة", "عامه"]);
+const tokens = (s: string) =>
+  norm(s).split(" ").filter((w) => w && !STOP_WORDS.has(w));
+
+const ALL_NORM = ALL_ACCOUNTS.map((a) => ({ name: a, norm: norm(a), toks: tokens(a) }));
+
+// ابحث عن أفضل حساب مطابق في الكشف لاسم حساب من القيد
+const matchAccount = (raw: string): string | null => {
+  if (!raw) return null;
+  const n = norm(raw);
+  if (!n) return null;
+  // مطابقة تامة
+  const exact = ALL_NORM.find((a) => a.norm === n);
+  if (exact) return exact.name;
+  // مطابقة احتواء (أي اتجاه)
+  const contains = ALL_NORM.find((a) => a.norm.includes(n) || n.includes(a.norm));
+  if (contains) return contains.name;
+  // مطابقة بالكلمات: أعلى نسبة تطابق
+  const rawToks = tokens(raw);
+  if (!rawToks.length) return null;
+  let best: { name: string; score: number } | null = null;
+  for (const a of ALL_NORM) {
+    if (!a.toks.length) continue;
+    const common = a.toks.filter((t) => rawToks.includes(t)).length;
+    if (!common) continue;
+    const score = common / Math.max(a.toks.length, rawToks.length);
+    if (!best || score > best.score) best = { name: a.name, score };
+  }
+  return best && best.score >= 0.6 ? best.name : null;
 };
 
 // الدالة المساعدة لحساب آخر يوم في الشهر (تم تثبيتها بشكل صحيح لحل خطأ الـ Build)
@@ -58,8 +90,10 @@ export default function MonthlyStatementTab() {
       const isPrev = m < startMonth;
       if (!isCurrent && !isPrev) return;
 
-      const dKey = norm(j.debitAccount || j.account || "");
-      const cKey = norm(j.creditAccount || "");
+      const dMatch = matchAccount(j.debitAccount || j.account || "");
+      const cMatch = matchAccount(j.creditAccount || "");
+      const dKey = dMatch ? norm(dMatch) : "";
+      const cKey = cMatch ? norm(cMatch) : "";
       if (dKey && map[dKey]) {
         if (isCurrent) map[dKey].curDebit += Number(j.debit) || 0;
         else map[dKey].prevDebit += Number(j.debit) || 0;
