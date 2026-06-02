@@ -333,7 +333,7 @@ export default function InstallmentsTab() {
     const months = year === 2025 ? MONTHS_2025 : MONTHS_2026;
     const today_date = today();
     
-    // فلترة الأشهر التي تم سدادها فقط
+    // مدفوعات السنة المطلوبة
     const paidMonths = months
       .map((month, idx) => ({
         month,
@@ -342,18 +342,34 @@ export default function InstallmentsTab() {
       }))
       .filter(item => item.paid > 0);
     
-    // استخدام نفس طريقة الحساب من الجدول
-    const remainingAmount = year === 2026 
-      ? Math.max(0, cleanNumber(row.prevDue) - cleanNumber(row.totalPaid))
-      : cleanNumber(row.remaining);
+    // بيانات سنة 2025 للطالب (في حالة طباعة 2026)
+    let student2025: any = null;
+    let paidMonths2025: { month: string; paid: number }[] = [];
+    if (year === 2026) {
+      student2025 = installments2025.find((s: any) => s.name === row.name);
+      if (student2025?.payments) {
+        paidMonths2025 = MONTHS_2025
+          .map(month => ({
+            month,
+            paid: Number(student2025.payments[month]) || 0
+          }))
+          .filter(item => item.paid > 0);
+      }
+    }
     
-    // إجمالي المستحق = رسوم الدراسة + متبقي 2025 (إن وجد)
-    const totalDue = year === 2026 
-      ? cleanNumber(row.fees) + cleanNumber(row.prevDue || 0)
-      : cleanNumber(row.fees);
+    // حساب المستحقات
+    let totalDue = 0;
+    let titleDue = '';
+    if (year === 2025) {
+      totalDue = cleanNumber(row.fees);
+      titleDue = 'إجمالي رسوم الدراسة';
+    } else {
+      totalDue = cleanNumber(row.prevDue || 0);
+      titleDue = 'المتبقي من عام 2025';
+    }
     
-    // المتبقي عليه = إجمالي المستحق - المسدد
-    const remainingDue = Math.max(0, totalDue - cleanNumber(row.totalPaid));
+    const totalPaidThisYear = cleanNumber(row.totalPaid);
+    const remainingDue = Math.max(0, totalDue - totalPaidThisYear);
     
     let html = `
       <html dir="rtl">
@@ -399,6 +415,7 @@ export default function InstallmentsTab() {
             .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-right: 5px; }
             .tag-owe { background: #fee2e2; color: #dc2626; }
             .tag-have { background: #dcfce7; color: #16a34a; }
+            .year-separator { border-left: 3px solid #cbd5e1; margin: 15px 0; padding-left: 15px; }
           </style>
         </head>
         <body>
@@ -433,27 +450,48 @@ export default function InstallmentsTab() {
             </div>
             
             <div class="summary-section">
-              <h2>📋 إجمالي المستحقات</h2>
+              <h2>📋 المستحقات</h2>
+              ${year === 2025 ? `
               <div class="summary-item">
                 <span class="summary-label">رسوم الدراسة</span>
                 <span class="summary-value">${fmt(row.fees)}</span>
               </div>
-              ${year === 2026 && cleanNumber(row.prevDue) > 0 ? `
+              ` : `
               <div class="summary-item">
                 <span class="summary-label">متبقي من العام 2025 <span class="tag tag-owe">عليه</span></span>
                 <span class="summary-value negative">${fmt(row.prevDue)}</span>
               </div>
-              ` : ''}
+              `}
               <div class="summary-total">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span>إجمالي المستحق عليه</span>
+                  <span>${titleDue}</span>
                   <span style="font-size: 20px; color: #ea580c;">${fmt(totalDue)}</span>
                 </div>
               </div>
             </div>
             
+            <!-- مدفوعات 2025 (فقط في كشف 2026) -->
+            ${year === 2026 && paidMonths2025.length > 0 ? `
+            <div class="payments-section" style="border-color: #f59e0b; background: #fffbeb;">
+              <h2 style="color: #b45309; border-bottom-color: #fcd34d;">💰 المبالغ المسددة في 2025</h2>
+              ${paidMonths2025.map(({ month, paid }) => `
+                <div class="payment-item">
+                  <span class="payment-label">سداد شهر ${month} <span class="tag tag-have">له</span></span>
+                  <span class="payment-value positive">${fmt(paid)}</span>
+                </div>
+              `).join("")}
+              <div class="payments-total" style="background: #fef3c7; margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>إجمالي مسدد 2025 <span class="tag tag-have">له</span></span>
+                  <span style="font-size: 18px;" class="positive">${fmt(paidMonths2025.reduce((sum, item) => sum + item.paid, 0))}</span>
+                </div>
+              </div>
+            </div>
+            ` : ''}
+            
+            <!-- مدفوعات السنة الحالية -->
             <div class="payments-section">
-              <h2>💰 المبالغ المسددة</h2>
+              <h2>💰 المبالغ المسددة في ${year}</h2>
               ${paidMonths.length > 0 
                 ? paidMonths.map(({ month, paid }) => `
                   <div class="payment-item">
@@ -461,13 +499,13 @@ export default function InstallmentsTab() {
                     <span class="payment-value positive">${fmt(paid)}</span>
                   </div>
                 `).join("")
-                : `<div class="no-payments">لا توجد مدفوعات مسجلة</div>`
+                : `<div class="no-payments">لا توجد مدفوعات مسجلة في ${year}</div>`
               }
               ${paidMonths.length > 0 ? `
               <div class="payments-total">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span>إجمالي المسدد <span class="tag tag-have">له</span></span>
-                  <span style="font-size: 20px;" class="positive">${fmt(row.totalPaid)}</span>
+                  <span>إجمالي المسدد في ${year} <span class="tag tag-have">له</span></span>
+                  <span style="font-size: 20px;" class="positive">${fmt(totalPaidThisYear)}</span>
                 </div>
               </div>
               ` : ''}
@@ -475,7 +513,7 @@ export default function InstallmentsTab() {
             
             ${remainingDue > 0 ? `
             <div class="remaining-section">
-              <h2>⚠️ الرصيد المتبقي</h2>
+              <h2>⚠️ الرصيد المتبقي (حتى تاريخه)</h2>
               <div class="remaining-value">${fmt(remainingDue)} عليه</div>
             </div>
             ` : `
@@ -868,4 +906,4 @@ export default function InstallmentsTab() {
       </Modal>
     </div>
   );
-}
+                                 }
