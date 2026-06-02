@@ -7,6 +7,11 @@ import seedInstallments from "@/data/installments.json";
 
 export type Trainee = { name: string; batch: string; specialty: string };
 
+export const INSTALLMENT_MONTHS = [
+  "يناير","فبراير","مارس","ابريل","مايو","يونيو",
+  "يوليو","اغسطس","سبتمبر","اكتوبر","نوفمبر","ديسمبر",
+] as const;
+
 export type Installment = {
   no: number | null;
   name: string;
