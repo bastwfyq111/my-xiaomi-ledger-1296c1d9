@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { BookOpenText, Plus, Trash2, Edit, Save, X } from "lucide-react";
 import { toast } from "sonner";
+import ImportButton from "@/components/ImportButton";
 
 // واجهة القيد
 type JournalEntry = {
@@ -45,7 +46,10 @@ export default function JournalTab() {
     <div className="w-full space-y-6" dir="rtl">
       {/* منطقة الإضافة */}
       <div className="bg-white p-4 rounded-xl border shadow-sm">
-        <h3 className="font-bold mb-4">{editingId ? "تعديل قيد" : "إضافة قيد جديد"}</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold">{editingId ? "تعديل قيد" : "إضافة قيد جديد"}</h3>
+          <ImportButton kind="journal" />
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <input placeholder="رقم القيد" value={form.formNo || ""} onChange={(e) => setForm({...form, formNo: e.target.value})} className="border p-2 rounded" />
           <input type="date" value={form.date || ""} onChange={(e) => setForm({...form, date: e.target.value})} className="border p-2 rounded" />
