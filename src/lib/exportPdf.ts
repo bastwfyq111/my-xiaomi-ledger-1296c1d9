@@ -70,7 +70,7 @@ export const journalPdf = (j: Journal[]) =>
   exportToPdf({
     title: "دفتر اليومية العامة",
     columns: ["م", "رقم الاستمارة", "كشف التسوية", "التاريخ", "البيان", "ح/ مدين", "ح/ دائن", "مدين", "دائن"],
-    rows: j.map((x, i) => [i + 1, x.formNo, x.settlement, x.date, x.description, x.debitAccount || x.account, x.creditAccount || "", fmt(x.debit), fmt(x.credit)]),
+    rows: j.map((x, i) => [i + 1, x.formNo, x.settlement || "", x.date, x.description, x.debitAccount || x.account, x.creditAccount || "", fmt(x.debit), fmt(x.credit)]),
   });
 
 const MONTH_NAMES_PDF = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
