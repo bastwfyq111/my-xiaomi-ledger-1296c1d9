@@ -183,6 +183,7 @@ export const useStore = create<State>()(
 
       setOpeningBalance: (n) => set({ openingBalance: n }),
 
+      // دالة الاستيراد الشاملة والمحدثة
       importData: (d) => set((s) => ({
         journal: d.journal ? [...s.journal, ...d.journal.map((j: any) => ({
           ...j,
@@ -190,11 +191,30 @@ export const useStore = create<State>()(
           debit: Number(j.debit) || 0,
           credit: Number(j.credit) || 0,
         }))] : s.journal,
+        
+        hafiza: d.hafiza ? [...s.hafiza, ...d.hafiza.map((h: any) => ({
+          ...h,
+          id: h.id || uid(),
+          hafizaAmount: Number(h.hafizaAmount) || 0,
+          notifyAmount: Number(h.notifyAmount) || 0,
+        }))] : s.hafiza,
+
+        accounts: d.accounts ? [...s.accounts, ...d.accounts.map((a: any) => ({
+          ...a,
+          id: a.id || uid(),
+          hafizaAmount: Number(a.hafizaAmount) || 0,
+          income: Number(a.income) || 0,
+          expense: Number(a.expense) || 0,
+        }))] : s.accounts,
+
+        installments: d.installments ? d.installments.map(recalcInstallment) : s.installments,
+        installments2025: d.installments2025 ? d.installments2025.map(recalcInstallment) : s.installments2025,
       })),
 
       clearAll: () => set({ hafiza: [], accounts: [], journal: [] }),
       clearTab: (tab) => set((s) => ({ ...s, [tab]: [] })),
 
+      // دوال Custom tabs
       addCustomTab: (name) => {
         const tab: CustomTab = { id: uid(), name, columns: [], rows: [] };
         set((s) => ({ customTabs: [...s.customTabs, tab] }));
