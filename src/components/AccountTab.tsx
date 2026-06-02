@@ -1,18 +1,19 @@
 import React, { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
+import { useStore, type Account } from "@/lib/store";
 import { fmt, today } from "@/lib/format";
-import { accountsPdf } from "@/lib/exportPdf";
+import { DESCRIPTIONS } from "@/lib/accounts";
 import { toast } from "sonner";
-import ImportButton from "./ImportButton";
+import * as XLSX from "xlsx";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
-import { Printer, X, Plus, Edit, Trash2, Save, Eraser, Wallet, ArrowDownToLine, ArrowUpFromLine, Landmark } from "lucide-react";
+import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser, FileSpreadsheet } from "lucide-react";
 
 const COLS = [
   { key: "date", label: "التاريخ" },
   { key: "hafizaNo", label: "رقم الحافظة" },
-  { key: "notifyNo", label: "رقم الاشعار" },
+  { key: "notifyNo", label: "رقم الإشعار" },
   { key: "notifyDate", label: "تاريخ التوريد" },
   { key: "checkNo", label: "رقم الشيك" },
+  { key: "checkDate", label: "تاريخ الشيك" },
   { key: "description", label: "البيان" },
   { key: "specialty", label: "التخصص" },
   { key: "name", label: "الاسم" },
@@ -21,7 +22,7 @@ const COLS = [
   { key: "expense", label: "المصروفات" },
 ];
 
-type EntryForm = {
+type FormType = {
   date: string;
   hafizaNo: string;
   notifyNo: string;
@@ -36,199 +37,272 @@ type EntryForm = {
   expense: string;
 };
 
-const emptyEntry = (): EntryForm => ({
-  date: today(),
-  hafizaNo: "",
-  notifyNo: "",
-  notifyDate: "",
-  checkNo: "",
-  checkDate: "",
-  description: "",
-  specialty: "",
-  name: "",
-  hafizaAmount: "",
-  income: "",
-  expense: "",
-});
+const emptyForm: FormType = {
+  date: today(), hafizaNo: "", notifyNo: "", notifyDate: "",
+  checkNo: "", checkDate: "", description: "", specialty: "",
+  name: "", hafizaAmount: "", income: "", expense: ""
+};
 
-// مكون النافذة المنبثقة الموحد
+// مكون النافذة المنبثقة للتعديل
 const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-2 sm:p-4" dir="rtl">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-4 border-b bg-gradient-to-l from-blue-50 to-slate-50 sticky top-0 z-10">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center p-4 border-b bg-gradient-to-l from-emerald-50 to-slate-50 sticky top-0 z-10">
           <h3 className="font-bold text-base sm:text-lg text-slate-900">{title}</h3>
           <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-lg transition-colors">
             <X className="w-5 h-5 text-slate-600" />
           </button>
         </div>
-        <div className="p-4 sm:p-5">{children}</div>
+        <div className="p-4">{children}</div>
       </div>
     </div>
   );
 };
 
-export default function AccountTab() {
-  const { accounts, openingBalance, setOpeningBalance, deleteAccount, addAccount, updateAccount } = useStore();
-  const [showForm, setShowForm] = useState(false);
-  const [entry, setEntry] = useState<EntryForm>(emptyEntry());
+export default function AccountsTab() {
+  const { accounts, addAccount, updateAccount, deleteAccount } = useStore();
+  const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
-  const { rows: filteredAccounts, sortKey, sortDir, toggleSort, filters, setFilter, clearFilters } =
+  const { rows: filtered, sortKey, sortDir, toggleSort, filters, setFilter, clearFilters } =
     useTableControls(accounts, COLS.map((c) => c.key));
 
-  const submitEntry = (e: React.FormEvent) => {
-    e.preventDefault();
-    const inc = Number(entry.income) || 0;
-    const exp = Number(entry.expense) || 0;
-    
-    if (!entry.description && !entry.name) {
-      toast.error("يرجى إدخال البيان أو الاسم على الأقل");
+  // حساب الرصيد التراكمي الإجمالي ديناميكياً
+  const totalIncome = useMemo(() => accounts.reduce((sum, a) => sum + (a.income || 0), 0), [accounts]);
+  const totalExpense = useMemo(() => accounts.reduce((sum, a) => sum + (a.expense || 0), 0), [accounts]);
+  const currentBalance = totalIncome - totalExpense;
+
+  // دالة الإضافة اليدوية لقيد حساب جديد
+  const submit = () => {
+    if (!form.name || (!form.income && !form.expense)) {
+      toast.error("يرجى إدخال الاسم وتحديد مبلغ إيراد أو مصروف على الأقل");
       return;
     }
 
     addAccount({
-      date: entry.date, hafizaNo: entry.hafizaNo, notifyNo: entry.notifyNo,
-      notifyDate: entry.notifyDate, checkNo: entry.checkNo, checkDate: entry.checkDate,
-      description: entry.description, specialty: entry.specialty, name: entry.name,
-      hafizaAmount: Number(entry.hafizaAmount) || 0, income: inc, expense: exp,
+      date: form.date,
+      hafizaNo: form.hafizaNo,
+      notifyNo: form.notifyNo,
+      notifyDate: form.notifyDate,
+      checkNo: form.checkNo,
+      checkDate: form.checkDate,
+      description: form.description,
+      specialty: form.specialty,
+      name: form.name,
+      hafizaAmount: Number(form.hafizaAmount) || 0,
+      income: Number(form.income) || 0,
+      expense: Number(form.expense) || 0,
     });
-    toast.success("تم إضافة القيد بنجاح");
-    setEntry(emptyEntry());
-    setShowForm(false);
+
+    toast.success("تم إضافة السجل المالي للحساب بنجاح");
+    setForm(emptyForm);
   };
 
+  // دالة حفظ التعديلات
   const handleEditSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingRow) return;
+    
     updateAccount(editingRow.id, {
       ...editingRow,
       hafizaAmount: Number(editingRow.hafizaAmount) || 0,
       income: Number(editingRow.income) || 0,
       expense: Number(editingRow.expense) || 0,
     });
-    toast.success("تم تعديل القيد بنجاح");
+    
+    toast.success("تم تعديل السجل بنجاح");
     setEditingRow(null);
   };
 
-  const rows = useMemo(() => {
-    let bal = openingBalance;
-    return filteredAccounts.map((a) => {
-      bal = bal + (Number(a.income) || 0) - (Number(a.expense) || 0);
-      return { ...a, balance: bal };
-    });
-  }, [filteredAccounts, openingBalance]);
+  // دالة استيراد بيانات الحساب من ملف إكسل Excel
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const totalIn = accounts.reduce((s, a) => s + (Number(a.income) || 0), 0);
-  const totalOut = accounts.reduce((s, a) => s + (Number(a.expense) || 0), 0);
-  const finalBalance = openingBalance + totalIn - totalOut;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+
+        if (json.length === 0) throw new Error("الملف فارغ أو غير صالح");
+
+        const importedAccounts = json.map((row: any) => ({
+          date: row["التاريخ"] || row["date"] || today(),
+          hafizaNo: String(row["رقم الحافظة"] || row["hafizaNo"] || ""),
+          notifyNo: String(row["رقم الاشعار"] || row["notifyNo"] || ""),
+          notifyDate: row["تاريخ التوريد"] || row["notifyDate"] || "",
+          checkNo: String(row["رقم الشيك"] || row["checkNo"] || ""),
+          checkDate: row["تاريخ الشيك"] || row["checkDate"] || "",
+          description: row["البيان"] || row["description"] || "",
+          specialty: row["التخصص"] || row["specialty"] || "",
+          name: row["الاسم"] || row["name"] || "",
+          hafizaAmount: Number(row["مبلغ الحافظة"] || row["hafizaAmount"] || 0),
+          income: Number(row["الإيرادات"] || row["income"] || 0),
+          expense: Number(row["المصروفات"] || row["expense"] || 0),
+        }));
+
+        useStore.getState().importData({ accounts: importedAccounts });
+        toast.success(`تم استيراد ${importedAccounts.length} سجل مالي بنجاح`);
+      } catch (err) {
+        toast.error("فشل استيراد الملف، تأكد من مطابقة رؤوس الأعمدة بالملف المرفوع");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = ""; // تصفية حقل المدخلات للسماح برفع ملف جديد
+  };
 
   return (
-    <div className="w-full space-y-4 sm:space-y-6 p-0 text-sm sm:text-base" dir="rtl">
+    <div className="w-full space-y-6" dir="rtl">
       
-      {/* ========== الإحصائيات العلوية ========== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Stat label="الرصيد الافتتاحي" icon={<Wallet className="w-5 h-5 text-slate-500"/>} value={openingBalance} editable onChange={setOpeningBalance} className="bg-white border-slate-200 shadow-sm" />
-        <Stat label="إجمالي الإيرادات" icon={<ArrowDownToLine className="w-5 h-5 text-emerald-500"/>} value={totalIn} className="bg-emerald-50 border-emerald-200 shadow-sm text-emerald-900" />
-        <Stat label="إجمالي المصروفات" icon={<ArrowUpFromLine className="w-5 h-5 text-rose-500"/>} value={totalOut} className="bg-rose-50 border-rose-200 shadow-sm text-rose-900" />
-        <Stat label="الرصيد النهائي (الحالي)" icon={<Landmark className="w-5 h-5 text-blue-500"/>} value={finalBalance} className="bg-blue-50 border-blue-200 shadow-sm text-blue-900" />
+      {/* ========== قسم الإدخال يدوياً والاستيراد ========== */}
+      <div className="w-full bg-white shadow-sm border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-gradient-to-l from-emerald-700 to-emerald-800 px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Plus className="w-5 h-5 text-white" />
+            <h2 className="text-sm sm:text-lg font-bold text-white">إضافة حركة مالية جديدة للحساب</h2>
+          </div>
+          <label className="flex items-center gap-2 px-3 py-1.5 bg-white text-emerald-800 rounded-lg text-xs font-bold cursor-pointer hover:bg-emerald-50 transition-all shadow-sm">
+            <FileSpreadsheet className="w-4 h-4" /> استيراد حساب Excel
+            <input type="file" accept=".xlsx, .xls, .csv" onChange={handleImportExcel} className="hidden" />
+          </label>
+        </div>
+
+        <div className="p-4 sm:p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Field label="الاسم *" v={form.name} on={(v) => setForm({ ...form, name: v })} placeholder="اسم الحركة أو المتدرب..." />
+            <Field label="التخصص" v={form.specialty} on={(v) => setForm({ ...form, specialty: v })} />
+            <Field label="التاريخ" type="date" v={form.date} on={(v) => setForm({ ...form, date: v })} />
+            
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">البيان</label>
+              <input
+                list="account-descriptions"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="اكتب أو اختر البيان..."
+                className="w-full px-3 py-2 text-sm border rounded-lg outline-none focus:border-emerald-500 bg-slate-50 transition-colors"
+              />
+              <datalist id="account-descriptions">
+                {Array.from(new Set([...DESCRIPTIONS, ...accounts.map((a) => a.description).filter(Boolean)])).map((d) => (
+                  <option key={d} value={d} />
+                ))}
+              </datalist>
+            </div>
+
+            <Field label="رقم الحافظة" v={form.hafizaNo} on={(v) => setForm({ ...form, hafizaNo: v })} />
+            <Field label="مبلغ الحافظة" type="number" v={form.hafizaAmount} on={(v) => setForm({ ...form, hafizaAmount: v })} />
+            <Field label="رقم الإشعار" v={form.notifyNo} on={(v) => setForm({ ...form, notifyNo: v })} />
+            <Field label="تاريخ التوريد" type="date" v={form.notifyDate} on={(v) => setForm({ ...form, notifyDate: v })} />
+            <Field label="رقم الشيك" v={form.checkNo} on={(v) => setForm({ ...form, checkNo: v })} />
+            <Field label="تاريخ الشيك" type="date" v={form.checkDate} on={(v) => setForm({ ...form, checkDate: v })} />
+            <Field label="الإيرادات (دخل) *" type="number" v={form.income} on={(v) => setForm({ ...form, income: v })} placeholder="0.00" />
+            <Field label="المصروفات (خرج) *" type="number" v={form.expense} on={(v) => setForm({ ...form, expense: v })} placeholder="0.00" />
+          </div>
+
+          <div className="mt-5 flex gap-3 flex-wrap border-t pt-4">
+            <button onClick={submit} className="flex items-center gap-2 px-5 py-2 bg-emerald-700 text-white rounded-lg font-bold hover:bg-emerald-600 active:scale-95 transition-all text-sm shadow-md">
+              <Save className="w-4 h-4" /> حفظ السجل المالي
+            </button>
+            <button onClick={() => setForm(emptyForm)} className="flex items-center gap-2 px-5 py-2 border border-slate-300 text-slate-700 bg-white rounded-lg font-semibold hover:bg-slate-50 transition-all text-sm">
+              <Eraser className="w-4 h-4" /> مسح الحقول
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* ========== جدول الحساب ========== */}
-      <div className="w-full bg-gradient-to-b from-blue-50 to-white shadow border border-blue-200 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-l from-blue-700 to-blue-800 px-4 py-3 sm:py-4 flex flex-wrap justify-between items-center gap-3">
+      {/* ========== الملخص المالي الإجمالي ========== */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+          <span className="text-xs text-slate-500 font-semibold">إجمالي الإيرادات</span>
+          <span className="text-xl font-bold text-emerald-600 mt-1 font-mono">{fmt(totalIncome)}</span>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+          <span className="text-xs text-slate-500 font-semibold">إجمالي المصروفات</span>
+          <span className="text-xl font-bold text-rose-600 mt-1 font-mono">{fmt(totalExpense)}</span>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-sm bg-emerald-50/20 flex flex-col">
+          <span className="text-xs text-emerald-700 font-semibold">الرصيد الحالي المتوفر</span>
+          <span className="text-xl font-bold text-emerald-800 mt-1 font-mono">{fmt(currentBalance)}</span>
+        </div>
+      </div>
+
+      {/* ========== قسم جدول حركات سجل الحساب ========== */}
+      <div className="w-full bg-white shadow border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-slate-800 px-4 py-3 flex flex-wrap justify-between items-center gap-3">
           <div>
-            <h2 className="text-sm sm:text-lg font-bold text-white">📑 حساب المجلس ({accounts.length})</h2>
-            <p className="text-xs text-blue-100 mt-0.5">سجل الحركات المالية من إيرادات ومصروفات</p>
+            <h2 className="text-sm sm:text-base font-bold text-white">📊 كشف سجل الحساب ({accounts.length})</h2>
           </div>
-          <div className="flex gap-2 flex-wrap items-center">
-            <button onClick={clearFilters} className="px-3 py-1.5 bg-blue-900/40 hover:bg-blue-900/60 text-white rounded-lg text-xs font-bold transition-colors border border-blue-500/30">
+          <div className="flex gap-2">
+            <button onClick={clearFilters} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold transition-colors">
               مسح التصفية
             </button>
-            <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-bold shadow hover:bg-emerald-600 transition-colors">
-              <Plus className="w-4 h-4" /> إضافة قيد خارجي
-            </button>
-            <button onClick={() => accountsPdf(accounts, openingBalance)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold shadow hover:bg-blue-50 transition-colors">
-              <Printer className="w-4 h-4" /> طباعة / PDF
-            </button>
-            <div className="bg-white/10 rounded-lg p-0.5">
-              <ImportButton kind="account" />
-            </div>
           </div>
         </div>
 
         <div className="p-3 sm:p-4">
-          <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm bg-white">
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
             <table className="w-full text-xs sm:text-sm">
               <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700">
                 <tr>
                   <th className="p-2 text-center w-10">م</th>
                   {COLS.map((c) => (
-                    <th key={c.key} className="p-2 text-right whitespace-nowrap cursor-pointer select-none hover:bg-slate-200 transition-colors" onClick={() => toggleSort(c.key)}>
+                    <th key={c.key} className="p-2 text-right whitespace-nowrap cursor-pointer hover:bg-slate-200 transition-colors" onClick={() => toggleSort(c.key)}>
                       <div className="flex items-center gap-1">
                         {c.label} <span className="text-[10px] opacity-50">{sortIndicator(sortKey === c.key, sortDir)}</span>
                       </div>
                     </th>
                   ))}
-                  <th className="p-2 text-right">الرصيد</th>
-                  <th className="p-2 text-center">إجراءات</th>
+                  <th className="p-2 text-center">خيارات</th>
                 </tr>
                 <tr className="bg-slate-50 border-t border-slate-200">
                   <th className="p-1"></th>
                   {COLS.map((c) => (
                     <th key={c.key} className="p-1">
                       <input value={filters[c.key] || ""} onChange={(e) => setFilter(c.key, e.target.value)}
-                        placeholder="بحث..." className="w-full px-2 py-1.5 text-xs border border-slate-300 rounded outline-none focus:border-blue-400 bg-white" />
+                        placeholder="بحث..." className="w-full px-2 py-1 text-xs border border-slate-300 rounded outline-none focus:border-emerald-400 bg-white" />
                     </th>
                   ))}
-                  <th className="p-1"></th>
                   <th className="p-1"></th>
                 </tr>
               </thead>
               <tbody>
-                {/* صف الرصيد الافتتاحي المدور */}
-                <tr className="border-t border-slate-200 bg-blue-50/50 font-bold text-slate-700">
-                  <td className="p-2 text-center">1</td>
-                  <td colSpan={8} className="p-2 text-center text-blue-800">رصيد افتتاحي مدور للعام 2025</td>
-                  <td className="p-2 font-mono text-emerald-700">{fmt(openingBalance)}</td>
-                  <td className="p-2 font-mono text-rose-700">0</td>
-                  <td className="p-2 font-mono text-blue-700 bg-blue-100/30">{fmt(openingBalance)}</td>
-                  <td></td>
-                </tr>
-                
-                {/* الحركات المالية */}
-                {rows.map((a, i) => (
-                  <tr key={a.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
-                    <td className="p-2 text-center text-slate-500 font-mono">{i + 2}</td>
-                    <td className="p-2 whitespace-nowrap text-slate-600">{a.date}</td>
-                    <td className="p-2 font-mono text-slate-600">{a.hafizaNo}</td>
-                    <td className="p-2 font-mono text-slate-600">{a.notifyNo}</td>
-                    <td className="p-2 whitespace-nowrap text-slate-600">{a.notifyDate}</td>
-                    <td className="p-2 font-mono text-slate-600">{a.checkNo}</td>
-                    <td className="p-2 text-slate-800 font-medium truncate max-w-[200px]" title={a.description}>{a.description}</td>
-                    <td className="p-2 text-slate-600">{a.specialty}</td>
-                    <td className="p-2 font-bold text-slate-900">{a.name}</td>
-                    <td className="p-2 font-mono text-slate-600">{fmt(a.hafizaAmount)}</td>
-                    <td className="p-2 font-mono font-bold text-emerald-600 bg-emerald-50/30">{fmt(a.income)}</td>
-                    <td className="p-2 font-mono font-bold text-rose-600 bg-rose-50/30">{fmt(a.expense)}</td>
-                    <td className="p-2 font-mono font-bold text-blue-700 bg-blue-50/30">{fmt(a.balance)}</td>
+                {filtered.map((acc, index) => (
+                  <tr key={acc.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
+                    <td className="p-2 text-center text-slate-500 font-mono">{index + 1}</td>
+                    <td className="p-2 whitespace-nowrap text-slate-600 font-mono">{acc.date}</td>
+                    <td className="p-2 font-mono text-slate-600">{acc.hafizaNo || "—"}</td>
+                    <td className="p-2 font-mono text-slate-600">{acc.notifyNo || "—"}</td>
+                    <td className="p-2 whitespace-nowrap text-slate-600 font-mono">{acc.notifyDate || "—"}</td>
+                    <td className="p-2 font-mono text-slate-600">{acc.checkNo || "—"}</td>
+                    <td className="p-2 whitespace-nowrap text-slate-600 font-mono">{acc.checkDate || "—"}</td>
+                    <td className="p-2 text-slate-700 truncate max-w-[150px]" title={acc.description}>{acc.description || "—"}</td>
+                    <td className="p-2 text-slate-600">{acc.specialty || "—"}</td>
+                    <td className="p-2 font-bold text-slate-900">{acc.name}</td>
+                    <td className="p-2 font-mono text-slate-600">{acc.hafizaAmount ? fmt(acc.hafizaAmount) : "—"}</td>
+                    <td className="p-2 font-mono font-bold text-emerald-600 bg-emerald-50/20">{acc.income ? fmt(acc.income) : "—"}</td>
+                    <td className="p-2 font-mono font-bold text-rose-600 bg-rose-50/20">{acc.expense ? fmt(acc.expense) : "—"}</td>
                     <td className="p-2 text-center whitespace-nowrap">
                       <div className="flex justify-center gap-1.5">
-                        <button onClick={() => setEditingRow(a)} className="p-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-500 hover:text-white transition-colors" title="تعديل">
-                          <Edit className="w-4 h-4" />
+                        <button onClick={() => setEditingRow(acc)} className="p-1 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-600 hover:text-white transition-colors">
+                          <Edit className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => { if (confirm("هل أنت متأكد من حذف هذا القيد؟")) deleteAccount(a.id); }} className="p-1.5 bg-rose-50 text-rose-600 rounded hover:bg-rose-500 hover:text-white transition-colors" title="حذف">
-                          <Trash2 className="w-4 h-4" />
+                        <button onClick={() => { if (confirm("هل أنت متأكد من حذف هذا السجل المالي للحساب؟")) deleteAccount(acc.id); }} className="p-1 bg-rose-50 text-rose-600 rounded hover:bg-rose-500 hover:text-white transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
                   </tr>
                 ))}
-                {rows.length === 0 && (
+                {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={14} className="p-8 text-center text-slate-400 bg-slate-50 font-medium">
-                      لا توجد حركات مالية مسجلة بعد
+                    <td colSpan={14} className="p-8 text-center text-slate-400 bg-slate-50">
+                      لا توجد سجلات مطابقة لخيارات التصفية الحالية
                     </td>
                   </tr>
                 )}
@@ -238,106 +312,65 @@ export default function AccountTab() {
         </div>
       </div>
 
-      {/* ========== نافذة إضافة قيد خارجي ========== */}
-      <Modal title="➕ إضافة قيد خارجي جديد" isOpen={showForm} onClose={() => setShowForm(false)}>
-        <form onSubmit={submitEntry} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <FormField label="التاريخ *" type="date" v={entry.date} on={(v) => setEntry({ ...entry, date: v })} />
-            <FormField label="رقم الحافظة" v={entry.hafizaNo} on={(v) => setEntry({ ...entry, hafizaNo: v })} />
-            <FormField label="رقم الاشعار" v={entry.notifyNo} on={(v) => setEntry({ ...entry, notifyNo: v })} />
-            <FormField label="تاريخ التوريد" type="date" v={entry.notifyDate} on={(v) => setEntry({ ...entry, notifyDate: v })} />
-            
-            <FormField label="رقم الشيك" v={entry.checkNo} on={(v) => setEntry({ ...entry, checkNo: v })} />
-            <FormField label="تاريخ الشيك" type="date" v={entry.checkDate} on={(v) => setEntry({ ...entry, checkDate: v })} />
-            <FormField label="التخصص" v={entry.specialty} on={(v) => setEntry({ ...entry, specialty: v })} />
-            <FormField label="الاسم" v={entry.name} on={(v) => setEntry({ ...entry, name: v })} />
-            
-            <div className="sm:col-span-2 lg:col-span-4">
-              <FormField label="البيان *" v={entry.description} on={(v) => setEntry({ ...entry, description: v })} />
-            </div>
-            
-            <FormField label="مبلغ الحافظة" type="number" v={entry.hafizaAmount} on={(v) => setEntry({ ...entry, hafizaAmount: v })} />
-            <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-100">
-              <FormField label="الإيرادات (مقبوضات)" type="number" v={entry.income} on={(v) => setEntry({ ...entry, income: v })} />
-            </div>
-            <div className="bg-rose-50 p-2 rounded-lg border border-rose-100">
-              <FormField label="المصروفات (مدفوعات)" type="number" v={entry.expense} on={(v) => setEntry({ ...entry, expense: v })} />
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 pt-4 border-t mt-4">
-            <button type="button" onClick={() => setEntry(emptyEntry())} className="flex items-center gap-2 px-5 py-2 border border-slate-300 text-slate-700 bg-white rounded-lg font-semibold hover:bg-slate-50 transition-all text-sm">
-              <Eraser className="w-4 h-4" /> مسح
-            </button>
-            <button type="submit" className="flex items-center gap-2 px-5 py-2 bg-slate-800 text-white rounded-lg font-bold hover:bg-slate-700 active:scale-95 transition-all text-sm shadow-md">
-              <Save className="w-4 h-4" /> حفظ القيد
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* ========== نافذة تعديل قيد ========== */}
-      <Modal title="✏️ تعديل قيد الحساب" isOpen={!!editingRow} onClose={() => setEditingRow(null)}>
+      {/* ========== نافذة التعديل المنبثقة ========== */}
+      <Modal title="✏️ تعديل السجل المالي للحساب" isOpen={!!editingRow} onClose={() => setEditingRow(null)}>
         {editingRow && (
           <form onSubmit={handleEditSave} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <FormField label="التاريخ *" type="date" v={editingRow.date} on={(v) => setEditingRow({ ...editingRow, date: v })} />
-              <FormField label="رقم الحافظة" v={editingRow.hafizaNo} on={(v) => setEditingRow({ ...editingRow, hafizaNo: v })} />
-              <FormField label="رقم الاشعار" v={editingRow.notifyNo} on={(v) => setEditingRow({ ...editingRow, notifyNo: v })} />
-              <FormField label="تاريخ التوريد" type="date" v={editingRow.notifyDate} on={(v) => setEditingRow({ ...editingRow, notifyDate: v })} />
-              
-              <FormField label="رقم الشيك" v={editingRow.checkNo} on={(v) => setEditingRow({ ...editingRow, checkNo: v })} />
-              <FormField label="تاريخ الشيك" type="date" v={editingRow.checkDate} on={(v) => setEditingRow({ ...editingRow, checkDate: v })} />
-              <FormField label="التخصص" v={editingRow.specialty} on={(v) => setEditingRow({ ...editingRow, specialty: v })} />
-              <FormField label="الاسم" v={editingRow.name} on={(v) => setEditingRow({ ...editingRow, name: v })} />
-              
-              <div className="sm:col-span-2 lg:col-span-4">
-                <FormField label="البيان *" v={editingRow.description} on={(v) => setEditingRow({ ...editingRow, description: v })} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">الاسم</label>
+                <input value={editingRow.name} onChange={(e) => setEditingRow({...editingRow, name: e.target.value})} className="w-full p-2 border rounded-lg bg-slate-50 outline-none" required />
               </div>
-              
-              <FormField label="مبلغ الحافظة" type="number" v={editingRow.hafizaAmount} on={(v) => setEditingRow({ ...editingRow, hafizaAmount: v })} />
-              <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-100">
-                <FormField label="الإيرادات" type="number" v={editingRow.income} on={(v) => setEditingRow({ ...editingRow, income: v })} />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">التخصص</label>
+                <input value={editingRow.specialty} onChange={(e) => setEditingRow({...editingRow, specialty: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
               </div>
-              <div className="bg-rose-50 p-2 rounded-lg border border-rose-100">
-                <FormField label="المصروفات" type="number" v={editingRow.expense} on={(v) => setEditingRow({ ...editingRow, expense: v })} />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">التاريخ</label>
+                <input type="date" value={editingRow.date} onChange={(e) => setEditingRow({...editingRow, date: e.target.value})} className="w-full p-2 border rounded-lg outline-none" required />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">رقم الحافظة</label>
+                <input value={editingRow.hafizaNo} onChange={(e) => setEditingRow({...editingRow, hafizaNo: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">مبلغ الحافظة</label>
+                <input type="number" value={editingRow.hafizaAmount} onChange={(e) => setEditingRow({...editingRow, hafizaAmount: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">رقم الإشعار</label>
+                <input value={editingRow.notifyNo} onChange={(e) => setEditingRow({...editingRow, notifyNo: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">تاريخ التوريد</label>
+                <input type="date" value={editingRow.notifyDate} onChange={(e) => setEditingRow({...editingRow, notifyDate: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">الإيرادات (دخل)</label>
+                <input type="number" value={editingRow.income} onChange={(e) => setEditingRow({...editingRow, income: e.target.value})} className="w-full p-2 border rounded-lg font-bold text-emerald-600 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">المصروفات (خرج)</label>
+                <input type="number" value={editingRow.expense} onChange={(e) => setEditingRow({...editingRow, expense: e.target.value})} className="w-full p-2 border rounded-lg font-bold text-rose-600 outline-none" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">البيان</label>
+                <input value={editingRow.description} onChange={(e) => setEditingRow({...editingRow, description: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t mt-4">
               <button type="button" onClick={() => setEditingRow(null)} className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-colors">إلغاء</button>
-              <button type="submit" className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-md">حفظ التعديلات</button>
+              <button type="submit" className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors shadow-md">حفظ التعديلات</button>
             </div>
           </form>
         )}
       </Modal>
-
     </div>
   );
 }
 
-// مكون فرعي لعرض الإحصائيات (محدث)
-function Stat({ label, value, className = "", editable, onChange, icon }: { label: string; value: number; className?: string; editable?: boolean; onChange?: (n: number) => void, icon?: React.ReactNode }) {
-  return (
-    <div className={`border rounded-xl p-3 sm:p-4 flex flex-col justify-between h-full ${className}`}>
-      <div className="flex items-center gap-2 mb-2">
-        {icon}
-        <div className="text-xs sm:text-sm font-bold opacity-80">{label}</div>
-      </div>
-      {editable ? (
-        <input
-          type="number"
-          value={value}
-          onChange={(e) => onChange?.(Number(e.target.value) || 0)}
-          className="text-lg sm:text-xl font-bold font-mono w-full bg-slate-100/50 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-slate-300 transition-all border border-transparent"
-        />
-      ) : (
-        <div className="text-lg sm:text-xl font-bold font-mono px-2 py-1">{fmt(value)}</div>
-      )}
-    </div>
-  );
-}
-
-// مكون فرعي لتقليل تكرار كود الحقول
-function FormField({ label, v, on, type = "text" }: { label: string; v: string; on: (v: string) => void; type?: string }) {
+// مكون الحقل الفرعي للمساعدة في تقليل التكرار
+function Field({ label, v, on, type = "text", placeholder = "" }: { label: string; v: string; on: (v: string) => void; type?: string; placeholder?: string }) {
   return (
     <div>
       <label className="block text-xs font-semibold text-slate-700 mb-1">{label}</label>
@@ -345,7 +378,8 @@ function FormField({ label, v, on, type = "text" }: { label: string; v: string; 
         type={type}
         value={v}
         onChange={(e) => on(e.target.value)}
-        className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-white transition-colors"
+        placeholder={placeholder}
+        className="w-full px-3 py-2 text-sm border rounded-lg outline-none focus:border-emerald-500 bg-slate-50 transition-colors"
       />
     </div>
   );
