@@ -79,7 +79,6 @@ export default function InstallmentsTab() {
     fees: controls2026.rows.reduce((s, r) => s + cleanNumber(r.fees), 0),
     prevDue: controls2026.rows.reduce((s, r) => s + cleanNumber(r.prevDue), 0),
     paid: controls2026.rows.reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
-    // المتبقي = متبقي 2025 - المسدد في 2026
     remaining: controls2026.rows.reduce((s, r) => s + Math.max(0, cleanNumber(r.prevDue) - cleanNumber(r.totalPaid)), 0),
   }), [controls2026.rows]);
 
@@ -116,7 +115,6 @@ export default function InstallmentsTab() {
       if (s.name !== paymentModal.row.name) return s;
       const payments = { ...s.payments, [paymentModal.month]: (Number(s.payments[paymentModal.month]) || 0) + amount };
       const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
-      // المتبقي = متبقي 2025 - المسدد في 2026
       const remaining = Math.max(0, cleanNumber(s.prevDue) - totalPaid);
       return { ...s, payments, totalPaid, remaining };
     });
@@ -142,7 +140,6 @@ export default function InstallmentsTab() {
         if (s.name !== newStudentName) return s;
         const payments = { ...s.payments, [newStudentMonth]: (Number(s.payments[newStudentMonth]) || 0) + amount };
         const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
-        // المتبقي = متبقي 2025 - المسدد في 2026
         const remaining = Math.max(0, cleanNumber(s.prevDue) - totalPaid);
         return { ...s, payments, totalPaid, remaining };
       });
@@ -156,7 +153,6 @@ export default function InstallmentsTab() {
         fees: 0,
         prevDue: 0,
         totalPaid: amount,
-        // المتبقي = متبقي 2025 - المسدد (في الحالة الجديدة prevDue = 0)
         remaining: Math.max(0, 0 - amount),
         notes: "",
         phone: "",
@@ -185,7 +181,6 @@ export default function InstallmentsTab() {
       if (s.name !== editPaymentModal.row.name) return s;
       const payments = { ...s.payments, [editPaymentModal.month]: newAmount };
       const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
-      // المتبقي = متبقي 2025 - المسدد في 2026
       const remaining = Math.max(0, cleanNumber(s.prevDue) - totalPaid);
       return { ...s, payments, totalPaid, remaining };
     });
@@ -204,7 +199,6 @@ export default function InstallmentsTab() {
       if (s.name !== row.name) return s;
       const payments = { ...s.payments, [month]: 0 };
       const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
-      // المتبقي = متبقي 2025 - المسدد في 2026
       const remaining = Math.max(0, cleanNumber(s.prevDue) - totalPaid);
       return { ...s, payments, totalPaid, remaining };
     });
@@ -276,7 +270,6 @@ export default function InstallmentsTab() {
             const fees = cleanNumber(findByKey(["رسوم", "مبلغ", "الرسوم"]));
             const prevDue = year === 2026 ? cleanNumber(findByKey(["2025", "السابق", "متبقي", "متبقي 2025"])) : 0;
             const totalPaid = cleanNumber(findByKey(["المسدد", "الإجمالي", "المدفوع", "المبلغ المسدد"]));
-            // المتبقي = متبقي 2025 - المسدد (أثناء الاستيراد)
             const remaining = Math.max(0, prevDue - totalPaid);
             const notes = findByKey(["ملاحظات", "ملاحظة"]);
             const phone = findByKey(["هاتف", "تلفون", "الهاتف"]);
@@ -349,10 +342,18 @@ export default function InstallmentsTab() {
       }))
       .filter(item => item.paid > 0);
     
-    // استخدام نفس المبلغ المتبقي من الجدول (مع حسابه بنفس الطريقة)
+    // استخدام نفس طريقة الحساب من الجدول
     const remainingAmount = year === 2026 
       ? Math.max(0, cleanNumber(row.prevDue) - cleanNumber(row.totalPaid))
       : cleanNumber(row.remaining);
+    
+    // إجمالي المستحق = رسوم الدراسة + متبقي 2025 (إن وجد)
+    const totalDue = year === 2026 
+      ? cleanNumber(row.fees) + cleanNumber(row.prevDue || 0)
+      : cleanNumber(row.fees);
+    
+    // المتبقي عليه = إجمالي المستحق - المسدد
+    const remainingDue = Math.max(0, totalDue - cleanNumber(row.totalPaid));
     
     let html = `
       <html dir="rtl">
@@ -362,23 +363,42 @@ export default function InstallmentsTab() {
             body { font-family: 'Arial', sans-serif; margin: 20px; text-align: right; background: #f5f5f5; }
             .container { background: white; padding: 30px; border-radius: 8px; max-width: 800px; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
             .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-            .header h1 { margin: 0; color: #333; }
+            .header h1 { margin: 0; color: #333; font-size: 24px; }
             .header p { margin: 5px 0; color: #666; font-size: 14px; }
-            .info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 4px; }
-            .info-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
-            .info-item:last-child { border-bottom: none; }
-            .info-label { font-weight: bold; color: #333; }
-            .info-value { color: #666; }
-            .table { width: 100%; border-collapse: collapse; margin: 30px 0; }
-            .table th { background: #f5f5f5; padding: 12px; text-align: right; border-bottom: 2px solid #ddd; font-weight: bold; }
-            .table td { padding: 10px 12px; border-bottom: 1px solid #ddd; text-align: center; }
-            .table tr:nth-child(even) { background: #f9f9f9; }
-            .total-row { background: #f0f9ff !important; font-weight: bold; border-top: 2px solid #0ea5e9; }
-            .total-row td { color: #0369a1; font-size: 16px; }
-            .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #ddd; padding-top: 15px; }
-            .positive { color: #27ae60; font-weight: bold; }
-            .negative { color: #e74c3c; font-weight: bold; }
+            .student-info { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 25px; }
+            .student-info h2 { margin: 0 0 15px 0; color: #1e293b; font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .info-item { display: flex; justify-content: space-between; padding: 8px 0; }
+            .info-label { color: #64748b; font-weight: 500; }
+            .info-value { color: #1e293b; font-weight: bold; }
+            .summary-section { background: #fefce8; border: 2px solid #eab308; border-radius: 8px; padding: 20px; margin-bottom: 25px; }
+            .summary-section h2 { margin: 0 0 15px 0; color: #854d0e; font-size: 18px; border-bottom: 2px solid #facc15; padding-bottom: 10px; }
+            .summary-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #fde047; }
+            .summary-item:last-child { border-bottom: none; }
+            .summary-label { color: #713f12; font-size: 15px; }
+            .summary-value { font-weight: bold; font-size: 16px; }
+            .summary-total { background: #fef9c3; margin: 10px -20px -20px -20px; padding: 15px 20px; border-radius: 0 0 8px 8px; font-weight: bold; }
+            .payments-section { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 20px; margin-bottom: 25px; }
+            .payments-section h2 { margin: 0 0 15px 0; color: #166534; font-size: 18px; border-bottom: 2px solid #86efac; padding-bottom: 10px; }
+            .payment-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #bbf7d0; }
+            .payment-item:last-child { border-bottom: none; }
+            .payment-label { color: #15803d; font-size: 15px; }
+            .payment-value { color: #166534; font-weight: bold; font-size: 16px; }
+            .payments-total { background: #dcfce7; margin: 10px -20px -20px -20px; padding: 15px 20px; border-radius: 0 0 8px 8px; font-weight: bold; }
             .no-payments { text-align: center; padding: 20px; color: #999; font-style: italic; }
+            .remaining-section { background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; padding: 20px; margin-top: 25px; }
+            .remaining-section h2 { margin: 0 0 10px 0; color: #991b1b; font-size: 18px; }
+            .remaining-value { font-size: 24px; font-weight: bold; color: #dc2626; text-align: center; }
+            .paid-section { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 20px; margin-top: 25px; }
+            .paid-section h2 { margin: 0 0 10px 0; color: #166534; font-size: 18px; }
+            .paid-value { font-size: 24px; font-weight: bold; color: #16a34a; text-align: center; }
+            .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #ddd; padding-top: 15px; }
+            .positive { color: #16a34a; }
+            .negative { color: #dc2626; }
+            .due { color: #ea580c; }
+            .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-right: 5px; }
+            .tag-owe { background: #fee2e2; color: #dc2626; }
+            .tag-have { background: #dcfce7; color: #16a34a; }
           </style>
         </head>
         <body>
@@ -388,8 +408,9 @@ export default function InstallmentsTab() {
               <p>تاريخ الطباعة: ${today_date}</p>
             </div>
             
-            <div class="info">
-              <div>
+            <div class="student-info">
+              <h2>بيانات المتدرب</h2>
+              <div class="info-grid">
                 <div class="info-item">
                   <span class="info-label">الاسم:</span>
                   <span class="info-value">${row.name}</span>
@@ -402,56 +423,67 @@ export default function InstallmentsTab() {
                   <span class="info-label">المساق:</span>
                   <span class="info-value">${row.specialty || "—"}</span>
                 </div>
-                ${year === 2026 ? `
+                ${row.phone ? `
                 <div class="info-item">
-                  <span class="info-label">المتبقي من 2025:</span>
-                  <span class="info-value">${fmt(row.prevDue || 0)}</span>
+                  <span class="info-label">الهاتف:</span>
+                  <span class="info-value">${row.phone}</span>
                 </div>
                 ` : ''}
               </div>
-              <div>
-                <div class="info-item">
-                  <span class="info-label">الرسوم:</span>
-                  <span class="info-value">${fmt(row.fees)}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">المسدد:</span>
-                  <span class="info-value positive">${fmt(row.totalPaid)}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">المتبقي:</span>
-                  <span class="info-value ${remainingAmount > 0 ? 'negative' : 'positive'}">${fmt(remainingAmount)}</span>
+            </div>
+            
+            <div class="summary-section">
+              <h2>📋 إجمالي المستحقات</h2>
+              <div class="summary-item">
+                <span class="summary-label">رسوم الدراسة</span>
+                <span class="summary-value">${fmt(row.fees)}</span>
+              </div>
+              ${year === 2026 && cleanNumber(row.prevDue) > 0 ? `
+              <div class="summary-item">
+                <span class="summary-label">متبقي من العام 2025 <span class="tag tag-owe">عليه</span></span>
+                <span class="summary-value negative">${fmt(row.prevDue)}</span>
+              </div>
+              ` : ''}
+              <div class="summary-total">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>إجمالي المستحق عليه</span>
+                  <span style="font-size: 20px; color: #ea580c;">${fmt(totalDue)}</span>
                 </div>
               </div>
             </div>
             
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>الشهر</th>
-                  <th>المبلغ المسدد</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${paidMonths.length > 0 
-                  ? paidMonths.map(({ month, idx, paid }) => `
-                    <tr>
-                      <td>${idx}</td>
-                      <td>${month}</td>
-                      <td><span class="positive">${fmt(paid)}</span></td>
-                    </tr>
-                  `).join("")
-                  : `<tr><td colspan="3" class="no-payments">لا توجد مدفوعات مسجلة</td></tr>`
-                }
-                ${paidMonths.length > 0 ? `
-                <tr class="total-row">
-                  <td colspan="2">الإجمالي</td>
-                  <td><span class="positive">${fmt(row.totalPaid)}</span></td>
-                </tr>
-                ` : ''}
-              </tbody>
-            </table>
+            <div class="payments-section">
+              <h2>💰 المبالغ المسددة</h2>
+              ${paidMonths.length > 0 
+                ? paidMonths.map(({ month, paid }) => `
+                  <div class="payment-item">
+                    <span class="payment-label">سداد شهر ${month} <span class="tag tag-have">له</span></span>
+                    <span class="payment-value positive">${fmt(paid)}</span>
+                  </div>
+                `).join("")
+                : `<div class="no-payments">لا توجد مدفوعات مسجلة</div>`
+              }
+              ${paidMonths.length > 0 ? `
+              <div class="payments-total">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>إجمالي المسدد <span class="tag tag-have">له</span></span>
+                  <span style="font-size: 20px;" class="positive">${fmt(row.totalPaid)}</span>
+                </div>
+              </div>
+              ` : ''}
+            </div>
+            
+            ${remainingDue > 0 ? `
+            <div class="remaining-section">
+              <h2>⚠️ الرصيد المتبقي</h2>
+              <div class="remaining-value">${fmt(remainingDue)} عليه</div>
+            </div>
+            ` : `
+            <div class="paid-section">
+              <h2>✅ تم السداد بالكامل</h2>
+              <div class="paid-value">${fmt(Math.abs(remainingDue))} له</div>
+            </div>
+            `}
             
             <div class="footer">
               <p>تم إنشاء هذا الكشف بواسطة نظام إدارة الأقساط</p>
@@ -558,7 +590,6 @@ export default function InstallmentsTab() {
                         </td>
                       </tr>
                     ))}
-                    {/* صف الإجمالي لجدول 2025 */}
                     <tr className="border-t-2 border-teal-300 bg-teal-50 font-bold">
                       <td className="p-2 sm:p-3 text-center text-teal-700 text-xs" colSpan={4}>الإجمالي</td>
                       <td className="p-2 sm:p-3 text-center font-mono text-teal-700 text-xs font-bold">{fmt(totals2025.fees)}</td>
@@ -692,7 +723,6 @@ export default function InstallmentsTab() {
                         </tr>
                       );
                     })}
-                    {/* صف الإجمالي لجدول 2026 */}
                     <tr className="border-t-2 border-purple-300 bg-purple-50 font-bold">
                       <td className="p-2 text-center text-purple-700 text-xs" colSpan={4}>الإجمالي</td>
                       <td className="p-2 text-center font-mono text-amber-700 text-xs font-bold">{fmt(totals2026.prevDue)}</td>
