@@ -6,14 +6,26 @@ import { toast } from "sonner";
 import { useTableControls } from "@/hooks/useTableControls";
 import { X, Printer, AlertCircle } from "lucide-react";
 
-const MONTHS_2025 = ["يونيو 2024", "يوليو 2024", "أغسطس 2024", "مارس 2025", "ابريل 2025", "مايو 2025", "يونيو 2025", "يوليو 2025", "أغسطس 2025", "سبتمبر 2025", "اكتوبر 2025", "نوفمبر 2025"];
-const MONTHS_2026 = ["يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", "يوليو", "اغسطس", "سبتمبر", "اكتوبر", "نوفمبر", "ديسمبر"];
+// مصفوفات الأشهر مطابقة تماماً للمسميات داخل ملفات الإكسيل المرفقة لضمان دقة الاستيراد
+const MONTHS_2025 = [
+  "يونيو 2024", "يوليو 2024", "أغسطس 2024", 
+  "مارس 2025", "ابريل 2025", "مايو 2025", 
+  "يونيو 2025", "يوليو 2025", "أغسطس 2025", 
+  "سبتمبر 2025", "أكتوبر 2025", "نوفمبر2025", "ديسمبر2025" // تمت مطابقتها مع الإكسيل بدون مسافات
+];
 
+const MONTHS_2026 = [
+  "يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", 
+  "يوليو", "اغسطس", "سبتمبر", "اكتوبر ", "نوفمبر", "ديسمبر" // "اكتوبر " يحتوي على مسافة مطابقة للملف
+];
+
+// دالة لتنظيف وتحويل القيم النصية الفارغة أو الغريبة إلى أرقام صالحة للعمليات الحسابية
 const cleanNumber = (val: any): number => {
-  if (!val) return 0;
+  if (!val || isNaN(Number(String(val).replace(/[^0-9.-]/g, "")))) return 0;
   return Number(String(val).replace(/[^0-9.-]/g, "")) || 0;
 };
 
+// مكون لعرض الإحصائيات بشكل شبكي منسق ومريح للعين
 const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) => {
   const colClass = columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3";
   return (
@@ -28,6 +40,7 @@ const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) =
   );
 };
 
+// مكون النافذة المنبثقة التفاعلية لإدخال وتعديل البيانات
 const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
   if (!isOpen) return null;
   return (
@@ -44,6 +57,7 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
 };
 
 export default function InstallmentsTab() {
+  // جلب البيانات وإدارتها عبر الستور المركزي للتطبيق
   const { installments, installments2025 } = useStore() as any;
   const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
   const [payAmount, setPayAmount] = useState("");
@@ -58,21 +72,25 @@ export default function InstallmentsTab() {
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
+  // ربط والتحكم بالجداول للبحث والفلترة
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining"]);
   const controls2025 = useTableControls(installments2025 || [], ["name", "batch", "specialty", "fees", "totalPaid", "remaining"]);
 
+  // احتساب الإجماليات العامة لعام 2025
   const totals2025 = useMemo(() => ({
     fees: controls2025.rows.reduce((s, r) => s + cleanNumber(r.fees), 0),
     paid: controls2025.rows.reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
     remaining: controls2025.rows.reduce((s, r) => s + cleanNumber(r.remaining), 0),
   }), [controls2025.rows]);
 
+  // احتساب الإجماليات العامة لعام 2026
   const totals2026 = useMemo(() => ({
     prevDue: controls2026.rows.reduce((s, r) => s + cleanNumber(r.prevDue), 0),
     paid: controls2026.rows.reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
-    remaining: controls2026.rows.reduce((s, r) => s + Math.max(0, cleanNumber(r.prevDue) - cleanNumber(r.totalPaid)), 0),
+    remaining: controls2026.rows.reduce((s, r) => s + cleanNumber(r.remaining), 0),
   }), [controls2026.rows]);
 
+  // تجميع الأسماء للمقترحات الذكية عند الكتابة
   const allNames = useMemo(() => {
     const n1 = (installments2025 || []).map((s: any) => s.name);
     const n2 = (installments || []).map((s: any) => s.name);
@@ -87,6 +105,7 @@ export default function InstallmentsTab() {
 
   const updateInstallments = (list: any[]) => useStore.setState({ installments: list });
 
+  // تسجيل دفعة جديدة لشهر محدد في عام 2026
   const addPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!paymentModal || !payAmount) return toast.error("يرجى إدخال المبلغ");
@@ -105,6 +124,7 @@ export default function InstallmentsTab() {
     setPayAmount("");
   };
 
+  // إضافة متدرب جديد أو دفعة مستقلة بالكامل
   const addNewPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStudentName || !newStudentAmount || !newStudentMonth) return toast.error("يرجى إدخال جميع البيانات");
@@ -132,6 +152,7 @@ export default function InstallmentsTab() {
     setNewStudentMonth("");
   };
 
+  // تعديل دفعة تم إدخالها مسبقاً
   const editPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editPaymentModal || !editAmount) return;
@@ -149,6 +170,7 @@ export default function InstallmentsTab() {
     setEditAmount("");
   };
 
+  // حذف قسط أو تصفيره
   const deletePayment = (row: any, month: string) => {
     if (!confirm(`حذف قسط شهر ${month}؟`)) return;
     const list = [...(installments || [])];
@@ -163,6 +185,7 @@ export default function InstallmentsTab() {
     if (editPaymentModal) setEditPaymentModal(null);
   };
 
+  // 📥 دالة استيراد الملفات الذكية: تطابق الأعمدة والمسميات العربية بالملفات المرفقة تماماً
   const importFile = (e: React.ChangeEvent<HTMLInputElement>, year: 2025 | 2026) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -172,14 +195,14 @@ export default function InstallmentsTab() {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(worksheet);
+        const json = XLSX.utils.sheet_to_json(worksheet) as any[];
         
-        // تحويل البيانات المستوردة إلى الهيكل المطلوب
         const formattedData = json.map((row: any) => {
           const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
           const payments: any = {};
           let totalPaid = 0;
           
+          // تجميع مبالغ الأشهر بشكل ديناميكي ومطابقتها مع أعمدة الإكسيل
           monthsList.forEach(m => {
             const amount = cleanNumber(row[m]);
             payments[m] = amount;
@@ -187,12 +210,16 @@ export default function InstallmentsTab() {
           });
 
           return {
-            ...row,
-            payments,
-            totalPaid,
-            fees: cleanNumber(row['fees'] || row['الرسوم']),
-            prevDue: cleanNumber(row['prevDue'] || row['متبقي 2025']),
-            remaining: cleanNumber(row['remaining'] || row['المتبقي'] || row['الرصيد']),
+            name: row['اسم المتدرب'] || row['name'] || "بدون اسم",
+            batch: row['رقم الدفعة'] || row['batch'] || "",
+            specialty: row['المساق'] || row['specialty'] || "",
+            fees: cleanNumber(row['مبلغ الرسوم'] || row['fees']),
+            prevDue: cleanNumber(row['المتبقي عليهم من العام 2025'] || row['prevDue']),
+            totalPaid: row['الإجمالي'] ? cleanNumber(row['الإجمالي']) : totalPaid,
+            remaining: cleanNumber(row['المتبقي'] || row['remaining']),
+            notes: row['ملاحظات'] || "",
+            phone: row['رقم الهاتف'] || "",
+            payments
           };
         });
 
@@ -202,11 +229,11 @@ export default function InstallmentsTab() {
             useStore.setState({ installments: formattedData });
         }
         
-        toast.success(`تم استيراد بيانات ${year} بنجاح`);
+        toast.success(`تم استيراد بيانات العام ${year} بنجاح من الملف المرفق!`);
         setImportError(null);
       } catch (error) {
-        setImportError("حدث خطأ أثناء قراءة الملف، تأكد من صحة الأعمدة.");
-        toast.error("فشل الاستيراد");
+        setImportError("حدث خطأ أثناء قراءة هيكل الملف، تأكد من صحة الأعمدة والملفات المطابقة.");
+        toast.error("فشل استيراد الملف");
       }
     };
     reader.readAsArrayBuffer(file);
@@ -214,15 +241,14 @@ export default function InstallmentsTab() {
 
   const getStatusText = (rem: number) => rem <= 0 ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" } : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
 
-  // 💡 إصلاح دالة الطباعة: إضافة هيكل HTML متكامل
+  // 🖨️ بناء كشف الحساب التفاعلي لطباعة التقارير المالية للمتدرب
   const generateAccountStatement = (row: any, year: number) => {
     const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
     
-    // جلب الأشهر التي تم الدفع فيها فقط أو عرض كل الأشهر
     const paymentsRows = monthsList.map(m => {
       const amount = Number(row.payments?.[m]) || 0;
       if (amount > 0) {
-         return `<tr><td style="padding: 12px; border: 1px solid #e2e8f0;">${m}</td><td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: bold; color: #059669;">${fmt(amount)}</td></tr>`;
+         return `<tr><td style="padding: 12px; border: 1px solid #cbd5e1;">${m}</td><td style="padding: 12px; border: 1px solid #cbd5e1; font-weight: bold; color: #059669; font-family: monospace;">${fmt(amount)}</td></tr>`;
       }
       return '';
     }).join('');
@@ -232,35 +258,38 @@ export default function InstallmentsTab() {
       <head>
         <title>كشف حساب - ${row.name}</title>
         <style>
-          body { font-family: Arial, Tahoma, sans-serif; padding: 40px; color: #1e293b; direction: rtl; }
-          .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
-          h2 { color: #4338ca; margin-bottom: 10px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: center; }
-          th { background-color: #f8fafc; padding: 15px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569; }
-          .totals-box { margin-top: 30px; background-color: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; justify-content: space-around; }
-          .totals-box p { margin: 0; font-size: 18px; font-weight: bold; }
+          body { font-family: Arial, Tahoma, sans-serif; padding: 40px; color: #1e293b; direction: rtl; background: #fff; }
+          .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px double #cbd5e1; }
+          h2 { color: #1e3a8a; margin-bottom: 5px; font-size: 24px; }
+          h3 { color: #475569; margin-top: 5px; font-size: 18px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 25px; text-align: center; }
+          th { background-color: #f1f5f9; padding: 12px; border: 1px solid #cbd5e1; font-weight: bold; color: #334155; }
+          .totals-box { margin-top: 30px; background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; justify-content: space-around; }
+          .totals-box p { margin: 0; font-size: 16px; font-weight: bold; }
         </style>
       </head>
       <body>
         <div class="header">
-          <h2>كشف حساب تفصيلي للمتدرب</h2>
-          <h3>الاسم: ${row.name}</h3>
-          <p>السنة المالية: ${year}</p>
+          <h2>سند كشف حساب الأقساط والمدفوعات</h2>
+          <h3>اسم المتدرب: ${row.name}</h3>
+          <p>المساق الدراسي: ${row.specialty || "—"} | الدفعة: ${row.batch || "—"}</p>
+          <p>العام المالي المطبوع: ${year}</p>
         </div>
         <table>
           <thead>
             <tr>
-              <th>الشهر</th>
-              <th>المبلغ المسدد</th>
+              <th>البيان (الشهر)</th>
+              <th>المبلغ المدفوع</th>
             </tr>
           </thead>
           <tbody>
-            ${paymentsRows || `<tr><td colspan="2" style="padding: 15px; border: 1px solid #e2e8f0; color: #64748b;">لا توجد دفعات مسجلة</td></tr>`}
+            ${paymentsRows || `<tr><td colspan="2" style="padding: 15px; border: 1px solid #cbd5e1; color: #94a3b8;">لا توجد أقساط مدفوعة مسجلة في هذا العام</td></tr>`}
           </tbody>
         </table>
         <div class="totals-box">
-          <p>إجمالي المسدد: <span style="color: #059669;">${fmt(row.totalPaid)}</span></p>
-          <p>المتبقي: <span style="color: #e11d48;">${fmt(row.remaining)}</span></p>
+          ${year === 2025 ? `<p>إجمالي الرسوم: <span>${fmt(row.fees)}</span></p>` : `<p>الرصيد السابق المدور: <span>${fmt(row.prevDue)}</span></p>`}
+          <p>إجمالي المدفوع: <span style="color: #059669;">${fmt(row.totalPaid)}</span></p>
+          <p>الرصيد المتبقي: <span style="color: #e11d48;">${fmt(row.remaining)}</span></p>
         </div>
       </body>
       </html>
@@ -269,89 +298,91 @@ export default function InstallmentsTab() {
 
   const printStatement = (row: any, year: number) => {
     const html = generateAccountStatement(row, year);
-    const w = window.open("", "", "width=900,height=700");
+    const w = window.open("", "", "width=850,height=700");
     if (w) { 
       w.document.write(html); 
       w.document.close(); 
-      // الانتظار قليلاً حتى يتم تحميل المحتوى قبل إظهار نافذة الطباعة
       setTimeout(() => w.print(), 250); 
     }
   };
 
   const stats2025 = [
-    { label: "رسوم الدراسة", value: fmt(totals2025.fees), bgClass: "bg-slate-50", borderClass: "border-slate-200" },
-    { label: "المسدد", value: fmt(totals2025.paid), bgClass: "bg-emerald-50", borderClass: "border-emerald-200" },
-    { label: "المتبقي", value: fmt(totals2025.remaining), bgClass: "bg-rose-50", borderClass: "border-rose-200" }
+    { label: "إجمالي الرسوم التقديرية", value: fmt(totals2025.fees), bgClass: "bg-slate-50", borderClass: "border-slate-200" },
+    { label: "إجمالي الأقساط المسددة", value: fmt(totals2025.paid), bgClass: "bg-emerald-50", borderClass: "border-emerald-200" },
+    { label: "إجمالي المتبقي والأرشيف", value: fmt(totals2025.remaining), bgClass: "bg-rose-50", borderClass: "border-rose-200" }
   ];
 
   const stats2026 = [
-    { label: "متبقي 2025", value: fmt(totals2026.prevDue), bgClass: "bg-amber-50", borderClass: "border-amber-200" },
-    { label: "المسدد", value: fmt(totals2026.paid), bgClass: "bg-emerald-50", borderClass: "border-emerald-200" },
-    { label: "الرصيد", value: fmt(totals2026.remaining), bgClass: "bg-rose-50", borderClass: "border-rose-200" }
+    { label: "المدور (متبقي 2025)", value: fmt(totals2026.prevDue), bgClass: "bg-amber-50", borderClass: "border-amber-200" },
+    { label: "إجمالي مسدد 2026", value: fmt(totals2026.paid), bgClass: "bg-emerald-50", borderClass: "border-emerald-200" },
+    { label: "صافي رصيد المتبقي الحركي", value: fmt(totals2026.remaining), bgClass: "bg-rose-50", borderClass: "border-rose-200" }
   ];
 
   return (
     <div className="w-full space-y-4 sm:space-y-6 p-0" dir="rtl">
-      {/* ========== جدول 2025 ========== */}
+      {/* ========== واجهة جدول 2025 (أرشيف الدفعات الشامل لـ 2024 و 2025) ========== */}
       <div className="w-full bg-gradient-to-b from-teal-50 to-white shadow border border-teal-200 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-teal-600 to-teal-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
           <div>
-            <h2 className="text-sm sm:text-lg font-bold text-white">📊 أقساط 2025 (تشمل 2024 و 2025)</h2>
-            <p className="text-xs text-teal-100">الأرشيف</p>
+            <h2 className="text-sm sm:text-lg font-bold text-white">📊 أقساط ومستندات العام 2025</h2>
+            <p className="text-xs text-teal-100">يشمل جميع الدفعات المقبوضة لعامي 2024 و 2025 من ملف "الاقساط للعام 2025.xlsx"</p>
           </div>
-          <label className="px-3 py-1.5 bg-white text-teal-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-teal-50">
-            📥 استيراد <input type="file" accept=".xlsx,.xls,.csv" onChange={e => importFile(e, 2025)} className="hidden" />
+          <label className="px-3 py-1.5 bg-white text-teal-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-teal-50 shadow">
+            📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2025)} className="hidden" />
           </label>
         </div>
         {importError && <div className="bg-red-50 border-b border-red-200 p-3 flex gap-2"><AlertCircle className="w-5 h-5 text-red-600" /><p className="text-sm text-red-700">{importError}</p></div>}
         <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2025} columns={3} />
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
             <table className="w-full text-xs sm:text-sm">
-              <thead className="bg-slate-100 font-bold border-b border-slate-300">
+              <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700">
                 <tr>
                   <th className="p-2 text-center">#</th>
-                  <th className="p-2 text-right">الاسم</th>
+                  <th className="p-2 text-right min-w-[150px]">اسم المتدرب</th>
                   <th className="p-2 text-center">الدفعة</th>
                   <th className="p-2 text-right">المساق</th>
-                  <th className="p-2 text-center">رسوم</th>
-                  {/* نعرض جميع الأشهر المعرفة في المصفوفة */}
-                  {MONTHS_2025.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200">{m}</th>)}
-                  <th className="p-2 text-center text-emerald-700">مسدد</th>
-                  <th className="p-2 text-center text-rose-700">متبقي</th>
-                  <th className="p-2 text-center">إجراء</th>
+                  <th className="p-2 text-center">الرسوم</th>
+                  {MONTHS_2025.map(m => <th key={m} className="p-1 text-center text-[11px] bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m}</th>)}
+                  <th className="p-2 text-center text-emerald-700">المسدد</th>
+                  <th className="p-2 text-center text-rose-700">المتبقي</th>
+                  <th className="p-2 text-center">طباعة</th>
                 </tr>
               </thead>
               <tbody>
                 {controls2025.rows.length === 0 ? (
-                  <tr><td colSpan={8 + MONTHS_2025.length} className="p-4 text-center text-slate-400">لا توجد بيانات</td></tr>
+                  <tr><td colSpan={8 + MONTHS_2025.length} className="p-6 text-center text-slate-400">يرجى الضغط على استيراد لرفع ملف "الاقساط للعام 2025.xlsx"</td></tr>
                 ) : (
                   <>
                     {controls2025.rows.map((r, i) => (
-                      <tr key={i} className="border-t border-slate-200 hover:bg-slate-50">
-                        <td className="p-2 text-center">{i + 1}</td>
-                        <td className="p-2 font-semibold">{r.name}</td>
-                        <td className="p-2 text-center">{r.batch || "—"}</td>
-                        <td className="p-2">{r.specialty || "—"}</td>
-                        <td className="p-2 text-center font-mono font-semibold">{fmt(r.fees)}</td>
+                      <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
+                        <td className="p-2 text-center text-slate-500">{i + 1}</td>
+                        <td className="p-2 font-semibold text-slate-900">{r.name}</td>
+                        <td className="p-2 text-center text-slate-600">{r.batch || "—"}</td>
+                        <td className="p-2 text-slate-600">{r.specialty || "—"}</td>
+                        <td className="p-2 text-center font-mono font-semibold text-slate-700">{fmt(r.fees)}</td>
                         {MONTHS_2025.map(m => {
                           const paid = Number(r.payments?.[m]) || 0;
-                          return <td key={m} className="p-1 text-center bg-slate-50 border-l border-slate-200">{paid > 0 ? <span className="text-emerald-700 font-bold">{fmt(paid)}</span> : <span className="text-slate-300">—</span>}</td>;
+                          return <td key={m} className="p-1 text-center bg-slate-50/50 border-l border-slate-200">{paid > 0 ? <span className="text-emerald-700 font-bold font-mono">{fmt(paid)}</span> : <span className="text-slate-300">—</span>}</td>;
                         })}
-                        <td className="p-2 text-center font-mono text-emerald-700 font-bold">{fmt(r.totalPaid)}</td>
-                        <td className="p-2 text-center font-mono text-rose-700 font-bold">{fmt(r.remaining)}</td>
-                        <td className="p-2 text-center"><button onClick={() => printStatement(r, 2025)} className="p-1 bg-blue-500 text-white rounded"><Printer className="w-3 h-3" /></button></td>
+                        <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30">{fmt(r.totalPaid)}</td>
+                        <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30">{fmt(r.remaining)}</td>
+                        <td className="p-2 text-center">
+                          <button onClick={() => printStatement(r, 2025)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors">
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
                       </tr>
                     ))}
-                    <tr className="border-t-2 border-teal-300 bg-teal-50 font-bold">
-                      <td className="p-2 text-center" colSpan={4}>الإجمالي</td>
+                    <tr className="border-t-2 border-teal-300 bg-teal-50 font-bold text-teal-900">
+                      <td className="p-2 text-center" colSpan={4}>الإجمالي العام</td>
                       <td className="p-2 text-center font-mono">{fmt(totals2025.fees)}</td>
                       {MONTHS_2025.map(m => {
                         const total = controls2025.rows.reduce((sum, r) => sum + (Number(r.payments?.[m]) || 0), 0);
-                        return <td key={m} className="p-1 text-center bg-teal-50 border-l border-teal-200">{total > 0 ? <span className="text-emerald-700 font-bold">{fmt(total)}</span> : <span className="text-slate-300">—</span>}</td>;
+                        return <td key={m} className="p-1 text-center bg-teal-50 border-l border-teal-200 font-mono text-emerald-800">{total > 0 ? fmt(total) : "—"}</td>;
                       })}
-                      <td className="p-2 text-center font-mono text-emerald-700">{fmt(totals2025.paid)}</td>
-                      <td className="p-2 text-center font-mono text-rose-700">{fmt(totals2025.remaining)}</td>
+                      <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50">{fmt(totals2025.paid)}</td>
+                      <td className="p-2 text-center font-mono text-rose-700 bg-rose-100/50">{fmt(totals2025.remaining)}</td>
                       <td></td>
                     </tr>
                   </>
@@ -362,88 +393,94 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* ========== جدول 2026 ========== */}
+      {/* ========== واجهة جدول 2026 (الحسابات والدفعات الحركية الحالية) ========== */}
       <div className="w-full bg-gradient-to-b from-purple-50 to-white shadow border border-purple-200 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-purple-600 to-purple-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
           <div>
-            <h2 className="text-sm sm:text-lg font-bold text-white">📊 أقساط 2026</h2>
-            <p className="text-xs text-purple-100">العام الحالي</p>
+            <h2 className="text-sm sm:text-lg font-bold text-white">📊 سجل أقساط العام الحالي 2026</h2>
+            <p className="text-xs text-purple-100">بيانات المسدد والرصيد المدور من ملف "الاقساط للعام 2026.xlsx"</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setNewPaymentModal(true)} className="px-2.5 py-1.5 bg-white text-purple-700 rounded-lg text-xs font-bold">➕ إضافة</button>
-            <label className="px-2.5 py-1.5 bg-white text-purple-700 rounded-lg text-xs font-bold cursor-pointer">📥 استيراد <input type="file" accept=".xlsx,.xls,.csv" onChange={e => importFile(e, 2026)} className="hidden" /></label>
+            <button onClick={() => setNewPaymentModal(true)} className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold shadow hover:bg-purple-200 transition-colors">➕ إضافة قسط</button>
+            <label className="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-xs font-bold cursor-pointer shadow hover:bg-purple-50 transition-colors">
+              📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2026)} className="hidden" />
+            </label>
           </div>
         </div>
         <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2026} columns={3} />
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
             <table className="w-full text-xs sm:text-sm">
-              <thead className="bg-slate-100 font-bold border-b border-slate-300">
+              <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700">
                 <tr>
                   <th className="p-2 text-center">#</th>
-                  <th className="p-2 text-right">الاسم</th>
+                  <th className="p-2 text-right min-w-[150px]">اسم المتدرب</th>
                   <th className="p-2 text-center">دفعة</th>
                   <th className="p-2 text-right">المساق</th>
-                  <th className="p-2 text-center">متبقي 2025</th>
-                  {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200">{m.substring(0, 3)}</th>)}
-                  <th className="p-2 text-center text-emerald-700">مسدد</th>
-                  <th className="p-2 text-center text-rose-700">رصيد</th>
+                  <th className="p-2 text-center bg-amber-50 text-amber-900">مدور 2025</th>
+                  {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m.trim()}</th>)}
+                  <th className="p-2 text-center text-emerald-700">مسدد 2026</th>
+                  <th className="p-2 text-center text-rose-700">الرصيد المتبقي</th>
                   <th className="p-2 text-center">حالة</th>
-                  <th className="p-2 text-center">إجراء</th>
+                  <th className="p-2 text-center">طباعة</th>
                 </tr>
               </thead>
               <tbody>
                 {controls2026.rows.length === 0 ? (
-                  <tr><td colSpan={4 + 1 + MONTHS_2026.length + 4} className="p-4 text-center text-slate-400">لا توجد بيانات</td></tr>
+                  <tr><td colSpan={6 + MONTHS_2026.length} className="p-6 text-center text-slate-400">يرجى الضغط على استيراد لرفع ملف "الاقساط للعام 2026.xlsx"</td></tr>
                 ) : (
                   <>
                     {controls2026.rows.map((r, i) => {
                       const status = getStatusText(r.remaining);
                       return (
-                        <tr key={i} className="border-t border-slate-200 hover:bg-slate-50">
-                          <td className="p-2 text-center">{i + 1}</td>
-                          <td className="p-2 font-semibold">{r.name}</td>
-                          <td className="p-2 text-center">{r.batch || "—"}</td>
-                          <td className="p-2">{r.specialty || "—"}</td>
-                          <td className="p-2 text-center font-mono text-amber-700 font-bold">{fmt(r.prevDue || 0)}</td>
+                        <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
+                          <td className="p-2 text-center text-slate-500">{i + 1}</td>
+                          <td className="p-2 font-semibold text-slate-900"/>{r.name}</td>
+                          <td className="p-2 text-center text-slate-600">{r.batch || "—"}</td>
+                          <td className="p-2 text-slate-600">{r.specialty || "—"}</td>
+                          <td className="p-2 text-center font-mono text-amber-700 font-bold bg-amber-50/20">{fmt(r.prevDue)}</td>
                           {MONTHS_2026.map(m => {
                             const paid = Number(r.payments?.[m]) || 0;
                             const cellId = `${r.name}-${m}`;
                             return (
-                              <td key={m} className="p-1 text-center relative bg-slate-50 border-l border-slate-200 hover:bg-slate-100 cursor-pointer group"
+                              <td key={m} className="p-1 text-center relative bg-slate-50/50 border-l border-slate-200 hover:bg-slate-100 cursor-pointer group transition-colors"
                                 onMouseEnter={() => setHoveredCell(cellId)} onMouseLeave={() => setHoveredCell(null)}>
                                 {paid > 0 ? (
                                   <div className="relative">
                                     <span className="font-mono text-emerald-700 font-bold">{fmt(paid)}</span>
                                     {hoveredCell === cellId && (
-                                      <div className="absolute -top-7 right-0 flex gap-0.5 bg-white shadow border rounded px-1 py-1 z-30">
-                                        <button onClick={() => { setEditPaymentModal({ row: r, month: m, amount: paid }); setEditAmount(String(paid)); setHoveredCell(null); }} className="px-1 bg-blue-500 text-white rounded text-xs">✏️</button>
-                                        <button onClick={() => { deletePayment(r, m); setHoveredCell(null); }} className="px-1 bg-red-500 text-white rounded text-xs">🗑️</button>
+                                      <div className="absolute -top-7 right-0 flex gap-0.5 bg-white shadow-xl border rounded px-1 py-1 z-30 animate-in fade-in zoom-in-95 duration-150">
+                                        <button onClick={() => { setEditPaymentModal({ row: r, month: m, amount: paid }); setEditAmount(String(paid)); setHoveredCell(null); }} className="px-1.5 py-0.5 bg-blue-500 text-white rounded text-[10px]">✏️</button>
+                                        <button onClick={() => { deletePayment(r, m); setHoveredCell(null); }} className="px-1.5 py-0.5 bg-red-500 text-white rounded text-[10px]">🗑️</button>
                                       </div>
                                     )}
                                   </div>
                                 ) : (
-                                  <button onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }} className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-100 rounded-full w-4 h-4 flex items-center justify-center font-bold">+</button>
+                                  <button onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }} className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-full w-5 h-5 flex items-center justify-center font-bold mx-auto transition-colors">+</button>
                                 )}
                               </td>
                             );
                           })}
-                          <td className="p-2 text-center font-mono text-emerald-700 font-bold">{fmt(r.totalPaid)}</td>
-                          <td className="p-2 text-center font-mono text-rose-700 font-bold">{fmt(r.remaining)}</td>
+                          <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30">{fmt(r.totalPaid)}</td>
+                          <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30">{fmt(r.remaining)}</td>
                           <td className="p-2 text-center"><span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color}`}>{status.text}</span></td>
-                          <td className="p-2 text-center"><button onClick={() => printStatement(r, 2026)} className="p-1 bg-blue-500 text-white rounded"><Printer className="w-3 h-3" /></button></td>
+                          <td className="p-2 text-center">
+                            <button onClick={() => printStatement(r, 2026)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors">
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
-                    <tr className="border-t-2 border-purple-300 bg-purple-50 font-bold">
-                      <td className="p-2 text-center" colSpan={4}>الإجمالي</td>
-                      <td className="p-2 text-center font-mono text-amber-700">{fmt(totals2026.prevDue)}</td>
+                    <tr className="border-t-2 border-purple-300 bg-purple-50 font-bold text-purple-900">
+                      <td className="p-2 text-center" colSpan={4}>الإجمالي العام</td>
+                      <td className="p-2 text-center font-mono text-amber-700 bg-amber-100/30">{fmt(totals2026.prevDue)}</td>
                       {MONTHS_2026.map(m => {
                         const total = controls2026.rows.reduce((sum, r) => sum + (Number(r.payments?.[m]) || 0), 0);
-                        return <td key={m} className="p-1 text-center bg-purple-50 border-l border-purple-200">{total > 0 ? <span className="text-emerald-700 font-bold">{fmt(total)}</span> : <span className="text-slate-300">—</span>}</td>;
+                        return <td key={m} className="p-1 text-center bg-purple-50 border-l border-purple-200 font-mono text-emerald-800">{total > 0 ? fmt(total) : "—"}</td>;
                       })}
-                      <td className="p-2 text-center font-mono text-emerald-700">{fmt(totals2026.paid)}</td>
-                      <td className="p-2 text-center font-mono text-rose-700">{fmt(totals2026.remaining)}</td>
+                      <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50">{fmt(totals2026.paid)}</td>
+                      <td className="p-2 text-center font-mono text-rose-700 bg-rose-100/50">{fmt(totals2026.remaining)}</td>
                       <td></td><td></td>
                     </tr>
                   </>
@@ -454,58 +491,60 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* النوافذ المنبثقة */}
+      {/* ========== نافذة منبثقة: إضافة قسط جديد لـ 2026 ========== */}
       <Modal title="➕ إضافة قسط جديد - 2026" isOpen={newPaymentModal} onClose={() => setNewPaymentModal(false)}>
         <form onSubmit={addNewPayment} className="space-y-3">
           <div className="relative">
-            <label className="block text-xs font-semibold">اسم المتدرب *</label>
-            <input type="text" required placeholder="ابحث أو أدخل الاسم" value={newStudentName} onChange={e => handleNameChange(e.target.value)} onFocus={() => newStudentName.length > 0 && setShowSuggestions(true)} className="w-full p-2 border rounded-lg" />
+            <label className="block text-xs font-semibold text-slate-700 mb-1">اسم المتدرب *</label>
+            <input type="text" required placeholder="ابحث أو أدخل الاسم الكامل" value={newStudentName} onChange={e => handleNameChange(e.target.value)} onFocus={() => newStudentName.length > 0 && setShowSuggestions(true)} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none" />
             {showSuggestions && nameSuggestions.length > 0 && (
-              <div className="absolute top-full right-0 left-0 bg-white border rounded-b-lg shadow-lg z-20 max-h-32 overflow-y-auto">
-                {nameSuggestions.map((n, idx) => <div key={idx} onClick={() => { setNewStudentName(n); setShowSuggestions(false); }} className="p-2 text-sm hover:bg-purple-50 cursor-pointer">{n}</div>)}
+              <div className="absolute top-full right-0 left-0 bg-white border rounded-b-lg shadow-xl z-50 max-h-32 overflow-y-auto">
+                {nameSuggestions.map((n, idx) => <div key={idx} onClick={() => { setNewStudentName(n); setShowSuggestions(false); }} className="p-2 text-sm hover:bg-purple-50 cursor-pointer text-slate-800">{n}</div>)}
               </div>
             )}
           </div>
-          <div><label className="block text-xs font-semibold">المبلغ *</label><input type="number" required value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2 border rounded-lg" min="0" step="0.01" /></div>
-          <div><label className="block text-xs font-semibold">الشهر *</label><select required value={newStudentMonth} onChange={e => setNewStudentMonth(e.target.value)} className="w-full p-2 border rounded-lg"><option value="">-- اختر --</option>{MONTHS_2026.map(m => <option key={m} value={m}>{m}</option>)}</select></div>
-          <div className="flex justify-end gap-2 pt-3 border-t">
-            <button type="button" onClick={() => setNewPaymentModal(false)} className="px-3 py-2 bg-slate-100 rounded-lg">إلغاء</button>
-            <button type="submit" className="px-3 py-2 bg-purple-600 text-white rounded-lg font-bold">حفظ</button>
+          <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المالي *</label><input type="number" required value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none" min="0" step="0.01" /></div>
+          <div><label className="block text-xs font-semibold text-slate-700 mb-1">الشهر المستهدف *</label><select required value={newStudentMonth} onChange={e => setNewStudentMonth(e.target.value)} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-400 outline-none"><option value="">-- اختر الشهر المالي --</option>{MONTHS_2026.map(m => <option key={m} value={m}>{m.trim()}</option>)}</select></div>
+          <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+            <button type="button" onClick={() => setNewPaymentModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">إلغاء</button>
+            <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition-colors">حفظ البيانات</button>
           </div>
         </form>
       </Modal>
 
-      <Modal title="💵 تسجيل دفعة" isOpen={!!paymentModal} onClose={() => setPaymentModal(null)}>
+      {/* ========== نافذة منبثقة: تسجيل دفعة سريعة لخلية فارغة ========== */}
+      <Modal title="💵 تسجيل دفعة مالية" isOpen={!!paymentModal} onClose={() => setPaymentModal(null)}>
         {paymentModal && (
           <>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-              <p><b>المتدرب:</b> {paymentModal.row.name}</p>
-              <p><b>الشهر:</b> {paymentModal.month}</p>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-slate-800">
+              <p><b>اسم المتدرب:</b> {paymentModal.row.name}</p>
+              <p><b>القسط المستهدف لشهر:</b> {paymentModal.month}</p>
             </div>
-            <form onSubmit={addPayment} className="space-y-3">
-              <div><label className="block text-xs font-semibold">المبلغ *</label><input type="number" required value={payAmount} onChange={e => setPayAmount(e.target.value)} className="w-full p-2 border rounded-lg" autoFocus min="0" step="0.01" /></div>
-              <div className="flex justify-end gap-2 pt-3 border-t">
-                <button type="button" onClick={() => setPaymentModal(null)} className="px-3 py-2 bg-slate-100 rounded-lg">إلغاء</button>
-                <button type="submit" className="px-3 py-2 bg-emerald-600 text-white rounded-lg font-bold">حفظ</button>
+            <form onSubmit={addPayment} className="space-y-3 mt-3">
+              <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المدفوع *</label><input type="number" required value={payAmount} onChange={e => setPayAmount(e.target.value)} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-400 outline-none" autoFocus min="0" step="0.01" /></div>
+              <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+                <button type="button" onClick={() => setPaymentModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">إلغاء</button>
+                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors">اعتماد التوريد</button>
               </div>
             </form>
           </>
         )}
       </Modal>
 
-      <Modal title="✏️ تعديل قسط" isOpen={!!editPaymentModal} onClose={() => setEditPaymentModal(null)}>
+      {/* ========== نافذة منبثقة: تعديل / حذف قسط موجود ========== */}
+      <Modal title="✏️ مراجعة وتعديل القسط" isOpen={!!editPaymentModal} onClose={() => setEditPaymentModal(null)}>
         {editPaymentModal && (
           <>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-slate-800">
               <p className="font-bold">{editPaymentModal.row.name}</p>
-              <p>{editPaymentModal.month}</p>
+              <p>بيان شهر: {editPaymentModal.month}</p>
             </div>
-            <form onSubmit={editPayment} className="space-y-3">
-              <div><label className="block text-xs font-semibold">المبلغ الجديد *</label><input type="number" required value={editAmount} onChange={e => setEditAmount(e.target.value)} className="w-full p-2 border rounded-lg" min="0" step="0.01" /></div>
-              <div className="flex justify-end gap-2 pt-3 border-t">
-                <button type="button" onClick={() => setEditPaymentModal(null)} className="px-3 py-2 bg-slate-100 rounded-lg">إلغاء</button>
-                <button type="button" onClick={() => deletePayment(editPaymentModal.row, editPaymentModal.month)} className="px-3 py-2 bg-red-600 text-white rounded-lg">🗑️ حذف</button>
-                <button type="submit" className="px-3 py-2 bg-blue-600 text-white rounded-lg font-bold">حفظ</button>
+            <form onSubmit={editPayment} className="space-y-3 mt-3">
+              <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ الجديد المعدل *</label><input type="number" required value={editAmount} onChange={e => setEditAmount(e.target.value)} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none" min="0" step="0.01" /></div>
+              <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+                <button type="button" onClick={() => setEditPaymentModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">إلغاء</button>
+                <button type="button" onClick={() => deletePayment(editPaymentModal.row, editPaymentModal.month)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">🗑️ حذف القسط</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">حفظ التعديل</button>
               </div>
             </form>
           </>
