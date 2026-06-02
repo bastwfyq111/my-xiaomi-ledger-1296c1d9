@@ -3,10 +3,11 @@ import { useStore, type Account } from "@/lib/store";
 import { fmt, today } from "@/lib/format";
 import { DESCRIPTIONS } from "@/lib/accounts";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx"; // مكتبة قراءة ملفات الإكسل
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser, FileSpreadsheet } from "lucide-react";
 
+// 1. تعريف أعمدة الجدول لتسهيل العرض والترتيب
 const COLS = [
   { key: "date", label: "التاريخ" },
   { key: "hafizaNo", label: "رقم الحافظة" },
@@ -22,6 +23,7 @@ const COLS = [
   { key: "expense", label: "المصروفات" },
 ];
 
+// 2. تعريف هيكل البيانات للحقول عند الإدخال اليدوي
 type FormType = {
   date: string;
   hafizaNo: string;
@@ -37,13 +39,14 @@ type FormType = {
   expense: string;
 };
 
+// القيم الافتراضية للنموذج (حقول فارغة وتاريخ اليوم)
 const emptyForm: FormType = {
   date: today(), hafizaNo: "", notifyNo: "", notifyDate: "",
   checkNo: "", checkDate: "", description: "", specialty: "",
   name: "", hafizaAmount: "", income: "", expense: ""
 };
 
-// مكون النافذة المنبثقة للتعديل
+// 3. مكون النافذة المنبثقة (Modal) لتعديل البيانات بشكل أنيق
 const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
   if (!isOpen) return null;
   return (
@@ -61,26 +64,35 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
   );
 };
 
+// ==========================================
+// المكون الأساسي لتبويب الحساب
+// ==========================================
 export default function AccountsTab() {
+  // جلب البيانات والدوال من مدير الحالة (Zustand Store)
   const { accounts, addAccount, updateAccount, deleteAccount } = useStore();
-  const [form, setForm] = useState<FormType>(emptyForm);
-  const [editingRow, setEditingRow] = useState<any | null>(null);
+  
+  // حالات المكون (State)
+  const [form, setForm] = useState<FormType>(emptyForm); // حالة نموذج الإضافة
+  const [editingRow, setEditingRow] = useState<any | null>(null); // حالة الصف الجاري تعديله
 
+  // دوال التحكم بالجدول (البحث، الترتيب، التصفية)
   const { rows: filtered, sortKey, sortDir, toggleSort, filters, setFilter, clearFilters } =
     useTableControls(accounts, COLS.map((c) => c.key));
 
-  // حساب الرصيد التراكمي الإجمالي ديناميكياً
+  // 4. الحسابات التلقائية للملخص المالي (تتحدث فوراً عند أي تغيير)
   const totalIncome = useMemo(() => accounts.reduce((sum, a) => sum + (a.income || 0), 0), [accounts]);
   const totalExpense = useMemo(() => accounts.reduce((sum, a) => sum + (a.expense || 0), 0), [accounts]);
   const currentBalance = totalIncome - totalExpense;
 
-  // دالة الإضافة اليدوية لقيد حساب جديد
+  // 5. دالة حفظ الإدخال اليدوي
   const submit = () => {
+    // التحقق من إدخال البيانات الأساسية
     if (!form.name || (!form.income && !form.expense)) {
       toast.error("يرجى إدخال الاسم وتحديد مبلغ إيراد أو مصروف على الأقل");
       return;
     }
 
+    // إضافة الحساب إلى الـ Store وتحويل النصوص الرقمية إلى أرقام فعلية
     addAccount({
       date: form.date,
       hafizaNo: form.hafizaNo,
@@ -97,10 +109,10 @@ export default function AccountsTab() {
     });
 
     toast.success("تم إضافة السجل المالي للحساب بنجاح");
-    setForm(emptyForm);
+    setForm(emptyForm); // تفريغ الحقول بعد الحفظ
   };
 
-  // دالة حفظ التعديلات
+  // 6. دالة حفظ التعديلات على سجل موجود
   const handleEditSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingRow) return;
@@ -113,10 +125,10 @@ export default function AccountsTab() {
     });
     
     toast.success("تم تعديل السجل بنجاح");
-    setEditingRow(null);
+    setEditingRow(null); // إغلاق نافذة التعديل
   };
 
-  // دالة استيراد بيانات الحساب من ملف إكسل Excel
+  // 7. دالة الاستيراد الذكية والمحدثة لملفات الإكسل (Excel)
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -124,39 +136,60 @@ export default function AccountsTab() {
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
+        // قراءة الملف وتحويله لمصفوفة
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet);
+        
+        // استخراج البيانات مع الحفاظ على التواريخ كنصوص
+        const json = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: "" });
 
-        if (json.length === 0) throw new Error("الملف فارغ أو غير صالح");
+        if (json.length === 0) throw new Error("الملف فارغ أو لا يحتوي على بيانات");
 
-        const importedAccounts = json.map((row: any) => ({
-          date: row["التاريخ"] || row["date"] || today(),
-          hafizaNo: String(row["رقم الحافظة"] || row["hafizaNo"] || ""),
-          notifyNo: String(row["رقم الاشعار"] || row["notifyNo"] || ""),
-          notifyDate: row["تاريخ التوريد"] || row["notifyDate"] || "",
-          checkNo: String(row["رقم الشيك"] || row["checkNo"] || ""),
-          checkDate: row["تاريخ الشيك"] || row["checkDate"] || "",
-          description: row["البيان"] || row["description"] || "",
-          specialty: row["التخصص"] || row["specialty"] || "",
-          name: row["الاسم"] || row["name"] || "",
-          hafizaAmount: Number(row["مبلغ الحافظة"] || row["hafizaAmount"] || 0),
-          income: Number(row["الإيرادات"] || row["income"] || 0),
-          expense: Number(row["المصروفات"] || row["expense"] || 0),
-        }));
+        // تنظيف البيانات ومطابقتها مع هيكل النظام
+        const importedAccounts = json
+          .map((row: any) => {
+            const cleanRow: any = {};
+            for (const key in row) {
+              cleanRow[key.trim()] = row[key]; // إزالة المسافات من أسماء الأعمدة
+            }
+            return cleanRow;
+          })
+          .filter((row: any) => row["الاسم"] || row["name"]) // تجاهل الصفوف الفارغة
+          .map((row: any) => ({
+            date: row["التاريخ"] || row["date"] || today(),
+            hafizaNo: String(row["رقم الحافظة"] || row["hafizaNo"] || ""),
+            notifyNo: String(row["رقم الاشعار"] || row["رقم الإشعار"] || row["notifyNo"] || ""),
+            notifyDate: row["تاريخ التوريد"] || row["notifyDate"] || "",
+            checkNo: String(row["رقم الشيك"] || row["checkNo"] || ""),
+            checkDate: row["تاريخ الشيك"] || row["checkDate"] || "",
+            description: row["البيان"] || row["description"] || "",
+            specialty: row["التخصص"] || row["specialty"] || "",
+            name: row["الاسم"] || row["name"] || "",
+            hafizaAmount: Number(row["مبلغ الحافظة"] || row["hafizaAmount"]) || 0,
+            income: Number(row["الإيرادات"] || row["income"]) || 0,
+            expense: Number(row["المصروفات"] || row["expense"]) || 0,
+          }));
 
+        if (importedAccounts.length === 0) {
+          toast.error("لم يتم العثور على بيانات صحيحة. تأكد من وجود عمود 'الاسم'.");
+          return;
+        }
+
+        // إرسال البيانات النظيفة للـ Store
         useStore.getState().importData({ accounts: importedAccounts });
         toast.success(`تم استيراد ${importedAccounts.length} سجل مالي بنجاح`);
       } catch (err) {
-        toast.error("فشل استيراد الملف، تأكد من مطابقة رؤوس الأعمدة بالملف المرفوع");
+        console.error("Error reading excel:", err);
+        toast.error("فشل الاستيراد. تأكد من صحة تنسيق ملف الإكسل ومطابقة الأعمدة.");
       }
     };
     reader.readAsArrayBuffer(file);
-    e.target.value = ""; // تصفية حقل المدخلات للسماح برفع ملف جديد
+    e.target.value = ""; // إعادة تعيين الحقل للسماح برفع نفس الملف مجدداً
   };
 
+  // 8. واجهة المستخدم (الرسميات)
   return (
     <div className="w-full space-y-6" dir="rtl">
       
@@ -167,6 +200,7 @@ export default function AccountsTab() {
             <Plus className="w-5 h-5 text-white" />
             <h2 className="text-sm sm:text-lg font-bold text-white">إضافة حركة مالية جديدة للحساب</h2>
           </div>
+          {/* زر رفع ملف الإكسل المربوط بدالة الاستيراد */}
           <label className="flex items-center gap-2 px-3 py-1.5 bg-white text-emerald-800 rounded-lg text-xs font-bold cursor-pointer hover:bg-emerald-50 transition-all shadow-sm">
             <FileSpreadsheet className="w-4 h-4" /> استيراد حساب Excel
             <input type="file" accept=".xlsx, .xls, .csv" onChange={handleImportExcel} className="hidden" />
@@ -179,6 +213,7 @@ export default function AccountsTab() {
             <Field label="التخصص" v={form.specialty} on={(v) => setForm({ ...form, specialty: v })} />
             <Field label="التاريخ" type="date" v={form.date} on={(v) => setForm({ ...form, date: v })} />
             
+            {/* حقل البيان مع إكمال تلقائي من السجلات السابقة */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">البيان</label>
               <input
@@ -260,6 +295,7 @@ export default function AccountsTab() {
                   ))}
                   <th className="p-2 text-center">خيارات</th>
                 </tr>
+                {/* حقول البحث والتصفية أسفل عناوين الأعمدة */}
                 <tr className="bg-slate-50 border-t border-slate-200">
                   <th className="p-1"></th>
                   {COLS.map((c) => (
@@ -289,10 +325,10 @@ export default function AccountsTab() {
                     <td className="p-2 font-mono font-bold text-rose-600 bg-rose-50/20">{acc.expense ? fmt(acc.expense) : "—"}</td>
                     <td className="p-2 text-center whitespace-nowrap">
                       <div className="flex justify-center gap-1.5">
-                        <button onClick={() => setEditingRow(acc)} className="p-1 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-600 hover:text-white transition-colors">
+                        <button onClick={() => setEditingRow(acc)} className="p-1 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-600 hover:text-white transition-colors" title="تعديل">
                           <Edit className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => { if (confirm("هل أنت متأكد من حذف هذا السجل المالي للحساب؟")) deleteAccount(acc.id); }} className="p-1 bg-rose-50 text-rose-600 rounded hover:bg-rose-500 hover:text-white transition-colors">
+                        <button onClick={() => { if (confirm("هل أنت متأكد من حذف هذا السجل المالي للحساب؟")) deleteAccount(acc.id); }} className="p-1 bg-rose-50 text-rose-600 rounded hover:bg-rose-500 hover:text-white transition-colors" title="حذف">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -369,7 +405,7 @@ export default function AccountsTab() {
   );
 }
 
-// مكون الحقل الفرعي للمساعدة في تقليل التكرار
+// 9. مكون مساعد لتقليل تكرار كتابة حقول الإدخال في النموذج
 function Field({ label, v, on, type = "text", placeholder = "" }: { label: string; v: string; on: (v: string) => void; type?: string; placeholder?: string }) {
   return (
     <div>
