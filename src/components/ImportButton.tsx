@@ -24,7 +24,7 @@ export default function ImportButton({ kind }: { kind: ImportKind }) {
       let count = 0;
       if (kind === "account") count = data.accounts.length;
       else if (kind === "revenue") count = Object.keys(data.revenue).length;
-      else if (kind === "monthly") count = 0;
+      else if (kind === "monthly") count = data.journal.length;
       else if (kind === "hafiza") count = data.hafiza.length;
       else if (kind === "journal") count = data.journal.length;
       else if (kind === "installments") count = data.installments.length;
