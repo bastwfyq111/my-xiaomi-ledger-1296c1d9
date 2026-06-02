@@ -349,6 +349,11 @@ export default function InstallmentsTab() {
       }))
       .filter(item => item.paid > 0);
     
+    // استخدام نفس المبلغ المتبقي من الجدول (مع حسابه بنفس الطريقة)
+    const remainingAmount = year === 2026 
+      ? Math.max(0, cleanNumber(row.prevDue) - cleanNumber(row.totalPaid))
+      : cleanNumber(row.remaining);
+    
     let html = `
       <html dir="rtl">
         <head>
@@ -368,6 +373,8 @@ export default function InstallmentsTab() {
             .table th { background: #f5f5f5; padding: 12px; text-align: right; border-bottom: 2px solid #ddd; font-weight: bold; }
             .table td { padding: 10px 12px; border-bottom: 1px solid #ddd; text-align: center; }
             .table tr:nth-child(even) { background: #f9f9f9; }
+            .total-row { background: #f0f9ff !important; font-weight: bold; border-top: 2px solid #0ea5e9; }
+            .total-row td { color: #0369a1; font-size: 16px; }
             .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #ddd; padding-top: 15px; }
             .positive { color: #27ae60; font-weight: bold; }
             .negative { color: #e74c3c; font-weight: bold; }
@@ -395,6 +402,12 @@ export default function InstallmentsTab() {
                   <span class="info-label">المساق:</span>
                   <span class="info-value">${row.specialty || "—"}</span>
                 </div>
+                ${year === 2026 ? `
+                <div class="info-item">
+                  <span class="info-label">المتبقي من 2025:</span>
+                  <span class="info-value">${fmt(row.prevDue || 0)}</span>
+                </div>
+                ` : ''}
               </div>
               <div>
                 <div class="info-item">
@@ -407,7 +420,7 @@ export default function InstallmentsTab() {
                 </div>
                 <div class="info-item">
                   <span class="info-label">المتبقي:</span>
-                  <span class="info-value ${row.remaining > 0 ? 'negative' : 'positive'}">${fmt(row.remaining)}</span>
+                  <span class="info-value ${remainingAmount > 0 ? 'negative' : 'positive'}">${fmt(remainingAmount)}</span>
                 </div>
               </div>
             </div>
@@ -431,6 +444,12 @@ export default function InstallmentsTab() {
                   `).join("")
                   : `<tr><td colspan="3" class="no-payments">لا توجد مدفوعات مسجلة</td></tr>`
                 }
+                ${paidMonths.length > 0 ? `
+                <tr class="total-row">
+                  <td colspan="2">الإجمالي</td>
+                  <td><span class="positive">${fmt(row.totalPaid)}</span></td>
+                </tr>
+                ` : ''}
               </tbody>
             </table>
             
@@ -518,26 +537,36 @@ export default function InstallmentsTab() {
                     </td>
                   </tr>
                 ) : (
-                  controls2025.rows.map((r: any, i: number) => (
-                    <tr key={i} className="border-t border-slate-200 hover:bg-slate-50 transition">
-                      <td className="p-2 sm:p-3 text-center text-slate-400 font-medium text-xs">{i + 1}</td>
-                      <td className="p-2 sm:p-3 font-semibold text-slate-900 truncate text-xs sm:text-sm">{r.name}</td>
-                      <td className="p-2 sm:p-3 text-center text-slate-600 text-xs">{r.batch || "—"}</td>
-                      <td className="p-2 sm:p-3 text-slate-700 text-xs truncate">{r.specialty || "—"}</td>
-                      <td className="p-2 sm:p-3 text-center font-mono text-slate-900 text-xs font-semibold">{fmt(r.fees)}</td>
-                      <td className="p-2 sm:p-3 text-center font-mono text-emerald-700 font-bold text-xs">{fmt(r.totalPaid)}</td>
-                      <td className="p-2 sm:p-3 text-center font-mono text-rose-700 font-bold text-xs">{fmt(r.remaining)}</td>
-                      <td className="p-2 sm:p-3 text-center">
-                        <button
-                          onClick={() => printStatement(r, 2025)}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition"
-                          title="طباعة"
-                        >
-                          <Printer className="w-3 h-3" />
-                        </button>
-                      </td>
+                  <>
+                    {controls2025.rows.map((r: any, i: number) => (
+                      <tr key={i} className="border-t border-slate-200 hover:bg-slate-50 transition">
+                        <td className="p-2 sm:p-3 text-center text-slate-400 font-medium text-xs">{i + 1}</td>
+                        <td className="p-2 sm:p-3 font-semibold text-slate-900 truncate text-xs sm:text-sm">{r.name}</td>
+                        <td className="p-2 sm:p-3 text-center text-slate-600 text-xs">{r.batch || "—"}</td>
+                        <td className="p-2 sm:p-3 text-slate-700 text-xs truncate">{r.specialty || "—"}</td>
+                        <td className="p-2 sm:p-3 text-center font-mono text-slate-900 text-xs font-semibold">{fmt(r.fees)}</td>
+                        <td className="p-2 sm:p-3 text-center font-mono text-emerald-700 font-bold text-xs">{fmt(r.totalPaid)}</td>
+                        <td className="p-2 sm:p-3 text-center font-mono text-rose-700 font-bold text-xs">{fmt(r.remaining)}</td>
+                        <td className="p-2 sm:p-3 text-center">
+                          <button
+                            onClick={() => printStatement(r, 2025)}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition"
+                            title="طباعة"
+                          >
+                            <Printer className="w-3 h-3" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {/* صف الإجمالي لجدول 2025 */}
+                    <tr className="border-t-2 border-teal-300 bg-teal-50 font-bold">
+                      <td className="p-2 sm:p-3 text-center text-teal-700 text-xs" colSpan={4}>الإجمالي</td>
+                      <td className="p-2 sm:p-3 text-center font-mono text-teal-700 text-xs font-bold">{fmt(totals2025.fees)}</td>
+                      <td className="p-2 sm:p-3 text-center font-mono text-emerald-700 text-xs font-bold">{fmt(totals2025.paid)}</td>
+                      <td className="p-2 sm:p-3 text-center font-mono text-rose-700 text-xs font-bold">{fmt(totals2025.remaining)}</td>
+                      <td className="p-2 sm:p-3 text-center"></td>
                     </tr>
-                  ))
+                  </>
                 )}
               </tbody>
             </table>
@@ -592,76 +621,95 @@ export default function InstallmentsTab() {
                     </td>
                   </tr>
                 ) : (
-                  controls2026.rows.map((r: any, i: number) => {
-                    const status = getStatusText(r.remaining);
-                    return (
-                      <tr key={i} className="border-t border-slate-200 hover:bg-slate-50 transition">
-                        <td className="p-2 text-center text-slate-400 font-medium text-xs">{i + 1}</td>
-                        <td className="p-2 font-semibold text-slate-900 truncate text-xs">{r.name}</td>
-                        <td className="p-2 text-center text-slate-600 text-xs">{r.batch || "—"}</td>
-                        <td className="p-2 text-center font-mono text-slate-900 text-xs font-semibold">{fmt(r.fees)}</td>
-                        <td className="p-2 text-center font-mono text-amber-700 font-bold text-xs">{fmt(r.prevDue || 0)}</td>
-                        {MONTHS_2026.map(m => {
-                          const paid = Number(r.payments?.[m]) || 0;
-                          const cellId = `${r.name}-${m}`;
-                          return (
-                            <td
-                              key={m}
-                              className="p-1 text-center relative bg-slate-50 border-l border-slate-200 hover:bg-slate-100 transition cursor-pointer group min-w-11"
-                              onMouseEnter={() => setHoveredCell(cellId)}
-                              onMouseLeave={() => setHoveredCell(null)}
+                  <>
+                    {controls2026.rows.map((r: any, i: number) => {
+                      const status = getStatusText(r.remaining);
+                      return (
+                        <tr key={i} className="border-t border-slate-200 hover:bg-slate-50 transition">
+                          <td className="p-2 text-center text-slate-400 font-medium text-xs">{i + 1}</td>
+                          <td className="p-2 font-semibold text-slate-900 truncate text-xs">{r.name}</td>
+                          <td className="p-2 text-center text-slate-600 text-xs">{r.batch || "—"}</td>
+                          <td className="p-2 text-center font-mono text-slate-900 text-xs font-semibold">{fmt(r.fees)}</td>
+                          <td className="p-2 text-center font-mono text-amber-700 font-bold text-xs">{fmt(r.prevDue || 0)}</td>
+                          {MONTHS_2026.map(m => {
+                            const paid = Number(r.payments?.[m]) || 0;
+                            const cellId = `${r.name}-${m}`;
+                            return (
+                              <td
+                                key={m}
+                                className="p-1 text-center relative bg-slate-50 border-l border-slate-200 hover:bg-slate-100 transition cursor-pointer group min-w-11"
+                                onMouseEnter={() => setHoveredCell(cellId)}
+                                onMouseLeave={() => setHoveredCell(null)}
+                              >
+                                {paid > 0 ? (
+                                  <div className="relative">
+                                    <span className="font-mono text-emerald-700 font-bold text-xs block">{fmt(paid).substring(0, 5)}</span>
+                                    {hoveredCell === cellId && (
+                                      <div className="absolute -top-7 right-0 flex gap-0.5 bg-white shadow-lg border border-slate-300 rounded px-1 py-1 z-30 whitespace-nowrap">
+                                        <button
+                                          onClick={() => { setEditPaymentModal({ row: r, month: m, amount: paid }); setEditAmount(String(paid)); setHoveredCell(null); }}
+                                          className="px-1 py-0.5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 font-bold transition"
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button
+                                          onClick={() => { deletePayment(r, m); setHoveredCell(null); }}
+                                          className="px-1 py-0.5 bg-red-500 text-white rounded text-xs hover:bg-red-600 font-bold transition"
+                                        >
+                                          🗑️
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }}
+                                    className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-100 rounded-full w-4 h-4 flex items-center justify-center font-bold transition text-xs mx-auto"
+                                    title="إضافة"
+                                  >
+                                    +
+                                  </button>
+                                )}
+                              </td>
+                            );
+                          })}
+                          <td className="p-2 text-center font-mono text-emerald-700 font-bold text-xs">{fmt(r.totalPaid)}</td>
+                          <td className="p-2 text-center font-mono text-rose-700 font-bold text-xs">{fmt(r.remaining)}</td>
+                          <td className="p-2 text-center">
+                            <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color} block truncate`}>
+                              {status.text}
+                            </span>
+                          </td>
+                          <td className="p-2 text-center">
+                            <button
+                              onClick={() => printStatement(r, 2026)}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition"
+                              title="طباعة"
                             >
-                              {paid > 0 ? (
-                                <div className="relative">
-                                  <span className="font-mono text-emerald-700 font-bold text-xs block">{fmt(paid).substring(0, 5)}</span>
-                                  {hoveredCell === cellId && (
-                                    <div className="absolute -top-7 right-0 flex gap-0.5 bg-white shadow-lg border border-slate-300 rounded px-1 py-1 z-30 whitespace-nowrap">
-                                      <button
-                                        onClick={() => { setEditPaymentModal({ row: r, month: m, amount: paid }); setEditAmount(String(paid)); setHoveredCell(null); }}
-                                        className="px-1 py-0.5 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 font-bold transition"
-                                      >
-                                        ✏️
-                                      </button>
-                                      <button
-                                        onClick={() => { deletePayment(r, m); setHoveredCell(null); }}
-                                        className="px-1 py-0.5 bg-red-500 text-white rounded text-xs hover:bg-red-600 font-bold transition"
-                                      >
-                                        🗑️
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }}
-                                  className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-100 rounded-full w-4 h-4 flex items-center justify-center font-bold transition text-xs mx-auto"
-                                  title="إضافة"
-                                >
-                                  +
-                                </button>
-                              )}
-                            </td>
-                          );
-                        })}
-                        <td className="p-2 text-center font-mono text-emerald-700 font-bold text-xs">{fmt(r.totalPaid)}</td>
-                        <td className="p-2 text-center font-mono text-rose-700 font-bold text-xs">{fmt(r.remaining)}</td>
-                        <td className="p-2 text-center">
-                          <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color} block truncate`}>
-                            {status.text}
-                          </span>
-                        </td>
-                        <td className="p-2 text-center">
-                          <button
-                            onClick={() => printStatement(r, 2026)}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition"
-                            title="طباعة"
-                          >
-                            <Printer className="w-3 h-3" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
+                              <Printer className="w-3 h-3" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {/* صف الإجمالي لجدول 2026 */}
+                    <tr className="border-t-2 border-purple-300 bg-purple-50 font-bold">
+                      <td className="p-2 text-center text-purple-700 text-xs" colSpan={4}>الإجمالي</td>
+                      <td className="p-2 text-center font-mono text-amber-700 text-xs font-bold">{fmt(totals2026.prevDue)}</td>
+                      {MONTHS_2026.map(m => {
+                        const monthTotal = controls2026.rows.reduce((sum, r) => sum + (Number(r.payments?.[m]) || 0), 0);
+                        return (
+                          <td key={m} className="p-1 text-center font-mono text-xs font-bold bg-purple-50 border-l border-purple-200">
+                            {monthTotal > 0 ? <span className="text-emerald-700">{fmt(monthTotal).substring(0, 5)}</span> : <span className="text-slate-300">—</span>}
+                          </td>
+                        );
+                      })}
+                      <td className="p-2 text-center font-mono text-emerald-700 text-xs font-bold">{fmt(totals2026.paid)}</td>
+                      <td className="p-2 text-center font-mono text-rose-700 text-xs font-bold">{fmt(totals2026.remaining)}</td>
+                      <td className="p-2 text-center"></td>
+                      <td className="p-2 text-center"></td>
+                    </tr>
+                  </>
                 )}
               </tbody>
             </table>
