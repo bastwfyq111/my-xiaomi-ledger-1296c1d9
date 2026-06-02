@@ -78,7 +78,7 @@ type State = {
   addTrainee: (t: Trainee) => void;
   addHafiza: (h: Omit<Hafiza, "id">) => Hafiza;
   addAccount: (a: Omit<Account, "id">) => Account;
-  addJournal: (j: Omit<Journal, "id">) => Journal;
+  addJournal: (j: Omit<Journal, "id">) => Journal; // تم تصحيح النوع هنا
   
   updateHafiza: (id: string, h: Partial<Hafiza>) => void;
   updateAccount: (id: string, a: Partial<Account>) => void;
@@ -114,7 +114,6 @@ export const useStore = create<State>()(
       installments: (seedInstallments as Installment[]).map(recalcInstallment),
       openingBalance: 811664,
       revenue: {},
-      customTabs: [],
 
       setRevenue: (year, month, itemKey, amount) =>
         set((s) => ({ revenue: { ...s.revenue, [`${year}-${month}-${itemKey}`]: amount } })),
@@ -134,7 +133,12 @@ export const useStore = create<State>()(
       },
 
       addJournal: (j) => {
-        const item = { ...j, id: uid(), debit: Number(j.debit) || 0, credit: Number(j.credit) || 0 };
+        const item = { 
+            ...j, 
+            id: uid(), 
+            debit: Number(j.debit) || 0, 
+            credit: Number(j.credit) || 0 
+        };
         set((s) => ({ journal: [...s.journal, item] }));
         return item;
       },
@@ -150,8 +154,12 @@ export const useStore = create<State>()(
       setOpeningBalance: (n) => set({ openingBalance: n }),
       
       importData: (d) => set((s) => ({
-        journal: d.journal ? [...s.journal, ...d.journal.map((j:any) => ({ ...j, id: j.id || uid() }))] : s.journal,
-        // ... باقي عمليات الاستيراد
+        journal: d.journal ? [...s.journal, ...d.journal.map((j: any) => ({ 
+            ...j, 
+            id: j.id || uid(),
+            debit: Number(j.debit) || 0,
+            credit: Number(j.credit) || 0
+        }))] : s.journal,
       })),
 
       clearAll: () => set({ hafiza: [], accounts: [], journal: [] }),
