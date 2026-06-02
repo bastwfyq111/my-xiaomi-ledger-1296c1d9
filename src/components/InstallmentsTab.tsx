@@ -164,19 +164,118 @@ export default function InstallmentsTab() {
   };
 
   const importFile = (e: React.ChangeEvent<HTMLInputElement>, year: 2025 | 2026) => {
-    // دالة الاستيراد – مطابقة للسابق بدون تغيير
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+        
+        // تحويل البيانات المستوردة إلى الهيكل المطلوب
+        const formattedData = json.map((row: any) => {
+          const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+          const payments: any = {};
+          let totalPaid = 0;
+          
+          monthsList.forEach(m => {
+            const amount = cleanNumber(row[m]);
+            payments[m] = amount;
+            totalPaid += amount;
+          });
+
+          return {
+            ...row,
+            payments,
+            totalPaid,
+            fees: cleanNumber(row['fees'] || row['الرسوم']),
+            prevDue: cleanNumber(row['prevDue'] || row['متبقي 2025']),
+            remaining: cleanNumber(row['remaining'] || row['المتبقي'] || row['الرصيد']),
+          };
+        });
+
+        if (year === 2025) {
+            useStore.setState({ installments2025: formattedData });
+        } else {
+            useStore.setState({ installments: formattedData });
+        }
+        
+        toast.success(`تم استيراد بيانات ${year} بنجاح`);
+        setImportError(null);
+      } catch (error) {
+        setImportError("حدث خطأ أثناء قراءة الملف، تأكد من صحة الأعمدة.");
+        toast.error("فشل الاستيراد");
+      }
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   const getStatusText = (rem: number) => rem <= 0 ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" } : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
 
+  // 💡 إصلاح دالة الطباعة: إضافة هيكل HTML متكامل
   const generateAccountStatement = (row: any, year: number) => {
-    // نفس دالة الطباعة السابقة التي تعرض المدفوعات الشهرية والمتبقي
+    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+    
+    // جلب الأشهر التي تم الدفع فيها فقط أو عرض كل الأشهر
+    const paymentsRows = monthsList.map(m => {
+      const amount = Number(row.payments?.[m]) || 0;
+      if (amount > 0) {
+         return `<tr><td style="padding: 12px; border: 1px solid #e2e8f0;">${m}</td><td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: bold; color: #059669;">${fmt(amount)}</td></tr>`;
+      }
+      return '';
+    }).join('');
+
+    return `
+      <html dir="rtl">
+      <head>
+        <title>كشف حساب - ${row.name}</title>
+        <style>
+          body { font-family: Arial, Tahoma, sans-serif; padding: 40px; color: #1e293b; direction: rtl; }
+          .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
+          h2 { color: #4338ca; margin-bottom: 10px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: center; }
+          th { background-color: #f8fafc; padding: 15px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569; }
+          .totals-box { margin-top: 30px; background-color: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; justify-content: space-around; }
+          .totals-box p { margin: 0; font-size: 18px; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>كشف حساب تفصيلي للمتدرب</h2>
+          <h3>الاسم: ${row.name}</h3>
+          <p>السنة المالية: ${year}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>الشهر</th>
+              <th>المبلغ المسدد</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${paymentsRows || `<tr><td colspan="2" style="padding: 15px; border: 1px solid #e2e8f0; color: #64748b;">لا توجد دفعات مسجلة</td></tr>`}
+          </tbody>
+        </table>
+        <div class="totals-box">
+          <p>إجمالي المسدد: <span style="color: #059669;">${fmt(row.totalPaid)}</span></p>
+          <p>المتبقي: <span style="color: #e11d48;">${fmt(row.remaining)}</span></p>
+        </div>
+      </body>
+      </html>
+    `;
   };
 
   const printStatement = (row: any, year: number) => {
     const html = generateAccountStatement(row, year);
     const w = window.open("", "", "width=900,height=700");
-    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 100); }
+    if (w) { 
+      w.document.write(html); 
+      w.document.close(); 
+      // الانتظار قليلاً حتى يتم تحميل المحتوى قبل إظهار نافذة الطباعة
+      setTimeout(() => w.print(), 250); 
+    }
   };
 
   const stats2025 = [
@@ -197,7 +296,7 @@ export default function InstallmentsTab() {
       <div className="w-full bg-gradient-to-b from-teal-50 to-white shadow border border-teal-200 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-teal-600 to-teal-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
           <div>
-            <h2 className="text-sm sm:text-lg font-bold text-white">📊 أقساط 2025</h2>
+            <h2 className="text-sm sm:text-lg font-bold text-white">📊 أقساط 2025 (تشمل 2024 و 2025)</h2>
             <p className="text-xs text-teal-100">الأرشيف</p>
           </div>
           <label className="px-3 py-1.5 bg-white text-teal-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-teal-50">
@@ -216,7 +315,8 @@ export default function InstallmentsTab() {
                   <th className="p-2 text-center">الدفعة</th>
                   <th className="p-2 text-right">المساق</th>
                   <th className="p-2 text-center">رسوم</th>
-                  {MONTHS_2025.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200">{m.substring(0, 3)}</th>)}
+                  {/* نعرض جميع الأشهر المعرفة في المصفوفة */}
+                  {MONTHS_2025.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200">{m}</th>)}
                   <th className="p-2 text-center text-emerald-700">مسدد</th>
                   <th className="p-2 text-center text-rose-700">متبقي</th>
                   <th className="p-2 text-center">إجراء</th>
@@ -354,7 +454,7 @@ export default function InstallmentsTab() {
         </div>
       </div>
 
-      {/* النوافذ المنبثقة – بدون تغيير */}
+      {/* النوافذ المنبثقة */}
       <Modal title="➕ إضافة قسط جديد - 2026" isOpen={newPaymentModal} onClose={() => setNewPaymentModal(false)}>
         <form onSubmit={addNewPayment} className="space-y-3">
           <div className="relative">
