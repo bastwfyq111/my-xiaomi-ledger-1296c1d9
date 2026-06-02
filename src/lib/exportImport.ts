@@ -355,7 +355,74 @@ export async function importFromExcel(file: File, only?: ImportKind) {
     return out;
   };
 
+  // Parse a monthly-statement sheet into journal entries so values
+  // aggregate (إضافة / خصم) into the كشف الحساب الشهري tab.
+  const monthIndexFromName = (name: string): number => {
+    const n = normHeader(name);
+    const map: Record<string, number> = {
+      "يناير": 1, "فبراير": 2, "مارس": 3, "ابريل": 4, "أبريل": 4, "مايو": 5,
+      "يونيو": 6, "يوليو": 7, "اغسطس": 8, "أغسطس": 8, "سبتمبر": 9,
+      "اكتوبر": 10, "أكتوبر": 10, "نوفمبر": 11, "ديسمبر": 12,
+    };
+    for (const k of Object.keys(map)) if (n.includes(normHeader(k))) return map[k];
+    return 0;
+  };
+  const knownMonthlyAccounts = new Set(
+    (monthlySchema as { groups: { accounts: string[] }[] }).groups.flatMap((g) =>
+      g.accounts.map((a) => normHeader(a))
+    )
+  );
+  const parseMonthlySheet = (sheet: XLSX.WorkSheet, sheetName: string): Journal[] => {
+    const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", blankrows: false });
+    if (aoa.length < 5) return [];
+    let month = monthIndexFromName(sheetName);
+    let year = new Date().getFullYear();
+    for (let i = 0; i < Math.min(aoa.length, 6); i++) {
+      const rowTxt = (aoa[i] as unknown[]).map((c) => String(c ?? "")).join(" ");
+      if (!month) month = monthIndexFromName(rowTxt);
+      const ym = rowTxt.match(/(20\d{2})/);
+      if (ym) year = parseInt(ym[1], 10);
+    }
+    if (!month) return [];
+    const lastDay = new Date(year, month, 0).getDate();
+    const opsDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    const openDate = `${year - 1}-12-31`;
+    let headerIdx = -1;
+    for (let i = 0; i < Math.min(aoa.length, 10); i++) {
+      const r = (aoa[i] as unknown[]).map((c) => String(c ?? ""));
+      if (r.some((c) => c.includes("مدين")) && r.some((c) => c.includes("دائن"))) {
+        headerIdx = i; break;
+      }
+    }
+    if (headerIdx < 0) return [];
+    const out: Journal[] = [];
+    // استيراد الأرصدة الافتتاحية لشهر يناير فقط لتجنب الازدواجية
+    const importOpening = month === 1;
+    for (let i = headerIdx + 1; i < aoa.length; i++) {
+      const row = aoa[i] as unknown[];
+      if (!row) continue;
+      const account = norm(row[0]);
+      if (!account) continue;
+      if (!knownMonthlyAccounts.has(normHeader(account))) continue;
+      const openD = num(row[1]);
+      const openC = num(row[2]);
+      const opsD = num(row[3]);
+      const opsC = num(row[4]);
+      if (importOpening && openD) out.push({ id: uid(), date: openDate, formNo: "", settlement: "", description: "رصيد افتتاحي (استيراد كشف شهري)", account, debitAccount: account, creditAccount: "", debit: openD, credit: 0 });
+      if (importOpening && openC) out.push({ id: uid(), date: openDate, formNo: "", settlement: "", description: "رصيد افتتاحي (استيراد كشف شهري)", account: "", debitAccount: "", creditAccount: account, debit: 0, credit: openC });
+      if (opsD) out.push({ id: uid(), date: opsDate, formNo: "", settlement: "", description: `عمليات ${sheetName} (استيراد كشف شهري)`, account, debitAccount: account, creditAccount: "", debit: opsD, credit: 0 });
+      if (opsC) out.push({ id: uid(), date: opsDate, formNo: "", settlement: "", description: `عمليات ${sheetName} (استيراد كشف شهري)`, account: "", debitAccount: "", creditAccount: account, debit: 0, credit: opsC });
+    }
+    return out;
+  };
+
   for (const name of wb.SheetNames) {
+    // أوراق كشف الحساب الشهري — استيراد كأقياد للتجميع في الكشف
+    if ((!only || only === "monthly" || only === "journal") && monthIndexFromName(name)) {
+      const mRows = parseMonthlySheet(wb.Sheets[name], name);
+      if (mRows.length) { result.journal.push(...mRows); continue; }
+    }
+
     // Revenue sheets (exported format) — handle first
     if ((!only || only === "revenue") && (name.includes("ايراد") || name.includes("إيراد") || name.includes("موارد"))) {
       const rev = parseRevenueSheet(wb.Sheets[name], name);
@@ -378,8 +445,9 @@ export async function importFromExcel(file: File, only?: ImportKind) {
     const kind = detectKind(name, cols);
     if (!kind) continue;
     if (only && kind !== only) continue;
-    // monthly sheets are read-only summaries; nothing to import into store
+    // fallback لأوراق الكشف غير المتعرف عليها بالاسم
     if (kind === "monthly") continue;
+
 
     if (kind === "hafiza") {
       rows.forEach((r) => {
