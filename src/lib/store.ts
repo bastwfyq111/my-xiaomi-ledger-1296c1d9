@@ -3,7 +3,9 @@ import { persist } from "zustand/middleware";
 import seedTrainees from "@/data/trainees.json";
 import seedInstallments from "@/data/installments.json";
 
-// --- تعريف الأنواع (Types) ---
+// ==========================================
+// 1. تعريف الأنواع (Types)
+// ==========================================
 
 export type Trainee = { name: string; batch: string; specialty: string };
 
@@ -81,9 +83,11 @@ export type CustomTab = {
   rows: Record<string, string | number>[];
 };
 
-// --- واجهة المتجر كاملة ---
+// ==========================================
+// 2. واجهة حالة المتجر (State Interface)
+// ==========================================
 type State = {
-  // البيانات
+  // --- البيانات الأساسية ---
   trainees: Trainee[];
   hafiza: Hafiza[];
   accounts: Account[];
@@ -110,7 +114,7 @@ type State = {
   addAccount: (a: Omit<Account, "id">) => Account;
   updateAccount: (id: string, a: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
-  clearAccounts: () => void;
+  clearAccounts: () => void; // دالة مسح كل الحسابات
 
   // --- عمليات اليومية ---
   addJournal: (j: Omit<Journal, "id">) => Journal;
@@ -155,7 +159,9 @@ type State = {
   getInstallmentByIndex: (index: number, year?: '2025') => Installment | undefined;
 };
 
-// --- دوال مساعدة ---
+// ==========================================
+// 3. دوال مساعدة محلية (Local Helpers)
+// ==========================================
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
 const getToday = () => new Date().toISOString().split('T')[0];
@@ -167,11 +173,13 @@ const recalcInstallment = (i: Installment): Installment => {
   return { ...i, fees, prevDue, totalPaid, remaining: prevDue - totalPaid };
 };
 
-// --- إنشاء المتجر ---
+// ==========================================
+// 4. إنشاء المتجر (Store Creation)
+// ==========================================
 export const useStore = create<State>()(
   persist(
     (set, get) => ({
-      // --- القيم الابتدائية ---
+      // --- القيم الابتدائية (Initial State) ---
       trainees: seedTrainees as Trainee[],
       hafiza: [],
       accounts: [],
@@ -219,7 +227,6 @@ export const useStore = create<State>()(
       deleteHafiza: (id) =>
         set((s) => ({
           hafiza: s.hafiza.filter((x) => x.id !== id),
-          // حذف الحسابات المرتبطة
           accounts: s.accounts.filter((a) => a.sourceHafizaId !== id),
         })),
 
@@ -249,7 +256,7 @@ export const useStore = create<State>()(
           accounts: s.accounts.filter((x) => x.id !== id),
         })),
 
-      clearAccounts: () => set({ accounts: [] }),
+      clearAccounts: () => set({ accounts: [] }), // تنظيف الحسابات
 
       // ============ عمليات اليومية ============
       addJournal: (j) => {
@@ -345,10 +352,7 @@ export const useStore = create<State>()(
       // ============ الاستيراد والتصدير ============
       importData: (d) =>
         set((s) => ({
-          trainees: d.trainees
-            ? [...s.trainees, ...d.trainees]
-            : s.trainees,
-
+          trainees: d.trainees ? [...s.trainees, ...d.trainees] : s.trainees,
           journal: d.journal
             ? [
                 ...s.journal,
@@ -360,7 +364,6 @@ export const useStore = create<State>()(
                 })),
               ]
             : s.journal,
-
           hafiza: d.hafiza
             ? [
                 ...s.hafiza,
@@ -372,7 +375,6 @@ export const useStore = create<State>()(
                 })),
               ]
             : s.hafiza,
-
           accounts: d.accounts
             ? [
                 ...s.accounts,
@@ -385,15 +387,12 @@ export const useStore = create<State>()(
                 })),
               ]
             : s.accounts,
-
           installments: d.installments
             ? [...s.installments, ...d.installments.map(recalcInstallment)]
             : s.installments,
-
           installments2025: d.installments2025
             ? [...s.installments2025, ...d.installments2025.map(recalcInstallment)]
             : s.installments2025,
-
           openingBalance: d.openingBalance ?? s.openingBalance,
           revenue: d.revenue ? { ...s.revenue, ...d.revenue } : s.revenue,
         })),
@@ -485,7 +484,7 @@ export const useStore = create<State>()(
           ),
         })),
 
-      // ============ دوال مساعدة ============
+      // ============ دوال مساعدة (Getters) ============
       getHafizaById: (id) => get().hafiza.find((h) => h.id === id),
 
       getAccountById: (id) => get().accounts.find((a) => a.id === id),
@@ -498,10 +497,7 @@ export const useStore = create<State>()(
 
       getOverdueInstallments: (year) => {
         const key = year === '2025' ? 'installments2025' : 'installments';
-        const today = getToday();
-        return get()[key].filter(
-          (i: Installment) => i.remaining > 0
-        );
+        return get()[key].filter((i: Installment) => i.remaining > 0);
       },
 
       getInstallmentByIndex: (index, year) => {
@@ -516,7 +512,9 @@ export const useStore = create<State>()(
   )
 );
 
-// --- Selectors للاستخدام في المكونات ---
+// ==========================================
+// 5. محددات الوصول السريع (Selectors)
+// ==========================================
 export const useTrainees = () => useStore((s) => s.trainees);
 export const useHafiza = () => useStore((s) => s.hafiza);
 export const useAccounts = () => useStore((s) => s.accounts);
