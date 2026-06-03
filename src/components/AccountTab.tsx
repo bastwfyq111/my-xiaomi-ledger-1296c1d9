@@ -7,7 +7,9 @@ import * as XLSX from "xlsx";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser, FileSpreadsheet } from "lucide-react";
 
-// 1. تعريف أعمدة الجدول لتسهيل العرض والترتيب
+// ==========================================
+// 1. الثوابت والإعدادات الأساسية
+// ==========================================
 const COLS = [
   { key: "date", label: "التاريخ" },
   { key: "hafizaNo", label: "رقم الحافظة" },
@@ -44,6 +46,21 @@ const emptyForm: FormType = {
   name: "", hafizaAmount: "", income: "", expense: ""
 };
 
+// ==========================================
+// 2. دالة تنظيف المبالغ المستوردة من الإكسل
+// ==========================================
+const parseAmount = (val: any): number => {
+  if (val === undefined || val === null || val === "") return 0;
+  if (typeof val === 'number') return val;
+  // إزالة أي نصوص، فواصل آلاف، أو مسافات مع الإبقاء على الأرقام والنقاط العشرية
+  const cleanString = String(val).replace(/[^\d.-]/g, '');
+  const parsed = parseFloat(cleanString);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
+// ==========================================
+// 3. مكون النافذة المنبثقة (Modal)
+// ==========================================
 const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
   if (!isOpen) return null;
   return (
@@ -61,8 +78,10 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
   );
 };
 
+// ==========================================
+// 4. المكون الرئيسي (AccountsTab)
+// ==========================================
 export default function AccountsTab() {
-  // 👇 تم إضافة clearAccounts هنا
   const { accounts, addAccount, updateAccount, deleteAccount, clearAccounts } = useStore();
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
@@ -149,9 +168,10 @@ export default function AccountsTab() {
             description: row["البيان"] || row["description"] || "",
             specialty: row["التخصص"] || row["specialty"] || "",
             name: row["الاسم"] || row["name"] || "",
-            hafizaAmount: Number(row["مبلغ الحافظة"] || row["hafizaAmount"]) || 0,
-            income: Number(row["الإيرادات"] || row["income"]) || 0,
-            expense: Number(row["المصروفات"] || row["expense"]) || 0,
+            // 👇 هنا قمنا باستخدام parseAmount والبحث عن الأسماء المتعددة للأعمدة
+            hafizaAmount: parseAmount(row["مبلغ الحافظة"] || row["المبلغ"] || row["hafizaAmount"]),
+            income: parseAmount(row["الإيرادات"] || row["الايرادات"] || row["إيراد"] || row["ايراد"] || row["income"]),
+            expense: parseAmount(row["المصروفات"] || row["المصروف"] || row["مصروفات"] || row["مصروف"] || row["expense"]),
           }));
 
         if (importedAccounts.length === 0) {
@@ -170,29 +190,25 @@ export default function AccountsTab() {
     e.target.value = "";
   };
 
-  // 👇 دالة مسح كل البيانات مع التحذير
   const handleClearAllData = () => {
     if (accounts.length === 0) {
       toast.info("لا توجد بيانات لمسحها");
       return;
     }
-    
     const confirmDelete = window.confirm("⚠️ تحذير: هل أنت متأكد من رغبتك في مسح جميع السجلات المالية بشكل نهائي؟ لا يمكن التراجع عن هذا الإجراء.");
-    
     if (confirmDelete) {
       if (clearAccounts) {
         clearAccounts();
         toast.success("تم مسح جميع السجلات المالية بنجاح");
       } else {
-        toast.error("عذراً، دالة مسح البيانات (clearAccounts) غير معرفة في الـ Store.");
+        toast.error("عذراً، دالة مسح البيانات غير معرفة في الـ Store.");
       }
     }
   };
 
   return (
     <div className="w-full space-y-6" dir="rtl">
-      
-      {/* ========== قسم الإدخال يدوياً والاستيراد ========== */}
+      {/* ========== الإدخال اليدوي والاستيراد ========== */}
       <div className="w-full bg-white shadow-sm border border-slate-200 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-emerald-700 to-emerald-800 px-4 py-3 flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-2">
@@ -248,6 +264,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
+      {/* ========== الإحصائيات ========== */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
           <span className="text-xs text-slate-500 font-semibold">إجمالي الإيرادات</span>
@@ -263,7 +280,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* ========== قسم جدول حركات سجل الحساب ========== */}
+      {/* ========== جدول حركات السجل ========== */}
       <div className="w-full bg-white shadow border border-slate-200 rounded-xl overflow-hidden">
         <div className="bg-slate-800 px-4 py-3 flex flex-wrap justify-between items-center gap-3">
           <div>
@@ -273,8 +290,6 @@ export default function AccountsTab() {
             <button onClick={clearFilters} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold transition-colors">
               مسح التصفية
             </button>
-            
-            {/* 👇 زر مسح كل البيانات الجديد */}
             {accounts.length > 0 && (
               <button 
                 onClick={handleClearAllData} 
