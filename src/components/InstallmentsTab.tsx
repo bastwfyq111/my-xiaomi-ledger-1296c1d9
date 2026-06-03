@@ -248,44 +248,94 @@ export default function InstallmentsTab() {
 
   const generateAccountStatement = (row: any, year: number) => {
     const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-    const paymentsRows = monthsList.map(m => {
-      const amount = Number(row.payments?.[m]) || 0;
-      if (amount > 0) {
-         return `<tr><td style="padding: 12px; border: 1px solid #cbd5e1;">${m}</td><td style="padding: 12px; border: 1px solid #cbd5e1; font-weight: bold; color: #059669; font-family: monospace;">${fmt(amount)}</td></tr>`;
-      }
-      return '';
-    }).join('');
+    const fees = cleanNumber(row.fees);
+    const prevDue = cleanNumber(row.prevDue);
+    const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
+    const dueTotal = year === 2026 ? (prevDue || fees) : fees;
+    const remaining = dueTotal - totalPaid;
+
+    const paidRows = monthsList
+      .map((m) => {
+        const amount = Number(row.payments?.[m]) || 0;
+        if (amount <= 0) return "";
+        return `<tr><td class="lbl">سداد شهر ${m} (له)</td><td class="num pay">${fmt(amount)}</td></tr>`;
+      })
+      .join("");
+
+    const infoCard = (label: string, value: string) =>
+      `<div class="info"><div class="info-lbl">${label}</div><div class="info-val">${value || "—"}</div></div>`;
+
+    const prevRow = year === 2026
+      ? `<tr><td class="lbl">متبقي من العام 2025 (عليه)</td><td class="num due">${fmt(prevDue)}</td></tr>`
+      : "";
+
+    const remainingLabel = remaining > 0 ? "الرصيد المتبقي عليه" : remaining < 0 ? "الرصيد له" : "تم السداد بالكامل";
+    const remainingClass = remaining > 0 ? "due" : "pay";
 
     return `
-      <html dir="rtl">
+      <html dir="rtl" lang="ar">
       <head>
+        <meta charset="utf-8" />
         <title>كشف حساب - ${row.name}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Tajawal:wght@400;500;700&display=swap">
         <style>
-          body { font-family: Arial, Tahoma, sans-serif; padding: 40px; color: #1e293b; direction: rtl; background: #fff; }
-          .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px double #cbd5e1; }
-          h2 { color: #1e3a8a; margin-bottom: 5px; font-size: 24px; }
-          h3 { color: #475569; margin-top: 5px; font-size: 18px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 25px; text-align: center; }
-          th { background-color: #f1f5f9; padding: 12px; border: 1px solid #cbd5e1; font-weight: bold; color: #334155; }
-          .totals-box { margin-top: 30px; background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; justify-content: space-around; }
-          .totals-box p { margin: 0; font-size: 16px; font-weight: bold; }
+          @page { size: A4 portrait; margin: 10mm; }
+          * { box-sizing: border-box; }
+          body { font-family: 'Cairo','Tajawal',Tahoma,Arial,sans-serif; direction: rtl; color: #0f172a; background: #fff; margin: 0; padding: 16px; }
+          .wrap { max-width: 760px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; }
+          .top { background: linear-gradient(90deg, #0f766e, #14b8a6); color: #fff; padding: 14px 20px; font-size: 20px; font-weight: 800; }
+          .body { padding: 18px 20px 22px; }
+          .title { text-align: right; }
+          .title h2 { margin: 0; color: #0f172a; font-size: 18px; font-weight: 800; }
+          .title p { margin: 4px 0 0; color: #64748b; font-size: 13px; font-weight: 500; }
+          .divider { height: 1px; background: #e2e8f0; margin: 14px 0 16px; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+          .info { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; }
+          .info-lbl { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 2px; }
+          .info-val { font-size: 14px; color: #0f172a; font-weight: 700; }
+          table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; }
+          thead th { background: #e0f2fe; color: #0c4a6e; font-weight: 800; padding: 10px; font-size: 14px; border-bottom: 1px solid #cbd5e1; text-align: center; }
+          tbody td { padding: 9px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+          tbody tr:last-child td { border-bottom: none; }
+          td.lbl { text-align: right; color: #1e293b; }
+          td.num { text-align: center; font-family: 'Cairo', monospace; font-weight: 700; width: 38%; }
+          td.due { color: #dc2626; }
+          td.pay { color: #2563eb; }
+          tr.sub td { background: #e0f2fe; font-weight: 800; color: #0c4a6e; }
+          tr.sub-pay td { background: #dbeafe; font-weight: 800; color: #1d4ed8; }
+          tr.final td { background: #fee2e2; font-weight: 800; }
+          tr.final td.lbl { color: #991b1b; }
+          @media print { body { padding: 0; } .wrap { border: none; } }
         </style>
       </head>
       <body>
-        <div class="header">
-          <h2>سند كشف حساب الأقساط والمدفوعات</h2>
-          <h3>اسم المتدرب: ${row.name}</h3>
-          <p>المساق الدراسي: ${row.specialty || "—"} | الدفعة: ${row.batch || "—"}</p>
-          <p>العام المالي: ${year}</p>
-        </div>
-        <table>
-          <thead><tr><th>البيان (الشهر)</th><th>المبلغ المدفوع</th></tr></thead>
-          <tbody>${paymentsRows || `<tr><td colspan="2" style="padding: 15px; border: 1px solid #cbd5e1; color: #94a3b8;">لا توجد أقساط مسجلة</td></tr>`}</tbody>
-        </table>
-        <div class="totals-box">
-          ${year === 2025 ? `<p>إجمالي الرسوم: <span>${fmt(row.fees)}</span></p>` : `<p>الرصيد السابق 2025: <span>${fmt(row.prevDue)}</span></p>`}
-          <p>إجمالي المدفوع: <span style="color: #059669;">${fmt(row.totalPaid)}</span></p>
-          <p>الرصيد المتبقي: <span style="color: #e11d48;">${fmt(row.remaining)}</span></p>
+        <div class="wrap">
+          <div class="top">كشف حساب</div>
+          <div class="body">
+            <div class="title">
+              <h2>المجلس اليمني للاختصاصات الطبية - صعدة</h2>
+              <p>كشف حساب أقساط - العام ${year}م</p>
+            </div>
+            <div class="divider"></div>
+            <div class="grid">
+              ${infoCard("الاسم", row.name)}
+              ${infoCard("الدفعة", row.batch)}
+              ${infoCard("المساق", row.specialty)}
+              ${infoCard("رقم الهاتف", row.phone)}
+            </div>
+            <table>
+              <thead><tr><th style="width:62%">البيان</th><th>المبلغ</th></tr></thead>
+              <tbody>
+                <tr><td class="lbl">رسوم الدراسة</td><td class="num">${fmt(fees)}</td></tr>
+                ${prevRow}
+                <tr class="sub"><td class="lbl">إجمالي المستحق عليه</td><td class="num">${fmt(dueTotal)}</td></tr>
+                ${paidRows}
+                <tr class="sub-pay"><td class="lbl">إجمالي المسدد (له)</td><td class="num pay">${fmt(totalPaid)}</td></tr>
+                <tr class="final"><td class="lbl">${remainingLabel}</td><td class="num ${remainingClass}">${fmt(Math.abs(remaining))}</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </body>
       </html>
