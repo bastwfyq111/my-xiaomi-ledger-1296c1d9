@@ -149,7 +149,7 @@ function Index() {
       </div>
 
       {/* نظام التبويبات الرئيسي الممتد */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-2 sm:space-y-3">
+      <Tabs dir="rtl" value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-2 sm:space-y-3">
         
         {/* شريط التبويبات: تم صف التبويبات كعناصر مباشرة دون دالة loop لضمان الترتيب الصارم من اليمين لليسار */}
         <div className="w-full overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
