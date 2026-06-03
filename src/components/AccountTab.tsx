@@ -5,7 +5,9 @@ import { DESCRIPTIONS } from "@/lib/accounts";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
-import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser, FileSpreadsheet } from "lucide-react";
+import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser, FileSpreadsheet, Link } from "lucide-react";
+// 💡 ملاحظة: يجب التأكد من توفر مسار هذا الملف لكي يعمل القائمة المنسدلة للربط بشكل صحيح.
+import schema from "@/data/revenueTemplate.json";
 
 // ==========================================
 // 1. الثوابت والإعدادات الأساسية (مطابقة تماماً لملف الإكسل)
@@ -23,7 +25,8 @@ const COLS = [
   { key: "hafizaAmount", label: "مبلغ الحافظة" },
   { key: "income", label: "الإيرادات" },
   { key: "expense", label: "المصروفات" },
-  { key: "balance", label: "الرصيد" }, // عمود الرصيد كما في الملف المرفق
+  { key: "revenueKey", label: "رمز الإيراد" }, // 💡 عمود جديد
+  { key: "balance", label: "الرصيد" },
 ];
 
 type FormType = {
@@ -39,12 +42,13 @@ type FormType = {
   hafizaAmount: string;
   income: string;
   expense: string;
+  revenueKey: string; // 💡 حقل جديد
 };
 
 const emptyForm: FormType = {
   date: today(), hafizaNo: "", notifyNo: "", notifyDate: "",
   checkNo: "", checkDate: "", description: "", specialty: "",
-  name: "", hafizaAmount: "", income: "", expense: ""
+  name: "", hafizaAmount: "", income: "", expense: "", revenueKey: ""
 };
 
 // ==========================================
@@ -89,28 +93,43 @@ export default function AccountsTab() {
   const { rows: filtered, sortKey, sortDir, toggleSort, filters, setFilter, clearFilters } =
     useTableControls(accounts, COLS.map((c) => c.key));
 
+  // 💡 تحضير قائمة الإيرادات لكي تظهر كخيارات (Dropdown) في الواجهة 
+  const revenueTypes = useMemo(() => {
+    const list: { key: string; label: string }[] = [];
+    if(schema && schema.chapters) {
+      schema.chapters.forEach((ch: any) =>
+        ch.sections.forEach((sec: any) =>
+          sec.items.forEach((it: any) =>
+            it.types.forEach((t: any) => {
+              list.push({
+                key: `${ch.no}-${sec.no}-${it.no}-${t.no}`,
+                label: `${ch.title} ← ${t.title}`
+              });
+            })
+          )
+        )
+      );
+    }
+    return list;
+  }, []);
+
   // حساب الإجماليات للأشرطة العلوية
   const totalIncome = useMemo(() => accounts.reduce((sum, a) => sum + (Number(a.income) || 0), 0), [accounts]);
   const totalExpense = useMemo(() => accounts.reduce((sum, a) => sum + (Number(a.expense) || 0), 0), [accounts]);
   const currentBalance = totalIncome - totalExpense;
 
-  // 💡 حساب مصفوفة تحتوي على الرصيد التراكمي لكل صف بناءً على الترتيب الحالي المعروض
+  // الرصيد التراكمي
   const filteredWithBalance = useMemo(() => {
     let runningBalance = 0;
-    // إذا كان هناك رصيد افتتاحي في الحسابات، سيتم مراعاته تلقائياً من خلال قيود الإيراد والمصروف
     return filtered.map((row) => {
       const inc = Number(row.income) || 0;
       const exp = Number(row.expense) || 0;
       runningBalance = runningBalance + inc - exp;
-      return {
-        ...row,
-        balance: runningBalance
-      };
+      return { ...row, balance: runningBalance };
     });
   }, [filtered]);
 
   const submit = () => {
-    // السماح بحفظ الحركة بدون اسم إذا كان بياناً عاماً (مثل الرصيد الافتتاحي أو المصروفات العمومية بالملف)
     if (!form.description && !form.name) {
       toast.error("يرجى إدخال الاسم أو البيان على الأقل");
       return;
@@ -129,9 +148,10 @@ export default function AccountsTab() {
       hafizaAmount: Number(form.hafizaAmount) || 0,
       income: Number(form.income) || 0,
       expense: Number(form.expense) || 0,
+      revenueKey: form.revenueKey || undefined, // إرسال مفتاح الربط
     });
 
-    toast.success("تم إضافة السجل المالي للحساب بنجاح");
+    toast.success("تم إضافة السجل المالي للحساب بنجاح وتحديث الإيرادات");
     setForm(emptyForm);
   };
 
@@ -146,7 +166,7 @@ export default function AccountsTab() {
       expense: Number(editingRow.expense) || 0,
     });
     
-    toast.success("تم تعديل السجل بنجاح");
+    toast.success("تم تعديل السجل بنجاح وتحديث الإيرادات");
     setEditingRow(null);
   };
 
@@ -174,7 +194,6 @@ export default function AccountsTab() {
             }
             return cleanRow;
           })
-          // الفلترة بناء على وجود بيان أو اسم (لأن السجلات الأولى بالملف قد لا تحتوي على اسم بل بيان فقط)
           .filter((row: any) => row["الاسم"] || row["البيان"] || row["name"] || row["description"])
           .map((row: any) => ({
             date: row["التاريخ"] || row["date"] || today(),
@@ -189,6 +208,8 @@ export default function AccountsTab() {
             hafizaAmount: parseAmount(row["مبلغ الحافظة"] || row["hafizaAmount"]),
             income: parseAmount(row["الإيرادات"] || row["الايرادات"] || row["income"]),
             expense: parseAmount(row["المصروفات"] || row["expense"]),
+            // 💡 استيراد رمز الإيراد من ملف الإكسل إذا كان موجوداً 
+            revenueKey: String(row["رمز الإيراد"] || row["رمز الايراد"] || row["revenueKey"] || ""),
           }));
 
         if (importedAccounts.length === 0) {
@@ -217,8 +238,6 @@ export default function AccountsTab() {
       if (clearAccounts) {
         clearAccounts();
         toast.success("تم مسح جميع السجلات المالية بنجاح");
-      } else {
-        toast.error("عذراً، دالة مسح البيانات غير معرفة في الـ Store.");
       }
     }
   };
@@ -268,6 +287,23 @@ export default function AccountsTab() {
             <Field label="مبلغ الحافظة" type="number" v={form.hafizaAmount} on={(v) => setForm({ ...form, hafizaAmount: v })} />
             <Field label="الإيرادات" type="number" v={form.income} on={(v) => setForm({ ...form, income: v })} placeholder="0.00" />
             <Field label="المصروفات" type="number" v={form.expense} on={(v) => setForm({ ...form, expense: v })} placeholder="0.00" />
+            
+            {/* 💡 حقل الربط بنوع الإيراد */}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-teal-800 mb-1 flex items-center gap-1">
+                <Link className="w-3.5 h-3.5" /> ربط بنوع الإيراد (اختياري)
+              </label>
+              <select
+                value={form.revenueKey}
+                onChange={(e) => setForm({ ...form, revenueKey: e.target.value })}
+                className="w-full px-3 py-2 text-sm border border-teal-200 rounded-lg outline-none focus:border-teal-500 bg-teal-50/40 text-slate-700"
+              >
+                <option value="">-- بدون ربط --</option>
+                {revenueTypes.map((t) => (
+                  <option key={t.key} value={t.key}>{t.key} | {t.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="mt-5 flex gap-3 flex-wrap border-t pt-4">
@@ -357,21 +393,14 @@ export default function AccountsTab() {
                     <td className="p-2 text-slate-700 truncate max-w-[180px]" title={acc.description}>{acc.description || "—"}</td>
                     <td className="p-2 text-slate-600">{acc.specialty || "—"}</td>
                     <td className="p-2 font-bold text-slate-900">{acc.name || "—"}</td>
+                    <td className="p-2 font-mono text-slate-600">{Number(acc.hafizaAmount) > 0 ? fmt(Number(acc.hafizaAmount)) : "—"}</td>
+                    <td className="p-2 font-mono font-bold text-emerald-600 bg-emerald-50/20">{Number(acc.income) > 0 ? fmt(Number(acc.income)) : "—"}</td>
+                    <td className="p-2 font-mono font-bold text-rose-600 bg-rose-50/20">{Number(acc.expense) > 0 ? fmt(Number(acc.expense)) : "—"}</td>
                     
-                    <td className="p-2 font-mono text-slate-600">
-                      {Number(acc.hafizaAmount) > 0 ? fmt(Number(acc.hafizaAmount)) : "—"}
-                    </td>
-                    <td className="p-2 font-mono font-bold text-emerald-600 bg-emerald-50/20">
-                      {Number(acc.income) > 0 ? fmt(Number(acc.income)) : "—"}
-                    </td>
-                    <td className="p-2 font-mono font-bold text-rose-600 bg-rose-50/20">
-                      {Number(acc.expense) > 0 ? fmt(Number(acc.expense)) : "—"}
-                    </td>
-                    {/* عمود الرصيد التراكمي الذكي المحسوب ديناميكياً لكل صف */}
-                    <td className="p-2 font-mono font-bold text-blue-700 bg-blue-50/10">
-                      {fmt(acc.balance)}
-                    </td>
-
+                    {/* 💡 عرض رمز الإيراد في الجدول */}
+                    <td className="p-2 font-mono font-bold text-teal-700 bg-teal-50/20 text-center">{acc.revenueKey || "—"}</td>
+                    
+                    <td className="p-2 font-mono font-bold text-blue-700 bg-blue-50/10">{fmt(acc.balance)}</td>
                     <td className="p-2 text-center whitespace-nowrap">
                       <div className="flex justify-center gap-1.5">
                         <button onClick={() => setEditingRow(acc)} className="p-1 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-600 hover:text-white transition-colors" title="تعديل">
@@ -386,7 +415,7 @@ export default function AccountsTab() {
                 ))}
                 {filteredWithBalance.length === 0 && (
                   <tr>
-                    <td colSpan={15} className="p-8 text-center text-slate-400 bg-slate-50">
+                    <td colSpan={16} className="p-8 text-center text-slate-400 bg-slate-50">
                       لا توجد سجلات مطابقة لخيارات التصفية الحالية
                     </td>
                   </tr>
@@ -449,6 +478,22 @@ export default function AccountsTab() {
                 <label className="block text-xs font-semibold text-slate-700 mb-1">المصروفات</label>
                 <input type="number" value={editingRow.expense} onChange={(e) => setEditingRow({...editingRow, expense: e.target.value})} className="w-full p-2 border rounded-lg font-bold text-rose-600 outline-none" />
               </div>
+
+              {/* 💡 تعديل حقل الربط داخل النافذة المنبثقة */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-teal-800 mb-1">تعديل ربط الإيراد</label>
+                <select
+                  value={editingRow.revenueKey || ""}
+                  onChange={(e) => setEditingRow({...editingRow, revenueKey: e.target.value})}
+                  className="w-full p-2 border border-teal-200 rounded-lg bg-teal-50/40 text-slate-700 outline-none"
+                >
+                  <option value="">-- بدون ربط --</option>
+                  {revenueTypes.map((t) => (
+                    <option key={t.key} value={t.key}>{t.key} | {t.label}</option>
+                  ))}
+                </select>
+              </div>
+
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t mt-4">
               <button type="button" onClick={() => setEditingRow(null)} className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-colors">إلغاء</button>
