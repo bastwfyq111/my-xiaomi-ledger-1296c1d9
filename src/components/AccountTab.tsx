@@ -8,7 +8,7 @@ import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser, FileSpreadsheet } from "lucide-react";
 
 // ==========================================
-// 1. الثوابت والإعدادات الأساسية
+// 1. الثوابت والإعدادات الأساسية (مطابقة تماماً لملف الإكسل)
 // ==========================================
 const COLS = [
   { key: "date", label: "التاريخ" },
@@ -23,6 +23,7 @@ const COLS = [
   { key: "hafizaAmount", label: "مبلغ الحافظة" },
   { key: "income", label: "الإيرادات" },
   { key: "expense", label: "المصروفات" },
+  { key: "balance", label: "الرصيد" }, // عمود الرصيد كما في الملف المرفق
 ];
 
 type FormType = {
@@ -52,7 +53,6 @@ const emptyForm: FormType = {
 const parseAmount = (val: any): number => {
   if (val === undefined || val === null || val === "") return 0;
   if (typeof val === 'number') return val;
-  // إزالة أي نصوص، فواصل آلاف، أو مسافات مع الإبقاء على الأرقام والنقاط العشرية
   const cleanString = String(val).replace(/[^\d.-]/g, '');
   const parsed = parseFloat(cleanString);
   return isNaN(parsed) ? 0 : parsed;
@@ -89,13 +89,30 @@ export default function AccountsTab() {
   const { rows: filtered, sortKey, sortDir, toggleSort, filters, setFilter, clearFilters } =
     useTableControls(accounts, COLS.map((c) => c.key));
 
+  // حساب الإجماليات للأشرطة العلوية
   const totalIncome = useMemo(() => accounts.reduce((sum, a) => sum + (Number(a.income) || 0), 0), [accounts]);
   const totalExpense = useMemo(() => accounts.reduce((sum, a) => sum + (Number(a.expense) || 0), 0), [accounts]);
   const currentBalance = totalIncome - totalExpense;
 
+  // 💡 حساب مصفوفة تحتوي على الرصيد التراكمي لكل صف بناءً على الترتيب الحالي المعروض
+  const filteredWithBalance = useMemo(() => {
+    let runningBalance = 0;
+    // إذا كان هناك رصيد افتتاحي في الحسابات، سيتم مراعاته تلقائياً من خلال قيود الإيراد والمصروف
+    return filtered.map((row) => {
+      const inc = Number(row.income) || 0;
+      const exp = Number(row.expense) || 0;
+      runningBalance = runningBalance + inc - exp;
+      return {
+        ...row,
+        balance: runningBalance
+      };
+    });
+  }, [filtered]);
+
   const submit = () => {
-    if (!form.name || (!form.income && !form.expense)) {
-      toast.error("يرجى إدخال الاسم وتحديد مبلغ إيراد أو مصروف على الأقل");
+    // السماح بحفظ الحركة بدون اسم إذا كان بياناً عاماً (مثل الرصيد الافتتاحي أو المصروفات العمومية بالملف)
+    if (!form.description && !form.name) {
+      toast.error("يرجى إدخال الاسم أو البيان على الأقل");
       return;
     }
 
@@ -157,25 +174,25 @@ export default function AccountsTab() {
             }
             return cleanRow;
           })
-          .filter((row: any) => row["الاسم"] || row["name"])
+          // الفلترة بناء على وجود بيان أو اسم (لأن السجلات الأولى بالملف قد لا تحتوي على اسم بل بيان فقط)
+          .filter((row: any) => row["الاسم"] || row["البيان"] || row["name"] || row["description"])
           .map((row: any) => ({
             date: row["التاريخ"] || row["date"] || today(),
             hafizaNo: String(row["رقم الحافظة"] || row["hafizaNo"] || ""),
-            notifyNo: String(row["رقم الاشعار"] || row["رقم الإشعار"] || row["notifyNo"] || ""),
+            notifyNo: String(row["رقم الإشعار"] || row["رقم الاشعار"] || row["notifyNo"] || ""),
             notifyDate: row["تاريخ التوريد"] || row["notifyDate"] || "",
             checkNo: String(row["رقم الشيك"] || row["checkNo"] || ""),
             checkDate: row["تاريخ الشيك"] || row["checkDate"] || "",
             description: row["البيان"] || row["description"] || "",
             specialty: row["التخصص"] || row["specialty"] || "",
             name: row["الاسم"] || row["name"] || "",
-            // 👇 هنا قمنا باستخدام parseAmount والبحث عن الأسماء المتعددة للأعمدة
-            hafizaAmount: parseAmount(row["مبلغ الحافظة"] || row["المبلغ"] || row["hafizaAmount"]),
-            income: parseAmount(row["الإيرادات"] || row["الايرادات"] || row["إيراد"] || row["ايراد"] || row["income"]),
-            expense: parseAmount(row["المصروفات"] || row["المصروف"] || row["مصروفات"] || row["مصروف"] || row["expense"]),
+            hafizaAmount: parseAmount(row["مبلغ الحافظة"] || row["hafizaAmount"]),
+            income: parseAmount(row["الإيرادات"] || row["الايرادات"] || row["income"]),
+            expense: parseAmount(row["المصروفات"] || row["expense"]),
           }));
 
         if (importedAccounts.length === 0) {
-          toast.error("لم يتم العثور على بيانات صحيحة. تأكد من وجود عمود 'الاسم'.");
+          toast.error("لم يتم العثور على بيانات متوافقة. تأكد من مطابقة أسماء الأعمدة.");
           return;
         }
 
@@ -223,9 +240,12 @@ export default function AccountsTab() {
 
         <div className="p-4 sm:p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Field label="الاسم *" v={form.name} on={(v) => setForm({ ...form, name: v })} placeholder="اسم الحركة أو المتدرب..." />
-            <Field label="التخصص" v={form.specialty} on={(v) => setForm({ ...form, specialty: v })} />
             <Field label="التاريخ" type="date" v={form.date} on={(v) => setForm({ ...form, date: v })} />
+            <Field label="رقم الحافظة" v={form.hafizaNo} on={(v) => setForm({ ...form, hafizaNo: v })} />
+            <Field label="رقم الإشعار" v={form.notifyNo} on={(v) => setForm({ ...form, notifyNo: v })} />
+            <Field label="تاريخ التوريد" type="date" v={form.notifyDate} on={(v) => setForm({ ...form, notifyDate: v })} />
+            <Field label="رقم الشيك" v={form.checkNo} on={(v) => setForm({ ...form, checkNo: v })} />
+            <Field label="تاريخ الشيك" type="date" v={form.checkDate} on={(v) => setForm({ ...form, checkDate: v })} />
             
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">البيان</label>
@@ -243,14 +263,11 @@ export default function AccountsTab() {
               </datalist>
             </div>
 
-            <Field label="رقم الحافظة" v={form.hafizaNo} on={(v) => setForm({ ...form, hafizaNo: v })} />
+            <Field label="التخصص" v={form.specialty} on={(v) => setForm({ ...form, specialty: v })} />
+            <Field label="الاسم" v={form.name} on={(v) => setForm({ ...form, name: v })} placeholder="اسم الحركة أو المتدرب..." />
             <Field label="مبلغ الحافظة" type="number" v={form.hafizaAmount} on={(v) => setForm({ ...form, hafizaAmount: v })} />
-            <Field label="رقم الإشعار" v={form.notifyNo} on={(v) => setForm({ ...form, notifyNo: v })} />
-            <Field label="تاريخ التوريد" type="date" v={form.notifyDate} on={(v) => setForm({ ...form, notifyDate: v })} />
-            <Field label="رقم الشيك" v={form.checkNo} on={(v) => setForm({ ...form, checkNo: v })} />
-            <Field label="تاريخ الشيك" type="date" v={form.checkDate} on={(v) => setForm({ ...form, checkDate: v })} />
-            <Field label="الإيرادات (دخل) *" type="number" v={form.income} on={(v) => setForm({ ...form, income: v })} placeholder="0.00" />
-            <Field label="المصروفات (خرج) *" type="number" v={form.expense} on={(v) => setForm({ ...form, expense: v })} placeholder="0.00" />
+            <Field label="الإيرادات" type="number" v={form.income} on={(v) => setForm({ ...form, income: v })} placeholder="0.00" />
+            <Field label="المصروفات" type="number" v={form.expense} on={(v) => setForm({ ...form, expense: v })} placeholder="0.00" />
           </div>
 
           <div className="mt-5 flex gap-3 flex-wrap border-t pt-4">
@@ -328,7 +345,7 @@ export default function AccountsTab() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((acc, index) => (
+                {filteredWithBalance.map((acc, index) => (
                   <tr key={acc.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
                     <td className="p-2 text-center text-slate-500 font-mono">{index + 1}</td>
                     <td className="p-2 whitespace-nowrap text-slate-600 font-mono">{acc.date}</td>
@@ -337,9 +354,9 @@ export default function AccountsTab() {
                     <td className="p-2 whitespace-nowrap text-slate-600 font-mono">{acc.notifyDate || "—"}</td>
                     <td className="p-2 font-mono text-slate-600">{acc.checkNo || "—"}</td>
                     <td className="p-2 whitespace-nowrap text-slate-600 font-mono">{acc.checkDate || "—"}</td>
-                    <td className="p-2 text-slate-700 truncate max-w-[150px]" title={acc.description}>{acc.description || "—"}</td>
+                    <td className="p-2 text-slate-700 truncate max-w-[180px]" title={acc.description}>{acc.description || "—"}</td>
                     <td className="p-2 text-slate-600">{acc.specialty || "—"}</td>
-                    <td className="p-2 font-bold text-slate-900">{acc.name}</td>
+                    <td className="p-2 font-bold text-slate-900">{acc.name || "—"}</td>
                     
                     <td className="p-2 font-mono text-slate-600">
                       {Number(acc.hafizaAmount) > 0 ? fmt(Number(acc.hafizaAmount)) : "—"}
@@ -349,6 +366,10 @@ export default function AccountsTab() {
                     </td>
                     <td className="p-2 font-mono font-bold text-rose-600 bg-rose-50/20">
                       {Number(acc.expense) > 0 ? fmt(Number(acc.expense)) : "—"}
+                    </td>
+                    {/* عمود الرصيد التراكمي الذكي المحسوب ديناميكياً لكل صف */}
+                    <td className="p-2 font-mono font-bold text-blue-700 bg-blue-50/10">
+                      {fmt(acc.balance)}
                     </td>
 
                     <td className="p-2 text-center whitespace-nowrap">
@@ -363,9 +384,9 @@ export default function AccountsTab() {
                     </td>
                   </tr>
                 ))}
-                {filtered.length === 0 && (
+                {filteredWithBalance.length === 0 && (
                   <tr>
-                    <td colSpan={14} className="p-8 text-center text-slate-400 bg-slate-50">
+                    <td colSpan={15} className="p-8 text-center text-slate-400 bg-slate-50">
                       لا توجد سجلات مطابقة لخيارات التصفية الحالية
                     </td>
                   </tr>
@@ -380,14 +401,6 @@ export default function AccountsTab() {
         {editingRow && (
           <form onSubmit={handleEditSave} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-700 mb-1">الاسم</label>
-                <input value={editingRow.name} onChange={(e) => setEditingRow({...editingRow, name: e.target.value})} className="w-full p-2 border rounded-lg bg-slate-50 outline-none" required />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">التخصص</label>
-                <input value={editingRow.specialty} onChange={(e) => setEditingRow({...editingRow, specialty: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
-              </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">التاريخ</label>
                 <input type="date" value={editingRow.date} onChange={(e) => setEditingRow({...editingRow, date: e.target.value})} className="w-full p-2 border rounded-lg outline-none" required />
@@ -395,10 +408,6 @@ export default function AccountsTab() {
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">رقم الحافظة</label>
                 <input value={editingRow.hafizaNo} onChange={(e) => setEditingRow({...editingRow, hafizaNo: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">مبلغ الحافظة</label>
-                <input type="number" value={editingRow.hafizaAmount} onChange={(e) => setEditingRow({...editingRow, hafizaAmount: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">رقم الإشعار</label>
@@ -409,16 +418,36 @@ export default function AccountsTab() {
                 <input type="date" value={editingRow.notifyDate} onChange={(e) => setEditingRow({...editingRow, notifyDate: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">الإيرادات (دخل)</label>
-                <input type="number" value={editingRow.income} onChange={(e) => setEditingRow({...editingRow, income: e.target.value})} className="w-full p-2 border rounded-lg font-bold text-emerald-600 outline-none" />
+                <label className="block text-xs font-semibold text-slate-700 mb-1">رقم الشيك</label>
+                <input value={editingRow.checkNo || ""} onChange={(e) => setEditingRow({...editingRow, checkNo: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">المصروفات (خرج)</label>
-                <input type="number" value={editingRow.expense} onChange={(e) => setEditingRow({...editingRow, expense: e.target.value})} className="w-full p-2 border rounded-lg font-bold text-rose-600 outline-none" />
+                <label className="block text-xs font-semibold text-slate-700 mb-1">تاريخ الشيك</label>
+                <input type="date" value={editingRow.checkDate || ""} onChange={(e) => setEditingRow({...editingRow, checkDate: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">البيان</label>
                 <input value={editingRow.description} onChange={(e) => setEditingRow({...editingRow, description: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">التخصص</label>
+                <input value={editingRow.specialty} onChange={(e) => setEditingRow({...editingRow, specialty: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">الاسم</label>
+                <input value={editingRow.name} onChange={(e) => setEditingRow({...editingRow, name: e.target.value})} className="w-full p-2 border rounded-lg bg-slate-50 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">مبلغ الحافظة</label>
+                <input type="number" value={editingRow.hafizaAmount} onChange={(e) => setEditingRow({...editingRow, hafizaAmount: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">الإيرادات</label>
+                <input type="number" value={editingRow.income} onChange={(e) => setEditingRow({...editingRow, income: e.target.value})} className="w-full p-2 border rounded-lg font-bold text-emerald-600 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">المصروفات</label>
+                <input type="number" value={editingRow.expense} onChange={(e) => setEditingRow({...editingRow, expense: e.target.value})} className="w-full p-2 border rounded-lg font-bold text-rose-600 outline-none" />
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t mt-4">
