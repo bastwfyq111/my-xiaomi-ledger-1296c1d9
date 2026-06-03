@@ -62,14 +62,14 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
 };
 
 export default function AccountsTab() {
-  const { accounts, addAccount, updateAccount, deleteAccount } = useStore();
+  // 👇 تم إضافة clearAccounts هنا
+  const { accounts, addAccount, updateAccount, deleteAccount, clearAccounts } = useStore();
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
   const { rows: filtered, sortKey, sortDir, toggleSort, filters, setFilter, clearFilters } =
     useTableControls(accounts, COLS.map((c) => c.key));
 
-  // التأكد من تحويل القيم إلى أرقام لتجنب أي أخطاء حسابية
   const totalIncome = useMemo(() => accounts.reduce((sum, a) => sum + (Number(a.income) || 0), 0), [accounts]);
   const totalExpense = useMemo(() => accounts.reduce((sum, a) => sum + (Number(a.expense) || 0), 0), [accounts]);
   const currentBalance = totalIncome - totalExpense;
@@ -170,10 +170,29 @@ export default function AccountsTab() {
     e.target.value = "";
   };
 
+  // 👇 دالة مسح كل البيانات مع التحذير
+  const handleClearAllData = () => {
+    if (accounts.length === 0) {
+      toast.info("لا توجد بيانات لمسحها");
+      return;
+    }
+    
+    const confirmDelete = window.confirm("⚠️ تحذير: هل أنت متأكد من رغبتك في مسح جميع السجلات المالية بشكل نهائي؟ لا يمكن التراجع عن هذا الإجراء.");
+    
+    if (confirmDelete) {
+      if (clearAccounts) {
+        clearAccounts();
+        toast.success("تم مسح جميع السجلات المالية بنجاح");
+      } else {
+        toast.error("عذراً، دالة مسح البيانات (clearAccounts) غير معرفة في الـ Store.");
+      }
+    }
+  };
+
   return (
     <div className="w-full space-y-6" dir="rtl">
-      {/* ... (باقي أجزاء نموذج الإدخال والملخص المالي كما هي) ... */}
       
+      {/* ========== قسم الإدخال يدوياً والاستيراد ========== */}
       <div className="w-full bg-white shadow-sm border border-slate-200 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-emerald-700 to-emerald-800 px-4 py-3 flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-2">
@@ -250,10 +269,20 @@ export default function AccountsTab() {
           <div>
             <h2 className="text-sm sm:text-base font-bold text-white">📊 كشف سجل الحساب ({accounts.length})</h2>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={clearFilters} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold transition-colors">
               مسح التصفية
             </button>
+            
+            {/* 👇 زر مسح كل البيانات الجديد */}
+            {accounts.length > 0 && (
+              <button 
+                onClick={handleClearAllData} 
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600/90 hover:bg-rose-600 text-white rounded-lg text-xs font-bold transition-colors border border-rose-500 shadow-sm"
+              >
+                <Trash2 className="w-4 h-4" /> مسح كافة البيانات
+              </button>
+            )}
           </div>
         </div>
 
@@ -297,7 +326,6 @@ export default function AccountsTab() {
                     <td className="p-2 text-slate-600">{acc.specialty || "—"}</td>
                     <td className="p-2 font-bold text-slate-900">{acc.name}</td>
                     
-                    {/* 👇 تم إصلاح الخلايا هنا ليتم عرض المبالغ بشكل صحيح */}
                     <td className="p-2 font-mono text-slate-600">
                       {Number(acc.hafizaAmount) > 0 ? fmt(Number(acc.hafizaAmount)) : "—"}
                     </td>
@@ -307,7 +335,6 @@ export default function AccountsTab() {
                     <td className="p-2 font-mono font-bold text-rose-600 bg-rose-50/20">
                       {Number(acc.expense) > 0 ? fmt(Number(acc.expense)) : "—"}
                     </td>
-                    {/* 👆 نهاية التعديل */}
 
                     <td className="p-2 text-center whitespace-nowrap">
                       <div className="flex justify-center gap-1.5">
@@ -337,7 +364,6 @@ export default function AccountsTab() {
       <Modal title="✏️ تعديل السجل المالي للحساب" isOpen={!!editingRow} onClose={() => setEditingRow(null)}>
         {editingRow && (
           <form onSubmit={handleEditSave} className="space-y-4">
-             {/* ... محتوى نافذة التعديل كما هو بدون تغيير ... */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">الاسم</label>
