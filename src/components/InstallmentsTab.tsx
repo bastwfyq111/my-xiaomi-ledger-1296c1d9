@@ -464,11 +464,27 @@ export default function InstallmentsTab() {
             <h2 className="text-sm sm:text-lg font-bold text-white">📊 سجل أقساط العام الحالي 2026</h2>
             <p className="text-xs text-purple-100">بيانات المسدد والرصيد المدور لعام 2026</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={() => setNewPaymentModal(true)} className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold shadow hover:bg-purple-200 transition-colors">➕ إضافة قسط</button>
             <label className="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-xs font-bold cursor-pointer shadow hover:bg-purple-50 transition-colors">
               📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2026)} className="hidden" />
             </label>
+            <TabActions
+              title="أقساط العام 2026"
+              rows={installments || []}
+              columns={[
+                { key: "name", label: "اسم المتدرب" },
+                { key: "batch", label: "الدفعة" },
+                { key: "specialty", label: "المساق" },
+                { key: "prevDue", label: "مدور 2025" },
+                { key: "fees", label: "الرسوم" },
+                { key: "totalPaid", label: "المسدد" },
+                { key: "remaining", label: "المتبقي" },
+              ]}
+              fileName="اقساط-2026"
+              numericKeys={["prevDue","fees","totalPaid","remaining"]}
+              onClear={() => clearInstallments()}
+            />
           </div>
         </div>
         <div className="p-3 sm:p-4">
