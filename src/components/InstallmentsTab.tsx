@@ -374,9 +374,26 @@ export default function InstallmentsTab() {
             <h2 className="text-sm sm:text-lg font-bold text-white">📊 أقساط ومستندات العام 2025</h2>
             <p className="text-xs text-teal-100">يشمل جميع الدفعات لعامي 2024 و 2025</p>
           </div>
-          <label className="px-3 py-1.5 bg-white text-teal-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-teal-50 shadow">
-            📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2025)} className="hidden" />
-          </label>
+          <div className="flex gap-2 flex-wrap">
+            <label className="px-3 py-1.5 bg-white text-teal-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-teal-50 shadow">
+              📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2025)} className="hidden" />
+            </label>
+            <TabActions
+              title="أقساط العام 2025"
+              rows={installments2025 || []}
+              columns={[
+                { key: "name", label: "اسم المتدرب" },
+                { key: "batch", label: "الدفعة" },
+                { key: "specialty", label: "المساق" },
+                { key: "fees", label: "الرسوم" },
+                { key: "totalPaid", label: "المسدد" },
+                { key: "remaining", label: "المتبقي" },
+              ]}
+              fileName="اقساط-2025"
+              numericKeys={["fees","totalPaid","remaining"]}
+              onClear={() => clearInstallments('2025')}
+            />
+          </div>
         </div>
         {importError && <div className="bg-red-50 border-b border-red-200 p-3 flex gap-2"><AlertCircle className="w-5 h-5 text-red-600" /><p className="text-sm text-red-700">{importError}</p></div>}
         <div className="p-3 sm:p-4">
