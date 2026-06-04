@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser, FileSpreadsheet, Link } from "lucide-react";
+import TabActions from "./TabActions";
 // 💡 ملاحظة: يجب التأكد من توفر مسار هذا الملف لكي يعمل القائمة المنسدلة للربط بشكل صحيح.
 import schema from "@/data/revenueTemplate.json";
 
