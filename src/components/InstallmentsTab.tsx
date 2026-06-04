@@ -58,7 +58,7 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
 };
 
 export default function InstallmentsTab() {
-  const { installments, installments2025 } = useStore() as any;
+  const { installments, installments2025, clearInstallments } = useStore() as any;
   const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [newPaymentModal, setNewPaymentModal] = useState(false);
