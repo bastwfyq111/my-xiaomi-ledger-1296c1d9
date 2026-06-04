@@ -110,11 +110,11 @@ function Index() {
       {/* نظام التبويبات الرئيسي الممتد */}
       <Tabs dir="rtl" value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-3 sm:space-y-4">
         
-        {/* شريط التبويبات: تم تحسين الحجم والمسافات لتناسب شاشات الهواتف الذكية (مثل شاومي وأندرويد) */}
-        <div className="w-full overflow-x-auto pb-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList className="flex w-max min-w-full bg-[#0b3d6d] p-1 sm:p-1.5 sm:rounded-xl shadow-md h-auto gap-1.5 sm:gap-2 rounded-none border-b border-white/10 justify-start">
+        {/* 💡 التعديل الرئيسي هنا: تم تحويل هذه الحاوية إلى sticky وبأعلى أولوية ظهور لتبقى ثابتة دائماً عند التمرير */}
+        <div className="sticky top-0 z-50 w-full bg-[#f3f7fa] pt-2 pb-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="flex w-max min-w-full bg-[#0b3d6d] p-1 sm:p-1.5 sm:rounded-xl shadow-lg h-auto gap-1.5 sm:gap-2 rounded-none border-b border-white/10 justify-start">
             
-            {/* 1. الأقساط (في أول اليمين) */}
+            {/* 1. الأقساط */}
             <TabsTrigger 
               value="installments" 
               className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
@@ -174,7 +174,7 @@ function Index() {
               <span className="sm:hidden">إيرادات</span>
             </TabsTrigger>
 
-            {/* 7. جدول المصروفات (في أقصى اليسار) */}
+            {/* 7. جدول المصروفات */}
             <TabsTrigger 
               value="expenses-table" 
               className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
