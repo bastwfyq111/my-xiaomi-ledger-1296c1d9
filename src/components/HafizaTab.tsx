@@ -58,7 +58,7 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
 };
 
 export default function HafizaTab() {
-  const { trainees, hafiza, addHafiza, deleteHafiza, addTrainee, updateHafiza } = useStore();
+  const { trainees, hafiza, addHafiza, deleteHafiza, addTrainee, updateHafiza, clearHafiza } = useStore();
   const [form, setForm] = useState<Form>(empty);
   const [nameQuery, setNameQuery] = useState("");
   const [showSugg, setShowSugg] = useState(false);
