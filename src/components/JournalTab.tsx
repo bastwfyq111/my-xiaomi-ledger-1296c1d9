@@ -3,6 +3,7 @@ import { useStore } from "@/lib/store";
 import { Edit, Save, Trash2, AlertOctagon, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import ImportButton from "@/components/ImportButton";
+import TabActions from "@/components/TabActions";
 import type { Journal } from "@/lib/store";
 
 // قائمة الـ 59 حساباً كاملة والمستخرجة حرفياً من رؤوس أعمدة ملف "القيود2026.xlsx"
@@ -127,16 +128,24 @@ export default function JournalTab() {
           <h3 className="font-bold text-lg text-slate-800">
             {editingId ? "✏️ تعديل القيد المحدد" : "➕ إضافة قيد يومية (قوائم منسدلة شاملة لكامل رؤوس ملف القيود)"}
           </h3>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <ImportButton kind="journal" />
-            {journal.length > 0 && (
-              <button 
-                onClick={() => { if(window.confirm("هل أنت متأكد من مسح البيانات؟")) clearJournal(); }} 
-                className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white border border-rose-200 rounded-lg text-sm font-bold transition-colors"
-              >
-                <AlertOctagon className="w-4 h-4" /> مسح البيانات
-              </button>
-            )}
+            <TabActions
+              title="قيود اليومية"
+              rows={journal}
+              columns={[
+                { key: "date", label: "التاريخ" },
+                { key: "formNo", label: "رقم الاستمارة" },
+                { key: "description", label: "البيان" },
+                { key: "debitAccount", label: "الحساب المدين" },
+                { key: "debit", label: "مدين" },
+                { key: "creditAccount", label: "الحساب الدائن" },
+                { key: "credit", label: "دائن" },
+              ]}
+              fileName="قيود-اليومية"
+              numericKeys={["debit","credit"]}
+              onClear={clearJournal}
+            />
           </div>
         </div>
 

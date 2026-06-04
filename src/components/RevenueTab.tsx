@@ -27,7 +27,7 @@ export function typeKey(c: number, s: number, i: number, t: number) {
 
 export default function RevenueTab() {
   // 1. استخراج حالة الإيرادات ودالة التحديث من مخزن زوستاند (Zustand Store)
-  const { revenue, setRevenue } = useStore();
+  const { revenue, setRevenue, clearTab } = useStore() as any;
   
   // 2. إدارة حالة التاريخ المحاسبي الحالي
   const [year, setYear] = useState(new Date().getFullYear());
@@ -144,7 +144,17 @@ export default function RevenueTab() {
             className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-teal-700 to-teal-800 hover:from-teal-800 hover:to-teal-900 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-teal-700/10 active:scale-[0.98] flex-1 sm:flex-none"
           >
             <FileText className="w-4 h-4" />
-            <span>تصدير تقرير PDF</span>
+            <span>طباعة / PDF</span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (!confirm("هل أنت متأكد من مسح جميع بيانات الإيرادات؟ لا يمكن التراجع.")) return;
+              useStore.setState({ revenue: {} });
+            }}
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-[0.98] flex-1 sm:flex-none"
+          >
+            🗑️ <span>مسح بيانات الإيرادات</span>
           </button>
         </div>
       </div>

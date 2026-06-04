@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import ImportButton from "./ImportButton";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser } from "lucide-react";
+import TabActions from "./TabActions";
 
 const COLS = [
   { key: "name", label: "الاسم" },
@@ -57,7 +58,7 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
 };
 
 export default function HafizaTab() {
-  const { trainees, hafiza, addHafiza, deleteHafiza, addTrainee, updateHafiza } = useStore();
+  const { trainees, hafiza, addHafiza, deleteHafiza, addTrainee, updateHafiza, clearHafiza } = useStore();
   const [form, setForm] = useState<Form>(empty);
   const [nameQuery, setNameQuery] = useState("");
   const [showSugg, setShowSugg] = useState(false);
@@ -213,6 +214,14 @@ export default function HafizaTab() {
             <button onClick={() => hafizaPdf(filtered)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold shadow-md hover:bg-blue-50 active:scale-95 transition-all">
               <Printer className="w-4 h-4" /> طباعة / PDF
             </button>
+            <TabActions
+              title="حوافظ التوريد"
+              rows={hafiza}
+              columns={COLS}
+              fileName="حوافظ-التوريد"
+              numericKeys={["hafizaAmount","notifyAmount"]}
+              onClear={clearHafiza}
+            />
           </div>
         </div>
         

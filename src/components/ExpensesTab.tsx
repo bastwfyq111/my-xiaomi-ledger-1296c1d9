@@ -1,4 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
+import * as XLSX from "xlsx";
+import { toast } from "sonner";
 import schemaJson from "@/lib/expensesSchema.json";
 
 // ====== نوع الصف في شجرة الاستخدامات ======
@@ -341,36 +343,80 @@ export default function ExpensesTab() {
 
   return (
     <div className="space-y-3" dir="rtl">
-      {/* شريط التبويبات الفرعي */}
-      <div className="bg-slate-100 p-1.5 rounded-xl border border-slate-200 overflow-x-auto">
-        <div className="flex gap-1 w-max min-w-full">
-          {subTabs.map(t => {
-            const active = view === t.key;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setView(t.key)}
-                className={`px-2.5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
-                  active
-                    ? `${groupClass(t.group)} text-white shadow-md`
-                    : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
-                }`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
+      {/* شريط التبويبات الفرعي + أزرار الطباعة والتصدير والمسح */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="bg-slate-100 p-1.5 rounded-xl border border-slate-200 overflow-x-auto flex-1 min-w-0">
+          <div className="flex gap-1 w-max min-w-full">
+            {subTabs.map(t => {
+              const active = view === t.key;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => setView(t.key)}
+                  className={`px-2.5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
+                    active
+                      ? `${groupClass(t.group)} text-white shadow-md`
+                      : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              const el = document.getElementById("expenses-view-content");
+              if (!el) return;
+              const w = window.open("", "_blank", "width=1200,height=800");
+              if (!w) return;
+              w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>المصروفات - ${view}</title>
+                <style>@page{size:A4 landscape;margin:8mm}body{font-family:Tajawal,Cairo,Tahoma,Arial,sans-serif;padding:10px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #94a3b8;padding:4px 6px;text-align:right}thead th{background:#0b3d6d;color:#fff}</style>
+                </head><body><h2 style="text-align:center;color:#10528e">جدول المصروفات - ${year}م</h2>${el.innerHTML}
+                <script>window.onload=()=>setTimeout(()=>window.print(),300)</script></body></html>`);
+              w.document.close();
+            }}
+            className="px-3 py-1.5 bg-white text-[#10528e] border border-[#10528e]/30 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-50"
+          >🖨️ طباعة</button>
+          <button
+            onClick={() => {
+              const el = document.getElementById("expenses-view-content");
+              if (!el) return;
+              const tables = el.querySelectorAll("table");
+              if (!tables.length) { toast.error("لا يوجد جدول للتصدير"); return; }
+              const wb = XLSX.utils.book_new();
+              tables.forEach((tb, i) => {
+                const ws = XLSX.utils.table_to_sheet(tb as HTMLTableElement);
+                XLSX.utils.book_append_sheet(wb, ws, `ورقة${i+1}`.slice(0,30));
+              });
+              XLSX.writeFile(wb, `المصروفات-${view}-${year}.xlsx`);
+              toast.success("تم التصدير");
+            }}
+            className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-emerald-700"
+          >📊 Excel</button>
+          <button
+            onClick={() => {
+              if (!confirm("هل أنت متأكد من مسح جميع بيانات المصروفات؟")) return;
+              setStore({});
+              localStorage.removeItem(STORAGE_KEY);
+              toast.success("تم مسح البيانات");
+            }}
+            className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-rose-700"
+          >🗑️ مسح</button>
         </div>
       </div>
 
       {/* محتوى التبويب */}
-      <div>
+      <div id="expenses-view-content">
         {view === "cover" && renderCover()}
         {view.startsWith("m") && view.length <= 3 && renderMonth(Number(view.slice(1)))}
         {view.startsWith("p") && renderQuarter(Number(view.slice(1)) - 1)}
         {view === "final" && renderFinal()}
         {view === "year" && renderYear()}
       </div>
+
 
       {/* تذييل توضيحي */}
       <div className="text-[10px] text-slate-500 text-center bg-slate-50 p-2 rounded-lg border border-slate-200">

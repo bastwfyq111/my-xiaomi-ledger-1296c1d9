@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser, FileSpreadsheet, Link } from "lucide-react";
+import TabActions from "./TabActions";
 // 💡 ملاحظة: يجب التأكد من توفر مسار هذا الملف لكي يعمل القائمة المنسدلة للربط بشكل صحيح.
 import schema from "@/data/revenueTemplate.json";
 
@@ -343,14 +344,14 @@ export default function AccountsTab() {
             <button onClick={clearFilters} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold transition-colors">
               مسح التصفية
             </button>
-            {accounts.length > 0 && (
-              <button 
-                onClick={handleClearAllData} 
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600/90 hover:bg-rose-600 text-white rounded-lg text-xs font-bold transition-colors border border-rose-500 shadow-sm"
-              >
-                <Trash2 className="w-4 h-4" /> مسح كافة البيانات
-              </button>
-            )}
+            <TabActions
+              title="كشف الحساب الجاري"
+              rows={accounts}
+              columns={COLS}
+              fileName="الحساب-الجاري"
+              numericKeys={["hafizaAmount","income","expense","balance"]}
+              onClear={clearAccounts}
+            />
           </div>
         </div>
 

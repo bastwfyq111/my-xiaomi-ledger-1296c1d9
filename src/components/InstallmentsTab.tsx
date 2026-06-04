@@ -5,6 +5,7 @@ import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls } from "@/hooks/useTableControls";
 import { X, Printer, AlertCircle } from "lucide-react";
+import TabActions from "./TabActions";
 
 // مصفوفات الأشهر مطابقة تماماً للمسميات داخل ملفات الإكسيل المرفقة
 const MONTHS_2025 = [
@@ -57,7 +58,7 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
 };
 
 export default function InstallmentsTab() {
-  const { installments, installments2025 } = useStore() as any;
+  const { installments, installments2025, clearInstallments } = useStore() as any;
   const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [newPaymentModal, setNewPaymentModal] = useState(false);
@@ -373,9 +374,26 @@ export default function InstallmentsTab() {
             <h2 className="text-sm sm:text-lg font-bold text-white">📊 أقساط ومستندات العام 2025</h2>
             <p className="text-xs text-teal-100">يشمل جميع الدفعات لعامي 2024 و 2025</p>
           </div>
-          <label className="px-3 py-1.5 bg-white text-teal-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-teal-50 shadow">
-            📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2025)} className="hidden" />
-          </label>
+          <div className="flex gap-2 flex-wrap">
+            <label className="px-3 py-1.5 bg-white text-teal-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-teal-50 shadow">
+              📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2025)} className="hidden" />
+            </label>
+            <TabActions
+              title="أقساط العام 2025"
+              rows={installments2025 || []}
+              columns={[
+                { key: "name", label: "اسم المتدرب" },
+                { key: "batch", label: "الدفعة" },
+                { key: "specialty", label: "المساق" },
+                { key: "fees", label: "الرسوم" },
+                { key: "totalPaid", label: "المسدد" },
+                { key: "remaining", label: "المتبقي" },
+              ]}
+              fileName="اقساط-2025"
+              numericKeys={["fees","totalPaid","remaining"]}
+              onClear={() => clearInstallments('2025')}
+            />
+          </div>
         </div>
         {importError && <div className="bg-red-50 border-b border-red-200 p-3 flex gap-2"><AlertCircle className="w-5 h-5 text-red-600" /><p className="text-sm text-red-700">{importError}</p></div>}
         <div className="p-3 sm:p-4">
@@ -446,11 +464,27 @@ export default function InstallmentsTab() {
             <h2 className="text-sm sm:text-lg font-bold text-white">📊 سجل أقساط العام الحالي 2026</h2>
             <p className="text-xs text-purple-100">بيانات المسدد والرصيد المدور لعام 2026</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={() => setNewPaymentModal(true)} className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold shadow hover:bg-purple-200 transition-colors">➕ إضافة قسط</button>
             <label className="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-xs font-bold cursor-pointer shadow hover:bg-purple-50 transition-colors">
               📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2026)} className="hidden" />
             </label>
+            <TabActions
+              title="أقساط العام 2026"
+              rows={installments || []}
+              columns={[
+                { key: "name", label: "اسم المتدرب" },
+                { key: "batch", label: "الدفعة" },
+                { key: "specialty", label: "المساق" },
+                { key: "prevDue", label: "مدور 2025" },
+                { key: "fees", label: "الرسوم" },
+                { key: "totalPaid", label: "المسدد" },
+                { key: "remaining", label: "المتبقي" },
+              ]}
+              fileName="اقساط-2026"
+              numericKeys={["prevDue","fees","totalPaid","remaining"]}
+              onClear={() => clearInstallments()}
+            />
           </div>
         </div>
         <div className="p-3 sm:p-4">
