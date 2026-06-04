@@ -6,7 +6,7 @@ import { DESCRIPTIONS } from "@/lib/accounts";
 import { toast } from "sonner";
 import ImportButton from "./ImportButton";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
-import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser } from "lucide-react";
+import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser, CheckSquare } from "lucide-react";
 import TabActions from "./TabActions";
 
 const COLS = [
@@ -19,19 +19,13 @@ const COLS = [
   { key: "hafizaAmount", label: "المبلغ" },
   { key: "notifyDate", label: "تاريخ التوريد" },
   { key: "notifyNo", label: "رقم الاشعار" },
+  { key: "notifyAmount", label: "مبلغ التوريد" },
 ];
 
 type Form = {
-  name: string;
-  batch: string;
-  specialty: string;
-  date: string;
-  hafizaNo: string;
-  description: string;
-  hafizaAmount: string;
-  notifyDate: string;
-  notifyNo: string;
-  notifyAmount: string;
+  name: string; batch: string; specialty: string; date: string;
+  hafizaNo: string; description: string; hafizaAmount: string;
+  notifyDate: string; notifyNo: string; notifyAmount: string;
 };
 
 const empty: Form = {
@@ -40,32 +34,27 @@ const empty: Form = {
   notifyDate: "", notifyNo: "", notifyAmount: "",
 };
 
-const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-2 sm:p-4" dir="rtl">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto transform transition-all duration-300">
-        <div className="flex justify-between items-center p-4 border-b bg-gradient-to-l from-indigo-50 to-purple-50 sticky top-0 z-10">
-          <h3 className="font-bold text-base sm:text-lg text-indigo-950">{title}</h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-slate-200/80 active:scale-90 rounded-lg transition-all">
-            <X className="w-5 h-5 text-slate-600" />
-          </button>
-        </div>
-        <div className="p-4">{children}</div>
-      </div>
-    </div>
-  );
-};
-
 export default function HafizaTab() {
   const { trainees, hafiza, addHafiza, deleteHafiza, addTrainee, updateHafiza, clearHafiza } = useStore();
   const [form, setForm] = useState<Form>(empty);
   const [nameQuery, setNameQuery] = useState("");
   const [showSugg, setShowSugg] = useState(false);
-  const [editingRow, setEditingRow] = useState<any | null>(null);
+  
+  // حالة التحكم بالتعديل الفوري داخل الخلايا
+  const [activeCell, setActiveCell] = useState<{ rowId: string; colKey: string } | null>(null);
+  const [cellValue, setCellValue] = useState("");
 
   const { rows: filtered, sortKey, sortDir, toggleSort, filters, setFilter, clearFilters } =
     useTableControls(hafiza, COLS.map((c) => c.key));
+
+  // حساب الإجماليات بشكل ديناميكي وتلقائي بناءً على السطور المعروضة حالياً
+  const totalHafizaAmount = useMemo(() => {
+    return filtered.reduce((sum, item) => sum + (Number(item.hafizaAmount) || 0), 0);
+  }, [filtered]);
+
+  const totalNotifyAmount = useMemo(() => {
+    return filtered.reduce((sum, item) => sum + (Number(item.notifyAmount) || 0), 0);
+  }, [filtered]);
 
   const nameSuggestions = useMemo(() => {
     const q = nameQuery.trim();
@@ -98,27 +87,55 @@ export default function HafizaTab() {
     if (!trainees.find((t) => t.name === form.name)) {
       addTrainee({ name: form.name, batch: form.batch, specialty: form.specialty });
     }
-    toast.success("تم الحفظ في الحوافظ والحساب واليومية بنجاح");
+    toast.success("تم الحفظ بنجاح");
     setForm(empty);
     setNameQuery("");
   };
 
-  const handleEditSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingRow) return;
-    updateHafiza(editingRow.id, {
-      ...editingRow,
-      hafizaAmount: Number(editingRow.hafizaAmount) || 0,
-      notifyAmount: Number(editingRow.notifyAmount) || 0,
+  const handleCopyAmountsToNotify = () => {
+    if (filtered.length === 0) {
+      toast.error("لا توجد سجلات حالية لنقل مبالغها");
+      return;
+    }
+    
+    filtered.forEach((row) => {
+      updateHafiza(row.id, {
+        ...row,
+        notifyAmount: Number(row.hafizaAmount) || 0
+      });
     });
-    toast.success("تم تعديل الحافظة بنجاح");
-    setEditingRow(null);
+    
+    toast.success(`تم نسخ مبالغ الحافظة إلى مبالغ التوريد لـ (${filtered.length}) سجل بنجاح!`);
+  };
+
+  const handleCellClick = (rowId: string, colKey: string, currentVal: any) => {
+    setActiveCell({ rowId, colKey });
+    setCellValue(String(currentVal ?? ""));
+  };
+
+  const handleCellSave = (row: any) => {
+    if (!activeCell) return;
+    
+    const { colKey, rowId } = activeCell;
+    let finalVal: any = cellValue;
+    
+    if (colKey === "hafizaAmount" || colKey === "notifyAmount") {
+      finalVal = Number(cellValue) || 0;
+    }
+
+    updateHafiza(rowId, {
+      ...row,
+      [colKey]: finalVal
+    });
+
+    setActiveCell(null);
+    toast.success("تم التحديث التلقائي للخلية");
   };
 
   return (
     <div className="w-full space-y-6 p-0" dir="rtl">
       
-      {/* ========== قسم إضافة حافظة توريد (تم تغيير العنوان إلى تدرج بنفسجي/نيلي حديث) ========== */}
+      {/* ========== قسم إضافة حافظة توريد جديدة ========== */}
       <div className="w-full bg-white shadow-md border border-slate-200/80 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-indigo-600 via-purple-600 to-pink-600 px-4 py-4 flex flex-wrap justify-between items-center gap-3 shadow-inner">
           <div className="flex items-center gap-2.5">
@@ -188,7 +205,6 @@ export default function HafizaTab() {
             <Field label="مبلغ التوريد" type="number" v={form.notifyAmount} on={(v) => setForm({ ...form, notifyAmount: v })} />
           </div>
           
-          {/* الأزرار التفاعلية الحديثة */}
           <div className="mt-5 flex gap-3 flex-wrap border-t border-slate-100 pt-4">
             <button onClick={submit} className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold hover:from-indigo-700 hover:to-purple-700 active:scale-95 transition-all text-sm shadow-md shadow-indigo-200 focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2">
               <Save className="w-4 h-4" /> حفظ وترحيل تلقائي
@@ -200,14 +216,21 @@ export default function HafizaTab() {
         </div>
       </div>
 
-      {/* ========== قسم جدول حوافظ التوريد ========== */}
+      {/* ========== سجل حوافظ التوريد الذكي الجدول التفاعلي ========== */}
       <div className="w-full bg-white shadow-md border border-blue-100 rounded-xl overflow-hidden">
         <div className="bg-gradient-to-l from-blue-600 to-cyan-600 px-4 py-4 flex flex-wrap justify-between items-center gap-3">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">📑 سجل حوافظ التوريد <span className="bg-white/20 text-white px-2 py-0.5 rounded-full text-xs font-mono">{hafiza.length}</span></h2>
-            <p className="text-xs text-blue-50/80 mt-0.5">عرض، تصفية وطباعة حوافظ التوريد المسجلة</p>
+            <p className="text-xs text-blue-50/80 mt-0.5">اضغط مباشرة على أي خلية لتعديل قيمتها فوراً • صف الإجمالي في الأسفل ديناميكي</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            <button 
+              onClick={handleCopyAmountsToNotify} 
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-extrabold rounded-lg text-xs shadow-md transition-all font-tajawal"
+            >
+              <CheckSquare className="w-4 h-4" /> نسخ المبالغ للتوريد ⚡
+            </button>
+            
             <button onClick={clearFilters} className="px-3 py-1.5 bg-blue-700/40 hover:bg-blue-700/60 active:scale-95 text-white rounded-lg text-xs font-bold transition-all border border-blue-400/30">
               مسح التصفية
             </button>
@@ -215,12 +238,8 @@ export default function HafizaTab() {
               <Printer className="w-4 h-4" /> طباعة / PDF
             </button>
             <TabActions
-              title="حوافظ التوريد"
-              rows={hafiza}
-              columns={COLS}
-              fileName="حوافظ-التوريد"
-              numericKeys={["hafizaAmount","notifyAmount"]}
-              onClear={clearHafiza}
+              title="حوافظ التوريد" rows={hafiza} columns={COLS} fileName="حوافظ-التوريد"
+              numericKeys={["hafizaAmount","notifyAmount"]} onClear={clearHafiza}
             />
           </div>
         </div>
@@ -253,96 +272,94 @@ export default function HafizaTab() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((h, i) => (
-                  <tr key={h.id} className="hover:bg-indigo-50/30 transition-colors">
-                    <td className="p-2.5 text-center text-slate-400 font-mono">{i + 1}</td>
-                    <td className="p-2.5 font-bold text-slate-900">{h.name}</td>
-                    <td className="p-2.5 text-slate-600">{h.batch || "—"}</td>
-                    <td className="p-2.5 text-slate-600">{h.specialty || "—"}</td>
-                    <td className="p-2.5 whitespace-nowrap text-slate-600">{h.date}</td>
-                    <td className="p-2.5 font-mono text-slate-700">{h.hafizaNo}</td>
-                    <td className="p-2.5 text-slate-600 truncate max-w-[150px]" title={h.description}>{h.description || "—"}</td>
-                    <td className="p-2.5 font-mono font-bold text-emerald-700 bg-emerald-50/40">{fmt(h.hafizaAmount)}</td>
-                    <td className="p-2.5 whitespace-nowrap text-slate-600">{h.notifyDate || "—"}</td>
-                    <td className="p-2.5 font-mono text-slate-600">{h.notifyNo || "—"}</td>
-                    <td className="p-2.5 text-center whitespace-nowrap">
-                      <div className="flex justify-center gap-1.5">
-                        <button onClick={() => setEditingRow(h)} className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-600 hover:text-white active:scale-90 transition-all" title="تعديل">
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => { if (confirm("هل أنت متأكد من حذف هذه الحافظة؟")) deleteHafiza(h.id); }} className="p-1.5 bg-rose-50 text-rose-600 rounded-md hover:bg-rose-500 hover:text-white active:scale-90 transition-all" title="حذف">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                  <tr key={h.id} className="hover:bg-indigo-50/20 transition-colors group">
+                    <td className="p-2.5 text-center text-slate-400 font-mono bg-slate-50/50">{i + 1}</td>
+                    
+                    {COLS.map((col) => {
+                      const isEditing = activeCell?.rowId === h.id && activeCell?.colKey === col.key;
+                      return (
+                        <td 
+                          key={col.key} 
+                          onClick={() => handleCellClick(h.id, col.key, h[col.key])}
+                          className={`p-2 cursor-pointer transition-all border border-transparent hover:border-indigo-300 hover:bg-yellow-50/40 relative ${
+                            col.key === 'hafizaAmount' ? 'font-mono font-bold text-emerald-700 bg-emerald-50/10' : 
+                            col.key === 'notifyAmount' ? 'font-mono font-bold text-blue-700 bg-blue-50/10' : 'text-slate-700'
+                          }`}
+                        >
+                          {isEditing ? (
+                            <input 
+                              type={col.key === 'hafizaAmount' || col.key === 'notifyAmount' ? 'number' : col.key === 'date' || col.key === 'notifyDate' ? 'date' : 'text'}
+                              value={cellValue}
+                              autoFocus
+                              onChange={(e) => setCellValue(e.target.value)}
+                              onBlur={() => handleCellSave(h)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleCellSave(h); if (e.key === 'Escape') setActiveCell(null); }}
+                              className="w-full p-1 border-2 border-indigo-500 rounded outline-none bg-white text-slate-900 shadow-md font-sans text-xs z-10"
+                            />
+                          ) : (
+                            <span className="block min-h-[20px] w-full">
+                              {col.key === "hafizaAmount" || col.key === "notifyAmount" 
+                                ? fmt(h[col.key]) 
+                                : (h[col.key] || "—")}
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })}
+
+                    <td className="p-2 text-center whitespace-nowrap">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); if (confirm("هل أنت متأكد من حذف هذه الحافظة نهائياً؟")) deleteHafiza(h.id); }} 
+                        className="p-1.5 bg-rose-50 text-rose-600 rounded-md hover:bg-rose-500 hover:text-white active:scale-90 transition-all opacity-80 group-hover:opacity-100" 
+                        title="حذف السجل"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={11} className="p-8 text-center text-slate-400 bg-slate-50 font-medium">
-                      لا توجد بيانات مطابقة للبحث
+                    <td colSpan={12} className="p-8 text-center text-slate-400 bg-slate-50 font-medium">
+                      لا توجد بيانات مطابقة للبحث حالياً
                     </td>
                   </tr>
                 )}
               </tbody>
+
+              {/* ========== صف الإجماليات المضاف والمميز بلون ذهبي رمادي أنيق ========== */}
+              {filtered.length > 0 && (
+                <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300 sticky bottom-0 z-10 text-slate-800">
+                  <tr>
+                    <td className="p-3 text-center bg-slate-200">∑</td>
+                    <td className="p-3 text-right text-slate-900 font-extrabold text-sm">الإجمالي المالي للتقرير</td>
+                    <td className="p-3">—</td>
+                    <td className="p-3">—</td>
+                    <td className="p-3">—</td>
+                    <td className="p-3">—</td>
+                    <td className="p-3">—</td>
+                    {/* إجمالي عمود المبلغ */}
+                    <td className="p-3 font-mono font-extrabold text-emerald-800 bg-emerald-100/80 text-sm">
+                      {fmt(totalHafizaAmount)}
+                    </td>
+                    <td className="p-3">—</td>
+                    <td className="p-3">—</td>
+                    {/* إجمالي عمود مبلغ التوريد */}
+                    <td className="p-3 font-mono font-extrabold text-blue-800 bg-blue-100/80 text-sm">
+                      {fmt(totalNotifyAmount)}
+                    </td>
+                    <td className="p-3 bg-slate-200"></td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>
       </div>
-
-      {/* ========== نافذة التعديل المنبثقة ========== */}
-      <Modal title="✏️ تعديل بيانات الحافظة" isOpen={!!editingRow} onClose={() => setEditingRow(null)}>
-        {editingRow && (
-          <form onSubmit={handleEditSave} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               <div className="sm:col-span-2">
-                 <label className="block text-xs font-bold text-slate-700 mb-1">الاسم</label>
-                 <input value={editingRow.name} onChange={(e) => setEditingRow({...editingRow, name: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-400 bg-slate-50" required />
-               </div>
-               <div>
-                 <label className="block text-xs font-bold text-slate-700 mb-1">الدفعة</label>
-                 <input value={editingRow.batch} onChange={(e) => setEditingRow({...editingRow, batch: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
-               </div>
-               <div>
-                 <label className="block text-xs font-bold text-slate-700 mb-1">التخصص</label>
-                 <input value={editingRow.specialty} onChange={(e) => setEditingRow({...editingRow, specialty: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
-               </div>
-               <div>
-                 <label className="block text-xs font-bold text-slate-700 mb-1">التاريخ</label>
-                 <input type="date" value={editingRow.date} onChange={(e) => setEditingRow({...editingRow, date: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-400" required />
-               </div>
-               <div>
-                 <label className="block text-xs font-bold text-slate-700 mb-1">رقم الحافظة</label>
-                 <input value={editingRow.hafizaNo} onChange={(e) => setEditingRow({...editingRow, hafizaNo: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-400" required />
-               </div>
-               <div>
-                 <label className="block text-xs font-bold text-slate-700 mb-1">مبلغ الحافظة</label>
-                 <input type="number" value={editingRow.hafizaAmount} onChange={(e) => setEditingRow({...editingRow, hafizaAmount: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-400" required />
-               </div>
-               <div className="sm:col-span-2">
-                 <label className="block text-xs font-bold text-slate-700 mb-1">البيان</label>
-                 <input value={editingRow.description} onChange={(e) => setEditingRow({...editingRow, description: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
-               </div>
-               <div>
-                 <label className="block text-xs font-bold text-slate-700 mb-1">تاريخ التوريد</label>
-                 <input type="date" value={editingRow.notifyDate || ''} onChange={(e) => setEditingRow({...editingRow, notifyDate: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
-               </div>
-               <div>
-                 <label className="block text-xs font-bold text-slate-700 mb-1">رقم الإشعار</label>
-                 <input value={editingRow.notifyNo || ''} onChange={(e) => setEditingRow({...editingRow, notifyNo: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-400" />
-               </div>
-            </div>
-            <div className="flex justify-end gap-3 pt-4 border-t mt-4">
-              <button type="button" onClick={() => setEditingRow(null)} className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 active:scale-95 transition-all">إلغاء</button>
-              <button type="submit" className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg hover:from-indigo-700 hover:to-purple-700 active:scale-95 transition-all shadow-md">حفظ التعديلات</button>
-            </div>
-          </form>
-        )}
-      </Modal>
     </div>
   );
 }
 
-// المكون الفرعي الصغير المحدث بلمسات تركيز (Focus) ناعمة ومتناسقة
 function Field({ label, v, on, type = "text" }: { label: string; v: string; on: (v: string) => void; type?: string }) {
   return (
     <div>
