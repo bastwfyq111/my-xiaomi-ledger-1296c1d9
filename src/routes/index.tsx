@@ -11,8 +11,6 @@ import {
   PieChart, 
   TrendingUp, 
   ReceiptText,
-  Download,
-  Upload,
   DownloadCloud
 } from "lucide-react";
 
@@ -28,13 +26,12 @@ import MonthlyStatementTab from "@/components/MonthlyStatementTab";
 import RevenueTab from "@/components/RevenueTab";
 import ExpensesTab from "@/components/ExpensesTab"; 
 
-// استيراد إدارة الحالة ووظائف الإكسيل والـ PWA
-import { useStore } from "@/lib/store";
-import { exportToExcel, importFromExcel } from "@/lib/exportImport";
+// استيراد وظائف الـ PWA
 import { canInstall, onInstallAvailability, promptInstall } from "@/lib/pwa";
 
 // إعداد مسار التوجيه والبيانات التعريفية للمتصفح
-export const Route = createFileRoute("/")({  component: Index,
+export const Route = createFileRoute("/")({  
+  component: Index,
   head: () => ({
     meta: [
       { title: "قيادة النظام المالي - المجلس اليمني للاختصاصات الطبية" },
@@ -57,9 +54,6 @@ function Index() {
   const [activeTab, setActiveTab] = useState<Tab>("installments");
   const [pwaInstallable, setPwaInstallable] = useState<boolean>(false);
 
-  const importData = useStore((state) => state.importData);
-  const fullState = useStore((state) => state);
-
   useEffect(() => {
     setPwaInstallable(canInstall());
     const unsubscribe = onInstallAvailability((available) => {
@@ -67,30 +61,6 @@ function Index() {
     });
     return () => unsubscribe();
   }, []);
-
-  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const loadingToast = toast.loading("جاري قراءة ومعالجة ملف الإكسل...");
-      const data = await importFromExcel(file);
-      importData(data);
-      toast.dismiss(loadingToast);
-      toast.success("تم استيراد البيانات بنجاح!");
-    } catch (error) {
-      toast.error("فشل استيراد الملف.");
-    }
-  };
-
-  const handleExportExcel = () => {
-    try {
-      exportToExcel(fullState);
-      toast.success("تم تصدير التقرير بنجاح");
-    } catch (error) {
-      toast.error("حدث خطأ أثناء التصدير");
-    }
-  };
 
   const handlePWAInstall = async () => {
     const success = await promptInstall();
@@ -106,6 +76,8 @@ function Index() {
       
       {/* قسم الهيدر العلوي والأزرار السريعة بالألوان الزرقاء الملكية */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-gradient-to-r from-[#10528e] to-[#0b3d6d] p-3 sm:p-5 sm:rounded-2xl border-b sm:border border-slate-200/40 shadow-md text-white">
+        
+        {/* الجزء الأيمن: الأيقونة، العنوان، والوصف */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="p-2 bg-white/10 rounded-xl text-white hidden sm:block">
             <FileSpreadsheet className="w-5 h-5" />
@@ -121,6 +93,7 @@ function Index() {
           </div>
         </div>
 
+        {/* الجزء الأيسر: زر التثبيت PWA */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 px-1 sm:px-0">
           {pwaInstallable && (
             <button
@@ -131,36 +104,22 @@ function Index() {
               <span>تثبيت</span>
             </button>
           )}
-
-          <label className="flex items-center gap-1 bg-white hover:bg-slate-50 text-[#10528e] border-2 border-[#10528e] font-bold text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg cursor-pointer transition-all shadow-sm">
-            <Upload className="w-3 h-3" />
-            <span>استيراد</span>
-            <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} />
-          </label>
-
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[10px] sm:text-xs px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all shadow-sm"
-          >
-            <Download className="w-3 h-3" />
-            <span>تصدير</span>
-          </button>
         </div>
       </div>
 
       {/* نظام التبويبات الرئيسي الممتد */}
-      <Tabs dir="rtl" value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-2 sm:space-y-3">
+      <Tabs dir="rtl" value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} className="w-full space-y-3 sm:space-y-4">
         
-        {/* شريط التبويبات: تم صف التبويبات كعناصر مباشرة دون دالة loop لضمان الترتيب الصارم من اليمين لليسار */}
-        <div className="w-full overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList className="flex w-max min-w-full bg-[#0b3d6d] p-0.5 sm:p-1 sm:rounded-xl shadow-md h-auto gap-0.5 sm:gap-1 rounded-none border-b border-white/10 justify-start">
+        {/* شريط التبويبات: تم تحسين الحجم والمسافات لتناسب شاشات الهواتف الذكية (مثل شاومي وأندرويد) */}
+        <div className="w-full overflow-x-auto pb-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="flex w-max min-w-full bg-[#0b3d6d] p-1 sm:p-1.5 sm:rounded-xl shadow-md h-auto gap-1.5 sm:gap-2 rounded-none border-b border-white/10 justify-start">
             
             {/* 1. الأقساط (في أول اليمين) */}
             <TabsTrigger 
               value="installments" 
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
+              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <WalletCards className="w-3 h-3" />
+              <WalletCards className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">كشف الأقساط</span>
               <span className="sm:hidden">أقساط</span>
             </TabsTrigger>
@@ -168,9 +127,9 @@ function Index() {
             {/* 2. حوافظ التوريد */}
             <TabsTrigger 
               value="hafiza" 
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
+              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <FileBox className="w-3 h-3" />
+              <FileBox className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">حوافظ التوريد</span>
               <span className="sm:hidden">حوافظ</span>
             </TabsTrigger>
@@ -178,9 +137,9 @@ function Index() {
             {/* 3. الحساب الجاري */}
             <TabsTrigger 
               value="account" 
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
+              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <FileSpreadsheet className="w-3 h-3" />
+              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">الحساب الجاري</span>
               <span className="sm:hidden">حساب</span>
             </TabsTrigger>
@@ -188,9 +147,9 @@ function Index() {
             {/* 4. القيود اليومية */}
             <TabsTrigger 
               value="journal" 
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
+              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <BookOpenText className="w-3 h-3" />
+              <BookOpenText className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">القيود اليومية</span>
               <span className="sm:hidden">قيود</span>
             </TabsTrigger>
@@ -198,9 +157,9 @@ function Index() {
             {/* 5. كشف حساب شهري */}
             <TabsTrigger 
               value="monthly" 
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
+              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <PieChart className="w-3 h-3" />
+              <PieChart className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">كشف حساب شهري</span>
               <span className="sm:hidden">شهري</span>
             </TabsTrigger>
@@ -208,9 +167,9 @@ function Index() {
             {/* 6. حركة الإيرادات */}
             <TabsTrigger 
               value="revenue" 
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
+              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <TrendingUp className="w-3 h-3" />
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">حركة الإيرادات</span>
               <span className="sm:hidden">إيرادات</span>
             </TabsTrigger>
@@ -218,9 +177,9 @@ function Index() {
             {/* 7. جدول المصروفات (في أقصى اليسار) */}
             <TabsTrigger 
               value="expenses-table" 
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-2 sm:py-2.5 text-[9px] sm:text-xs font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
+              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
             >
-              <ReceiptText className="w-3 h-3" />
+              <ReceiptText className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">جدول المصروفات</span>
               <span className="sm:hidden">مصروفات</span>
             </TabsTrigger>
