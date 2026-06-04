@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import ImportButton from "./ImportButton";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser } from "lucide-react";
+import TabActions from "./TabActions";
 
 const COLS = [
   { key: "name", label: "الاسم" },
