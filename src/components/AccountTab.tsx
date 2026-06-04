@@ -74,6 +74,7 @@ export default function AccountsTab() {
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
+  // 💡 تحديث منطق المطابقة لمنع التكرار بناءً على (الاسم أو المبلغ أو التاريخ)
   const handleSyncFromHafiza = () => {
     if (!hafizas || hafizas.length === 0) {
       toast.error("لا توجد بيانات في تبويب حوافظ التوريد لجلبها!");
@@ -81,20 +82,33 @@ export default function AccountsTab() {
     }
     let addedCount = 0;
     let skippedCount = 0;
+    
+    // تصفية حوافظ عام 2026 فقط
     const h2026 = hafizas.filter((h: any) => (h.date ? String(h.date).substring(0, 4) : "") === "2026");
+    
     if (h2026.length === 0) {
       toast.info("لم يتم العثور على أي حوافظ تابعة لعام 2026.");
       return;
     }
+
     h2026.forEach((hafiza: any) => {
+      const hName = String(hafiza.name || "").trim();
+      const hAmount = Number(hafiza.hafizaAmount || hafiza.income || 0);
+      const hDate = String(hafiza.date || "").trim();
+
+      // التحقق: إذا تشابه أي عمود (الاسم أو المبلغ أو التاريخ) مع الحسابات الحالية
       const isDuplicate = accounts.some((acc: any) => {
+        const accName = String(acc.name || "").trim();
+        const accAmount = Number(acc.hafizaAmount || acc.income || 0);
+        const accDate = String(acc.date || "").trim();
+
         return (
-          String(acc.hafizaNo || "") === String(hafiza.hafizaNo || "") &&
-          String(acc.date || "") === String(hafiza.date || "") &&
-          Number(acc.income || 0) === Number(hafiza.income || hafiza.hafizaAmount || 0) &&
-          Number(acc.hafizaAmount || 0) === Number(hafiza.hafizaAmount || 0)
+          (hName !== "" && accName === hName) || 
+          (hAmount !== 0 && accAmount === hAmount) || 
+          (hDate !== "" && accDate === hDate)
         );
       });
+
       if (!isDuplicate) {
         addAccount({
           date: hafiza.date || today(),
@@ -106,8 +120,8 @@ export default function AccountsTab() {
           description: hafiza.description || "استيراد تلقائي من حوافظ التوريد 2026",
           specialty: hafiza.specialty || "",
           name: hafiza.name || "",
-          hafizaAmount: Number(hafiza.hafizaAmount) || 0,
-          income: Number(hafiza.income || hafiza.hafizaAmount || 0),
+          hafizaAmount: hAmount,
+          income: hAmount, // الحوافظ تمثل إيراداً للحساب الجاري
           expense: 0,
           revenueKey: hafiza.revenueKey || undefined,
         });
@@ -116,10 +130,11 @@ export default function AccountsTab() {
         skippedCount++;
       }
     });
+
     if (addedCount > 0) {
-      toast.success(`تمت المطابقة بنجاح! تم استيراد (${addedCount}) سجلات جديدة وتجاهل (${skippedCount}) سجلات مكررة.`);
+      toast.success(`تمت المطابقة الذكية بنجاح! تم استيراد (${addedCount}) سجلات جديدة وتجاهل (${skippedCount}) سجلات موجودة مسبقاً.`);
     } else {
-      toast.info(`المطابقة مكتملة! جميع حوافظ 2026 موجودة مسبقاً.`);
+      toast.info(`المطابقة مكتملة! كافة سجلات حوافظ 2026 متطابقة وموجودة مسبقاً في الحساب الجاري.`);
     }
   };
 
@@ -174,13 +189,14 @@ export default function AccountsTab() {
   const handleEditSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingRow) return;
+    // 💡 التحديث المباشر والفوري داخل الحساب الجاري وتحديث منطق المتجر
     updateAccount(editingRow.id, {
       ...editingRow,
       hafizaAmount: Number(editingRow.hafizaAmount) || 0,
       income: Number(editingRow.income) || 0,
       expense: Number(editingRow.expense) || 0,
     });
-    toast.success("تم تعديل السجل بنجاح");
+    toast.success("تم تعديل السجل وتحديث البيانات في الحساب الجاري فوراً");
     setEditingRow(null);
   };
 
@@ -282,7 +298,7 @@ export default function AccountsTab() {
               className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-black cursor-pointer hover:from-amber-400 hover:to-amber-500 transition-all shadow-sm active:scale-95 duration-150"
             >
               <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" /> 
-              <span>ربط ومطابقة حوافظ 2026</span>
+              <span>ربط ومطابقة حوافظ 2026 (الاسم أو المبلغ أو التاريخ)</span>
             </button>
 
             <label className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 text-white border border-white/10 rounded-xl text-xs font-bold cursor-pointer hover:bg-white/20 transition-all shadow-sm duration-150">
@@ -462,9 +478,6 @@ export default function AccountsTab() {
   );
 }
 
-// ==========================================
-// 3. مكون الحقل الفرعي المساعد (Field)
-// ==========================================
 function Field({ label, v, on, type = "text", placeholder = "", icon, className = "" }: { label: string; v: string; on: (v: string) => void; type?: string; placeholder?: string; icon?: React.ReactNode; className?: string }) {
   return (
     <div>
