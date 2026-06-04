@@ -5,6 +5,7 @@ import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls } from "@/hooks/useTableControls";
 import { X, Printer, AlertCircle } from "lucide-react";
+import TabActions from "./TabActions";
 
 // مصفوفات الأشهر مطابقة تماماً للمسميات داخل ملفات الإكسيل المرفقة
 const MONTHS_2025 = [
