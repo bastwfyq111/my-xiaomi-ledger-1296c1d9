@@ -27,7 +27,7 @@ export function typeKey(c: number, s: number, i: number, t: number) {
 
 export default function RevenueTab() {
   // 1. استخراج حالة الإيرادات ودالة التحديث من مخزن زوستاند (Zustand Store)
-  const { revenue, setRevenue } = useStore();
+  const { revenue, setRevenue, clearTab } = useStore() as any;
   
   // 2. إدارة حالة التاريخ المحاسبي الحالي
   const [year, setYear] = useState(new Date().getFullYear());
