@@ -26,24 +26,14 @@ const COLS = [
   { key: "hafizaAmount", label: "مبلغ الحافظة" },
   { key: "income", label: "الإيرادات" },
   { key: "expense", label: "المصروفات" },
-  { key: "revenueKey", label: "رمز الإيراد" }, // 💡 عمود جديد
+  { key: "revenueKey", label: "رمز الإيراد" }, 
   { key: "balance", label: "الرصيد" },
 ];
 
 type FormType = {
-  date: string;
-  hafizaNo: string;
-  notifyNo: string;
-  notifyDate: string;
-  checkNo: string;
-  checkDate: string;
-  description: string;
-  specialty: string;
-  name: string;
-  hafizaAmount: string;
-  income: string;
-  expense: string;
-  revenueKey: string; // 💡 حقل جديد
+  date: string; hafizaNo: string; notifyNo: string; notifyDate: string;
+  checkNo: string; checkDate: string; description: string; specialty: string;
+  name: string; hafizaAmount: string; income: string; expense: string; revenueKey: string;
 };
 
 const emptyForm: FormType = {
@@ -52,9 +42,6 @@ const emptyForm: FormType = {
   name: "", hafizaAmount: "", income: "", expense: "", revenueKey: ""
 };
 
-// ==========================================
-// 2. دالة تنظيف المبالغ المستوردة من الإكسل
-// ==========================================
 const parseAmount = (val: any): number => {
   if (val === undefined || val === null || val === "") return 0;
   if (typeof val === 'number') return val;
@@ -63,9 +50,6 @@ const parseAmount = (val: any): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-// ==========================================
-// 3. مكون النافذة المنبثقة (Modal)
-// ==========================================
 const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
   if (!isOpen) return null;
   return (
@@ -83,18 +67,44 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
   );
 };
 
-// ==========================================
-// 4. المكون الرئيسي (AccountsTab)
-// ==========================================
 export default function AccountsTab() {
-  const { accounts, addAccount, updateAccount, deleteAccount, clearAccounts } = useStore();
+  // 💡 قمنا بسحب مصفوفة الحوافظ (hafiza) لربطها تلقائياً بجدول كشف الحساب الجاري
+  const { accounts, hafiza, addAccount, updateAccount, deleteAccount, clearAccounts } = useStore();
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
-  const { rows: filtered, sortKey, sortDir, toggleSort, filters, setFilter, clearFilters } =
-    useTableControls(accounts, COLS.map((c) => c.key));
+  // حالات التحكم بالتعديل الفوري المباشر داخل الخلايا
+  const [activeCell, setActiveCell] = useState<{ rowId: string; colKey: string } | null>(null);
+  const [cellValue, setCellValue] = useState("");
 
-  // 💡 تحضير قائمة الإيرادات لكي تظهر كخيارات (Dropdown) في الواجهة 
+  // 💡 الدمج الذكي: نقوم بدمج الحسابات اليدوية والمستوردة مع بيانات الحوافظ بشكل تلقائي
+  const combinedData = useMemo(() => {
+    // 1. تحويل بيانات الحوافظ إلى شكل متوافق مع أعمدة كشف الحساب
+    const hafizaMapped = hafiza.map((h) => ({
+      id: `hafiza-${h.id}`, // معرف مميز للحماية من تكرار المفاتيح
+      isFromHafiza: true,    // علامة استرشادية لمنع الحذف العشوائي من هنا
+      date: h.date || today(),
+      hafizaNo: h.hafizaNo || "",
+      notifyNo: h.notifyNo || "",
+      notifyDate: h.notifyDate || "",
+      checkNo: "",
+      checkDate: "",
+      description: h.description || "توريد حافظة تلقائي",
+      specialty: h.specialty || "",
+      name: h.name || "",
+      hafizaAmount: Number(h.hafizaAmount) || 0,
+      income: Number(h.notifyAmount) || 0, // مبلغ التوريد يرحل تلقائياً كإيراد
+      expense: 0,
+      revenueKey: h.revenueKey || "", 
+    }));
+
+    return [...accounts, ...hafizaMapped];
+  }, [accounts, hafiza]);
+
+  // استخدام عناصر التصفية والتحكم على المصفوفة المدمجة بالكامل
+  const { rows: filtered, sortKey, sortDir, toggleSort, filters, setFilter, clearFilters } =
+    useTableControls(combinedData, COLS.map((c) => c.key));
+
   const revenueTypes = useMemo(() => {
     const list: { key: string; label: string }[] = [];
     if(schema && schema.chapters) {
@@ -114,12 +124,12 @@ export default function AccountsTab() {
     return list;
   }, []);
 
-  // حساب الإجماليات للأشرطة العلوية
-  const totalIncome = useMemo(() => accounts.reduce((sum, a) => sum + (Number(a.income) || 0), 0), [accounts]);
-  const totalExpense = useMemo(() => accounts.reduce((sum, a) => sum + (Number(a.expense) || 0), 0), [accounts]);
+  // حساب الإجماليات للأشرطة العلوية بناءً على الحسابات المدمجة شاملة الحوافظ
+  const totalIncome = useMemo(() => combinedData.reduce((sum, a) => sum + (Number(a.income) || 0), 0), [combinedData]);
+  const totalExpense = useMemo(() => combinedData.reduce((sum, a) => sum + (Number(a.expense) || 0), 0), [combinedData]);
   const currentBalance = totalIncome - totalExpense;
 
-  // الرصيد التراكمي
+  // حساب الرصيد التراكمي المتحرك للأسطر الظاهرة والمفلترة
   const filteredWithBalance = useMemo(() => {
     let runningBalance = 0;
     return filtered.map((row) => {
@@ -137,19 +147,13 @@ export default function AccountsTab() {
     }
 
     addAccount({
-      date: form.date,
-      hafizaNo: form.hafizaNo,
-      notifyNo: form.notifyNo,
-      notifyDate: form.notifyDate,
-      checkNo: form.checkNo,
-      checkDate: form.checkDate,
-      description: form.description,
-      specialty: form.specialty,
-      name: form.name,
+      date: form.date, hafizaNo: form.hafizaNo, notifyNo: form.notifyNo,
+      notifyDate: form.notifyDate, checkNo: form.checkNo, checkDate: form.checkDate,
+      description: form.description, specialty: form.specialty, name: form.name,
       hafizaAmount: Number(form.hafizaAmount) || 0,
       income: Number(form.income) || 0,
       expense: Number(form.expense) || 0,
-      revenueKey: form.revenueKey || undefined, // إرسال مفتاح الربط
+      revenueKey: form.revenueKey || undefined,
     });
 
     toast.success("تم إضافة السجل المالي للحساب بنجاح وتحديث الإيرادات");
@@ -160,6 +164,13 @@ export default function AccountsTab() {
     e.preventDefault();
     if (!editingRow) return;
     
+    // إذا كان السجل قادم من الحوافظ، نوجه المستخدم لتعديله من تبويبه الأصلي لمنع تعارض البيانات
+    if (editingRow.isFromHafiza) {
+      toast.error("هذا السجل مرتبط بتبويب الحوافظ، يرجى تعديله من تبويب الحوافظ مباشرة لتحديثه تلقائياً هنا.");
+      setEditingRow(null);
+      return;
+    }
+
     updateAccount(editingRow.id, {
       ...editingRow,
       hafizaAmount: Number(editingRow.hafizaAmount) || 0,
@@ -169,6 +180,31 @@ export default function AccountsTab() {
     
     toast.success("تم تعديل السجل بنجاح وتحديث الإيرادات");
     setEditingRow(null);
+  };
+
+  // التحكم بالتعديل الفوري المباشر عند النقر فوق الخلية
+  const handleCellClick = (row: any, colKey: string, currentVal: any) => {
+    if (row.isFromHafiza) {
+      toast.info("هذه الخلية مرتبطة بجدول الحوافظ. أي تعديل هناك سيحدثها هنا فوراً ⚡");
+      return;
+    }
+    setActiveCell({ rowId: row.id, colKey });
+    setCellValue(String(currentVal ?? ""));
+  };
+
+  // حفظ التعديل الفوري المباشر للخلية ونقله للستور
+  const handleCellSave = (row: any) => {
+    if (!activeCell) return;
+    const { colKey, rowId } = activeCell;
+    let finalVal: any = cellValue;
+    
+    if (colKey === "hafizaAmount" || colKey === "income" || colKey === "expense") {
+      finalVal = Number(cellValue) || 0;
+    }
+
+    updateAccount(rowId, { ...row, [colKey]: finalVal });
+    setActiveCell(null);
+    toast.success("تم التحديث التلقائي للخلية");
   };
 
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,17 +218,14 @@ export default function AccountsTab() {
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        
         const json = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: "" });
 
-        if (json.length === 0) throw new Error("الملف فارغ أو لا يحتوي على بيانات");
+        if (json.length === 0) throw new Error("الملف فارغ");
 
         const importedAccounts = json
           .map((row: any) => {
             const cleanRow: any = {};
-            for (const key in row) {
-              cleanRow[key.trim()] = row[key];
-            }
+            for (const key in row) cleanRow[key.trim()] = row[key];
             return cleanRow;
           })
           .filter((row: any) => row["الاسم"] || row["البيان"] || row["name"] || row["description"])
@@ -209,38 +242,17 @@ export default function AccountsTab() {
             hafizaAmount: parseAmount(row["مبلغ الحافظة"] || row["hafizaAmount"]),
             income: parseAmount(row["الإيرادات"] || row["الايرادات"] || row["income"]),
             expense: parseAmount(row["المصروفات"] || row["expense"]),
-            // 💡 استيراد رمز الإيراد من ملف الإكسل إذا كان موجوداً 
             revenueKey: String(row["رمز الإيراد"] || row["رمز الايراد"] || row["revenueKey"] || ""),
           }));
-
-        if (importedAccounts.length === 0) {
-          toast.error("لم يتم العثور على بيانات متوافقة. تأكد من مطابقة أسماء الأعمدة.");
-          return;
-        }
 
         useStore.getState().importData({ accounts: importedAccounts });
         toast.success(`تم استيراد ${importedAccounts.length} سجل مالي بنجاح`);
       } catch (err) {
-        console.error("Error reading excel:", err);
-        toast.error("فشل الاستيراد. تأكد من صحة تنسيق ملف الإكسل ومطابقة الأعمدة.");
+        toast.error("فشل الاستيراد، يرجى مراجعة التنسيق والأعمدة.");
       }
     };
     reader.readAsArrayBuffer(file);
     e.target.value = "";
-  };
-
-  const handleClearAllData = () => {
-    if (accounts.length === 0) {
-      toast.info("لا توجد بيانات لمسحها");
-      return;
-    }
-    const confirmDelete = window.confirm("⚠️ تحذير: هل أنت متأكد من رغبتك في مسح جميع السجلات المالية بشكل نهائي؟ لا يمكن التراجع عن هذا الإجراء.");
-    if (confirmDelete) {
-      if (clearAccounts) {
-        clearAccounts();
-        toast.success("تم مسح جميع السجلات المالية بنجاح");
-      }
-    }
   };
 
   return (
@@ -289,7 +301,6 @@ export default function AccountsTab() {
             <Field label="الإيرادات" type="number" v={form.income} on={(v) => setForm({ ...form, income: v })} placeholder="0.00" />
             <Field label="المصروفات" type="number" v={form.expense} on={(v) => setForm({ ...form, expense: v })} placeholder="0.00" />
             
-            {/* 💡 حقل الربط بنوع الإيراد */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-teal-800 mb-1 flex items-center gap-1">
                 <Link className="w-3.5 h-3.5" /> ربط بنوع الإيراد (اختياري)
@@ -318,10 +329,10 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* ========== الإحصائيات ========== */}
+      {/* ========== الأشرطة الإحصائية المدمجة والتلقائية ========== */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-          <span className="text-xs text-slate-500 font-semibold">إجمالي الإيرادات</span>
+          <span className="text-xs text-slate-500 font-semibold">إجمالي الإيرادات (شامل الحوافظ الموردة ⚡)</span>
           <span className="text-xl font-bold text-emerald-600 mt-1 font-mono">{fmt(totalIncome)}</span>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
@@ -329,28 +340,26 @@ export default function AccountsTab() {
           <span className="text-xl font-bold text-rose-600 mt-1 font-mono">{fmt(totalExpense)}</span>
         </div>
         <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-sm bg-emerald-50/20 flex flex-col">
-          <span className="text-xs text-emerald-700 font-semibold">الرصيد الحالي المتوفر</span>
+          <span className="text-xs text-emerald-700 font-semibold">الرصيد الكلي المتوفر حالياً</span>
           <span className="text-xl font-bold text-emerald-800 mt-1 font-mono">{fmt(currentBalance)}</span>
         </div>
       </div>
 
-      {/* ========== جدول حركات السجل ========== */}
+      {/* ========== جدول حركات السجل المدمج والمباشر ========== */}
       <div className="w-full bg-white shadow border border-slate-200 rounded-xl overflow-hidden">
         <div className="bg-slate-800 px-4 py-3 flex flex-wrap justify-between items-center gap-3">
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-white">📊 كشف سجل الحساب ({accounts.length})</h2>
+            <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              📊 كشف سجل الحساب المدمج <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-mono">{combinedData.length}</span>
+            </h2>
           </div>
           <div className="flex gap-2 flex-wrap">
             <button onClick={clearFilters} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold transition-colors">
               مسح التصفية
             </button>
             <TabActions
-              title="كشف الحساب الجاري"
-              rows={accounts}
-              columns={COLS}
-              fileName="الحساب-الجاري"
-              numericKeys={["hafizaAmount","income","expense","balance"]}
-              onClear={clearAccounts}
+              title="كشف الحساب الجاري المدمج" rows={combinedData} columns={COLS} fileName="الحساب-الجاري-المدمج"
+              numericKeys={["hafizaAmount","income","expense","balance"]} onClear={clearAccounts}
             />
           </div>
         </div>
@@ -382,38 +391,67 @@ export default function AccountsTab() {
                 </tr>
               </thead>
               <tbody>
-                {filteredWithBalance.map((acc, index) => (
-                  <tr key={acc.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
-                    <td className="p-2 text-center text-slate-500 font-mono">{index + 1}</td>
-                    <td className="p-2 whitespace-nowrap text-slate-600 font-mono">{acc.date}</td>
-                    <td className="p-2 font-mono text-slate-600">{acc.hafizaNo || "—"}</td>
-                    <td className="p-2 font-mono text-slate-600">{acc.notifyNo || "—"}</td>
-                    <td className="p-2 whitespace-nowrap text-slate-600 font-mono">{acc.notifyDate || "—"}</td>
-                    <td className="p-2 font-mono text-slate-600">{acc.checkNo || "—"}</td>
-                    <td className="p-2 whitespace-nowrap text-slate-600 font-mono">{acc.checkDate || "—"}</td>
-                    <td className="p-2 text-slate-700 truncate max-w-[180px]" title={acc.description}>{acc.description || "—"}</td>
-                    <td className="p-2 text-slate-600">{acc.specialty || "—"}</td>
-                    <td className="p-2 font-bold text-slate-900">{acc.name || "—"}</td>
-                    <td className="p-2 font-mono text-slate-600">{Number(acc.hafizaAmount) > 0 ? fmt(Number(acc.hafizaAmount)) : "—"}</td>
-                    <td className="p-2 font-mono font-bold text-emerald-600 bg-emerald-50/20">{Number(acc.income) > 0 ? fmt(Number(acc.income)) : "—"}</td>
-                    <td className="p-2 font-mono font-bold text-rose-600 bg-rose-50/20">{Number(acc.expense) > 0 ? fmt(Number(acc.expense)) : "—"}</td>
-                    
-                    {/* 💡 عرض رمز الإيراد في الجدول */}
-                    <td className="p-2 font-mono font-bold text-teal-700 bg-teal-50/20 text-center">{acc.revenueKey || "—"}</td>
-                    
-                    <td className="p-2 font-mono font-bold text-blue-700 bg-blue-50/10">{fmt(acc.balance)}</td>
-                    <td className="p-2 text-center whitespace-nowrap">
-                      <div className="flex justify-center gap-1.5">
-                        <button onClick={() => setEditingRow(acc)} className="p-1 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-600 hover:text-white transition-colors" title="تعديل">
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => { if (confirm("هل أنت متأكد من حذف هذا السجل المالي للحساب؟")) deleteAccount(acc.id); }} className="p-1 bg-rose-50 text-rose-600 rounded hover:bg-rose-500 hover:text-white transition-colors" title="حذف">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filteredWithBalance.map((acc, index) => {
+                  return (
+                    <tr key={acc.id} className={`border-t border-slate-200 hover:bg-slate-50 transition-colors ${acc.isFromHafiza ? 'bg-amber-50/20' : ''}`}>
+                      <td className="p-2 text-center text-slate-500 font-mono">{index + 1}</td>
+                      
+                      {COLS.map((col) => {
+                        const isEditing = activeCell?.rowId === acc.id && activeCell?.colKey === col.key;
+                        if (col.key === "balance") {
+                          return <td key={col.key} className="p-2 font-mono font-bold text-blue-700 bg-blue-50/10">{fmt(acc.balance)}</td>;
+                        }
+                        return (
+                          <td 
+                            key={col.key}
+                            onClick={() => handleCellClick(acc, col.key, acc[col.key])}
+                            className={`p-2 transition-all border border-transparent cursor-pointer ${
+                              col.key === 'income' ? 'font-mono font-bold text-emerald-600 bg-emerald-50/10' :
+                              col.key === 'expense' ? 'font-mono font-bold text-rose-600 bg-rose-50/10' : 'text-slate-600'
+                            }`}
+                          >
+                            {isEditing ? (
+                              <input 
+                                type={col.key === 'hafizaAmount' || col.key === 'income' || col.key === 'expense' ? 'number' : col.key === 'date' || col.key === 'notifyDate' || col.key === 'checkDate' ? 'date' : 'text'}
+                                value={cellValue}
+                                autoFocus
+                                onChange={(e) => setCellValue(e.target.value)}
+                                onBlur={() => handleCellSave(acc)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleCellSave(acc); if (e.key === 'Escape') setActiveCell(null); }}
+                                className="p-0.5 border border-emerald-500 rounded outline-none bg-white text-slate-900 text-xs w-full"
+                              />
+                            ) : (
+                              col.key === "hafizaAmount" || col.key === "income" || col.key === "expense"
+                                ? (Number(acc[col.key]) > 0 ? fmt(Number(acc[col.key])) : "—")
+                                : (acc[col.key] || "—")
+                            )}
+                          </td>
+                        );
+                      })}
+
+                      <td className="p-2 text-center whitespace-nowrap">
+                        <div className="flex justify-center gap-1.5">
+                          <button onClick={() => setEditingRow(acc)} className="p-1 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-600 hover:text-white transition-colors" title={acc.isFromHafiza ? "عرض ارتباط الحافظة" : "تعديل"}>
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => { 
+                              if (acc.isFromHafiza) {
+                                toast.error("لا يمكن حذف هذا السجل من هنا لأنه مسجل في الحوافظ؛ احذفه من تبويب الحوافظ ليختفي تلقائياً.");
+                                return;
+                              }
+                              if (confirm("هل أنت متأكد من حذف هذا السجل المالي للحساب؟")) deleteAccount(acc.id); 
+                            }} 
+                            className={`p-1 rounded transition-colors ${acc.isFromHafiza ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white'}`}
+                            title="حذف"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {filteredWithBalance.length === 0 && (
                   <tr>
                     <td colSpan={16} className="p-8 text-center text-slate-400 bg-slate-50">
@@ -427,78 +465,54 @@ export default function AccountsTab() {
         </div>
       </div>
 
+      {/* النافذة المنبثقة للتعديل التقليدي الكامل */}
       <Modal title="✏️ تعديل السجل المالي للحساب" isOpen={!!editingRow} onClose={() => setEditingRow(null)}>
         {editingRow && (
           <form onSubmit={handleEditSave} className="space-y-4">
+            {editingRow.isFromHafiza && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 font-semibold mb-2">
+                ⚠️ تنبيه: هذا السجل مستورد تلقائياً وبشكل حي ومباشر من تبويب "حوافظ التوريد". أي تعديل عليه يجب أن يتم في شاشة الحوافظ ليظهر هنا.
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">التاريخ</label>
-                <input type="date" value={editingRow.date} onChange={(e) => setEditingRow({...editingRow, date: e.target.value})} className="w-full p-2 border rounded-lg outline-none" required />
+                <input type="date" disabled={editingRow.isFromHafiza} value={editingRow.date} onChange={(e) => setEditingRow({...editingRow, date: e.target.value})} className="w-full p-2 border rounded-lg bg-white disabled:bg-slate-100" required />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">رقم الحافظة</label>
-                <input value={editingRow.hafizaNo} onChange={(e) => setEditingRow({...editingRow, hafizaNo: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+                <input disabled={editingRow.isFromHafiza} value={editingRow.hafizaNo} onChange={(e) => setEditingRow({...editingRow, hafizaNo: e.target.value})} className="w-full p-2 border rounded-lg bg-white disabled:bg-slate-100" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">رقم الإشعار</label>
-                <input value={editingRow.notifyNo} onChange={(e) => setEditingRow({...editingRow, notifyNo: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+                <input disabled={editingRow.isFromHafiza} value={editingRow.notifyNo} onChange={(e) => setEditingRow({...editingRow, notifyNo: e.target.value})} className="w-full p-2 border rounded-lg bg-white disabled:bg-slate-100" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">تاريخ التوريد</label>
-                <input type="date" value={editingRow.notifyDate} onChange={(e) => setEditingRow({...editingRow, notifyDate: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">رقم الشيك</label>
-                <input value={editingRow.checkNo || ""} onChange={(e) => setEditingRow({...editingRow, checkNo: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">تاريخ الشيك</label>
-                <input type="date" value={editingRow.checkDate || ""} onChange={(e) => setEditingRow({...editingRow, checkDate: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+                <input type="date" disabled={editingRow.isFromHafiza} value={editingRow.notifyDate} onChange={(e) => setEditingRow({...editingRow, notifyDate: e.target.value})} className="w-full p-2 border rounded-lg bg-white disabled:bg-slate-100" />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">البيان</label>
-                <input value={editingRow.description} onChange={(e) => setEditingRow({...editingRow, description: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">التخصص</label>
-                <input value={editingRow.specialty} onChange={(e) => setEditingRow({...editingRow, specialty: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+                <input disabled={editingRow.isFromHafiza} value={editingRow.description} onChange={(e) => setEditingRow({...editingRow, description: e.target.value})} className="w-full p-2 border rounded-lg bg-white disabled:bg-slate-100" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">الاسم</label>
-                <input value={editingRow.name} onChange={(e) => setEditingRow({...editingRow, name: e.target.value})} className="w-full p-2 border rounded-lg bg-slate-50 outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">مبلغ الحافظة</label>
-                <input type="number" value={editingRow.hafizaAmount} onChange={(e) => setEditingRow({...editingRow, hafizaAmount: e.target.value})} className="w-full p-2 border rounded-lg outline-none" />
+                <input disabled={editingRow.isFromHafiza} value={editingRow.name} onChange={(e) => setEditingRow({...editingRow, name: e.target.value})} className="w-full p-2 border rounded-lg bg-white disabled:bg-slate-100" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">الإيرادات</label>
-                <input type="number" value={editingRow.income} onChange={(e) => setEditingRow({...editingRow, income: e.target.value})} className="w-full p-2 border rounded-lg font-bold text-emerald-600 outline-none" />
+                <input type="number" disabled={editingRow.isFromHafiza} value={editingRow.income} onChange={(e) => setEditingRow({...editingRow, income: e.target.value})} className="w-full p-2 border rounded-lg font-bold text-emerald-600 bg-white disabled:bg-slate-100" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">المصروفات</label>
-                <input type="number" value={editingRow.expense} onChange={(e) => setEditingRow({...editingRow, expense: e.target.value})} className="w-full p-2 border rounded-lg font-bold text-rose-600 outline-none" />
+                <input type="number" disabled={editingRow.isFromHafiza} value={editingRow.expense} onChange={(e) => setEditingRow({...editingRow, expense: e.target.value})} className="w-full p-2 border rounded-lg font-bold text-rose-600 bg-white disabled:bg-slate-100" />
               </div>
-
-              {/* 💡 تعديل حقل الربط داخل النافذة المنبثقة */}
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-teal-800 mb-1">تعديل ربط الإيراد</label>
-                <select
-                  value={editingRow.revenueKey || ""}
-                  onChange={(e) => setEditingRow({...editingRow, revenueKey: e.target.value})}
-                  className="w-full p-2 border border-teal-200 rounded-lg bg-teal-50/40 text-slate-700 outline-none"
-                >
-                  <option value="">-- بدون ربط --</option>
-                  {revenueTypes.map((t) => (
-                    <option key={t.key} value={t.key}>{t.key} | {t.label}</option>
-                  ))}
-                </select>
-              </div>
-
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t mt-4">
-              <button type="button" onClick={() => setEditingRow(null)} className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 transition-colors">إلغاء</button>
-              <button type="submit" className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors shadow-md">حفظ التعديلات</button>
+              <button type="button" onClick={() => setEditingRow(null)} className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200">إلغاء</button>
+              {!editingRow.isFromHafiza && (
+                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 shadow-md">حفظ التعديلات</button>
+              )}
             </div>
           </form>
         )}
