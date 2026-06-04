@@ -50,7 +50,7 @@ const parseAmount = (val: any): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-// خوارزمية قياس نسبة تشابه قيم البيانات الفردية داخل الخلايا
+// خوارزمية تقصي الفروق الإملائية والمسافات العشوائية
 const getSimilarity = (str1: string, str2: string): number => {
   const cleanText = (s: string) => 
     s.trim()
@@ -108,7 +108,9 @@ export default function AccountsTab() {
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
-  // دالة المطابقة المحدثة: تفحص "البيانات" والركائز داخل كل حقل لتجنب تكرار العمليات المالية
+  // ==========================================
+  // 💡 دالة المزامنة والمطابقة والتحديث الفوري (Upsert Strategy)
+  // ==========================================
   const handleSyncFromHafiza = () => {
     if (!hafizas || hafizas.length === 0) {
       toast.error("لا توجد بيانات في تبويب حوافظ التوريد لجلبها!");
@@ -116,7 +118,10 @@ export default function AccountsTab() {
     }
     
     let addedCount = 0;
-    let skippedCount = 0;
+    let updatedCount = 0;
+    let unchangedCount = 0;
+    
+    // تصفية حوافظ عام 2026
     const h2026 = hafizas.filter((h: any) => (h.date ? String(h.date).substring(0, 4) : "") === "2026");
     
     if (h2026.length === 0) {
@@ -127,33 +132,30 @@ export default function AccountsTab() {
     const SIMILARITY_THRESHOLD = 0.85;
 
     h2026.forEach((hafiza: any) => {
-      // استخراج القيم الفردية من خلايا الصف الحالي في الحافظة
       const hName = String(hafiza.name || "").trim();
       const hDesc = String(hafiza.description || "").trim();
       const hAmount = Number(hafiza.hafizaAmount || hafiza.income || 0);
+      const hNo = String(hafiza.hafizaNo || "").trim();
 
-      // مقارنة البيانات الحالية ببيانات صفوف الحساب الجاري
-      const isDuplicate = accounts.some((acc: any) => {
+      // البحث عن السجل المطابق في الحساب الجاري 
+      // المطابقة تعتمد على رقم الحافظة الفريد أو التشابه العالي جداً في الاسم والبيان
+      const existingAccount = accounts.find((acc: any) => {
         const accName = String(acc.name || "").trim();
         const accDesc = String(acc.description || "").trim();
-        const accAmount = Number(acc.hafizaAmount || acc.income || 0);
+        const accNo = String(acc.hafizaNo || "").trim();
 
+        const isSameHafizaNo = hNo !== "" && accNo === hNo;
         const nameSimilarity = getSimilarity(hName, accName);
         const descSimilarity = getSimilarity(hDesc, accDesc);
-        const isAmountEqual = hAmount !== 0 && accAmount === hAmount;
 
-        // مطابقة محتوى الخلايا (الاسم يشبه الاسم، أو البيان يشبه البيان، أو المبالغ متطابقة)
-        return (
-          (hName !== "" && nameSimilarity >= SIMILARITY_THRESHOLD) || 
-          (hDesc !== "" && descSimilarity >= SIMILARITY_THRESHOLD) || 
-          isAmountEqual
-        );
+        return isSameHafizaNo || (nameSimilarity >= SIMILARITY_THRESHOLD && descSimilarity >= SIMILARITY_THRESHOLD);
       });
 
-      if (!isDuplicate) {
+      if (!existingAccount) {
+        // 1. الحالة الأولى: القيد جديد تماماً 👈 نقوم بإضافته
         addAccount({
           date: hafiza.date || today(),
-          hafizaNo: hafiza.hafizaNo || "",
+          hafizaNo: hNo,
           notifyNo: hafiza.notifyNo || "",
           notifyDate: hafiza.notifyDate || "",
           checkNo: hafiza.checkNo || "",
@@ -168,14 +170,41 @@ export default function AccountsTab() {
         });
         addedCount++;
       } else {
-        skippedCount++;
+        // 2. الحالة الثانية: القيد موجود مسبقاً 👈 نفحص هل تم تعديل أي قيمة داخله؟
+        const isDataChanged = 
+          existingAccount.name !== hafiza.name ||
+          existingAccount.description !== hafiza.description ||
+          Number(existingAccount.hafizaAmount) !== hAmount ||
+          existingAccount.notifyNo !== hafiza.notifyNo ||
+          existingAccount.date !== hafiza.date;
+
+        if (isDataChanged) {
+          // تم اكتشاف تعديل في خلايا حوافظ التوريد! 👈 نقوم بتحديث السجل المقابل في الحساب الجاري فوراً
+          updateAccount(existingAccount.id, {
+            ...existingAccount,
+            date: hafiza.date || existingAccount.date,
+            notifyNo: hafiza.notifyNo || existingAccount.notifyNo,
+            notifyDate: hafiza.notifyDate || existingAccount.notifyDate,
+            checkNo: hafiza.checkNo || existingAccount.checkNo,
+            checkDate: hafiza.checkDate || existingAccount.checkDate,
+            description: hafiza.description || existingAccount.description,
+            specialty: hafiza.specialty || existingAccount.specialty,
+            name: hafiza.name || existingAccount.name,
+            hafizaAmount: hAmount,
+            income: hAmount, // تحديث الإيراد تلقائياً تبعاً لتعديل مبلغ الحافظة
+          });
+          updatedCount++;
+        } else {
+          unchangedCount++;
+        }
       }
     });
 
-    if (addedCount > 0) {
-      toast.success(`تمت المطابقة المستندة للبيانات! تم جلب (${addedCount}) قيود جديدة وتجاهل (${skippedCount}) عمليات متشابهة المضمون.`);
+    // إرسال الإشعارات بناءً على العمليات الفعلية
+    if (addedCount > 0 || updatedCount > 0) {
+      toast.success(`اكتملت المزامنة الذكية! تم إضافة (${addedCount}) قيود جديدة، وتحديث واجهة الحساب الجاري بـ (${updatedCount}) تعديلات فورية من الحوافظ.`);
     } else {
-      toast.info(`المطابقة مكتملة! جميع بيانات خلايا الحوافظ متطابقة مع كشف الحساب الحالي.`);
+      toast.info(`المطابقة مستقرة ومحدثة! لم يتم رصد أي تعديلات جديدة داخل خلايا تبويب الحوافظ.`);
     }
   };
 
@@ -321,9 +350,10 @@ export default function AccountsTab() {
             <h2 className="text-sm sm:text-base font-bold text-white">إضافة حركة مالية جديدة أو مزامنة الحوافظ</h2>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={handleSyncFromHafiza} className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-black hover:from-amber-400 hover:to-amber-500 transition-all active:scale-95">
+            {/* زر تشغيل المطابقة والتحديث الذكي الفوري */}
+            <button onClick={handleSyncFromHafiza} className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-black hover:from-amber-400 hover:to-amber-500 transition-all active:scale-95 shadow-sm">
               <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" /> 
-              <span>تشغيل مطابقة محتوى البيانات خلايا (3 أعمدة)</span>
+              <span>مزامنة وتحديث البيانات الفوري (3 أعمدة ثابتة)</span>
             </button>
             <label className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 text-white border border-white/10 rounded-xl text-xs font-bold cursor-pointer hover:bg-white/20 transition-all">
               <FileSpreadsheet className="w-3.5 h-3.5" /> <span>استيراد Excel</span>
@@ -374,7 +404,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* 📌 جدول مراقبة القيود مع تفعيل ميزة تثبيت رؤوس الأعمدة برمجياً */}
+      {/* جدول مراقبة القيود مع تفعيل ميزة تثبيت رؤوس الأعمدة برمجياً */}
       <div className="w-full bg-white shadow-sm border border-slate-100 rounded-2xl overflow-hidden">
         <div className="bg-slate-800 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-2">
@@ -390,11 +420,10 @@ export default function AccountsTab() {
         </div>
 
         <div className="p-4 bg-white">
-          {/* هنا قمنا بتحديد أقصى ارتفاع للتمرير max-h-[550px] لتفعيل التثبيت الفعلي للرؤوس */}
           <div className="overflow-x-auto overflow-y-auto max-h-[550px] rounded-xl border border-slate-100 shadow-inner relative">
             <table className="w-full text-xs sm:text-sm text-right border-collapse table-auto">
               
-              {/* 💡 الرؤوس الثابتة: استخدام sticky top-0 و z-20 لضمان بقائها في الأعلى عند النزول لأسفل */}
+              {/* الرؤوس الثابتة برمجياً */}
               <thead className="sticky top-0 z-20 bg-slate-100 shadow-[0_1px_0_0_rgba(226,232,240,1)] text-slate-700 font-bold text-xs">
                 <tr>
                   <th className="p-3 text-center w-12 bg-slate-100 sticky top-0 z-20">م</th>
@@ -408,7 +437,6 @@ export default function AccountsTab() {
                   ))}
                   <th className="p-3 text-center bg-slate-100 sticky top-0 z-20">إجراءات</th>
                 </tr>
-                {/* صف التصفية والفرز الفرعي الثابت أيضاً تحت الرؤوس مباشرة */}
                 <tr className="bg-slate-50 border-t border-slate-200 shadow-[0_1px_0_0_rgba(226,232,240,1)]">
                   <th className="p-1.5 bg-slate-50"></th>
                   {COLS.map((c) => (
@@ -458,7 +486,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* نافذة التعديل المنبثقة */}
+      {/* نافذة التعديل */}
       <Modal title="✏️ تعديل وتدقيق السجل المالي" isOpen={!!editingRow} onClose={() => setEditingRow(null)}>
         {editingRow && (
           <form onSubmit={handleEditSave} className="space-y-4">
