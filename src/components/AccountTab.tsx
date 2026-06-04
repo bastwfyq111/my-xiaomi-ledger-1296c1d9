@@ -13,6 +13,7 @@ import {
 import TabActions from "./TabActions";
 import schema from "@/data/revenueTemplate.json";
 
+// تعريف أعمدة الجدول الرئيسي
 const COLS = [
   { key: "date", label: "التاريخ" },
   { key: "hafizaNo", label: "رقم الحافظة" },
@@ -50,7 +51,7 @@ const parseAmount = (val: any): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-// خوارزمية تقصي الفروق الإملائية والمسافات العشوائية
+// 🧮 خوارزمية قياس نسبة تشابه النصوص للتحقق من تطابق حقل البيان
 const getSimilarity = (str1: string, str2: string): number => {
   const cleanText = (s: string) => 
     s.trim()
@@ -108,9 +109,9 @@ export default function AccountsTab() {
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
-  // ==========================================
-  // 💡 دالة المزامنة والمطابقة والتحديث الفوري (Upsert Strategy)
-  // ==========================================
+  // =========================================================
+  // ⚡ خوارزمية المطابقة والتحديث الفوري المعتمدة كلياً على عمود البيان
+  // =========================================================
   const handleSyncFromHafiza = () => {
     if (!hafizas || hafizas.length === 0) {
       toast.error("لا توجد بيانات في تبويب حوافظ التوريد لجلبها!");
@@ -119,9 +120,8 @@ export default function AccountsTab() {
     
     let addedCount = 0;
     let updatedCount = 0;
-    let unchangedCount = 0;
     
-    // تصفية حوافظ عام 2026
+    // تصفية حوافظ عام 2026 فقط
     const h2026 = hafizas.filter((h: any) => (h.date ? String(h.date).substring(0, 4) : "") === "2026");
     
     if (h2026.length === 0) {
@@ -129,38 +129,30 @@ export default function AccountsTab() {
       return;
     }
 
-    const SIMILARITY_THRESHOLD = 0.85;
+    const SIMILARITY_THRESHOLD = 0.95; // نسبة تطابق نصي شبه تامة للبيان
 
     h2026.forEach((hafiza: any) => {
-      const hName = String(hafiza.name || "").trim();
       const hDesc = String(hafiza.description || "").trim();
       const hAmount = Number(hafiza.hafizaAmount || hafiza.income || 0);
-      const hNo = String(hafiza.hafizaNo || "").trim();
 
-      // البحث عن السجل المطابق في الحساب الجاري 
-      // المطابقة تعتمد على رقم الحافظة الفريد أو التشابه العالي جداً في الاسم والبيان
+      if (hDesc === "") return; // تخطي القيود التي لا تحتوي على بيان
+
+      // 🔍 البحث عن تطابق داخل عمود البيان فقط في جدول الحساب الجاري
       const existingAccount = accounts.find((acc: any) => {
-        const accName = String(acc.name || "").trim();
         const accDesc = String(acc.description || "").trim();
-        const accNo = String(acc.hafizaNo || "").trim();
-
-        const isSameHafizaNo = hNo !== "" && accNo === hNo;
-        const nameSimilarity = getSimilarity(hName, accName);
-        const descSimilarity = getSimilarity(hDesc, accDesc);
-
-        return isSameHafizaNo || (nameSimilarity >= SIMILARITY_THRESHOLD && descSimilarity >= SIMILARITY_THRESHOLD);
+        return getSimilarity(hDesc, accDesc) >= SIMILARITY_THRESHOLD;
       });
 
       if (!existingAccount) {
-        // 1. الحالة الأولى: القيد جديد تماماً 👈 نقوم بإضافته
+        // أ) البيان غير موجود مسبقاً 👈 إضافة قيد جديد تماماً
         addAccount({
           date: hafiza.date || today(),
-          hafizaNo: hNo,
+          hafizaNo: hafiza.hafizaNo || "",
           notifyNo: hafiza.notifyNo || "",
           notifyDate: hafiza.notifyDate || "",
           checkNo: hafiza.checkNo || "",
           checkDate: hafiza.checkDate || "",
-          description: hafiza.description || "استيراد تلقائي من حوافظ التوريد 2026",
+          description: hDesc,
           specialty: hafiza.specialty || "",
           name: hafiza.name || "",
           hafizaAmount: hAmount,
@@ -170,41 +162,40 @@ export default function AccountsTab() {
         });
         addedCount++;
       } else {
-        // 2. الحالة الثانية: القيد موجود مسبقاً 👈 نفحص هل تم تعديل أي قيمة داخله؟
+        // ب) البيان متطابق وموجود مسبقاً 👈 فحص هل حدث أي تعديل في باقي قيم الصف؟
         const isDataChanged = 
           existingAccount.name !== hafiza.name ||
-          existingAccount.description !== hafiza.description ||
           Number(existingAccount.hafizaAmount) !== hAmount ||
+          existingAccount.hafizaNo !== hafiza.hafizaNo ||
           existingAccount.notifyNo !== hafiza.notifyNo ||
-          existingAccount.date !== hafiza.date;
+          existingAccount.date !== hafiza.date ||
+          existingAccount.specialty !== hafiza.specialty ||
+          existingAccount.checkNo !== hafiza.checkNo;
 
         if (isDataChanged) {
-          // تم اكتشاف تعديل في خلايا حوافظ التوريد! 👈 نقوم بتحديث السجل المقابل في الحساب الجاري فوراً
+          // حدث تعديل في حوافظ التوريد لنفس البيان! 👈 تحديث القيم في الحساب الجاري فوراً
           updateAccount(existingAccount.id, {
             ...existingAccount,
             date: hafiza.date || existingAccount.date,
+            hafizaNo: hafiza.hafizaNo || existingAccount.hafizaNo,
             notifyNo: hafiza.notifyNo || existingAccount.notifyNo,
             notifyDate: hafiza.notifyDate || existingAccount.notifyDate,
             checkNo: hafiza.checkNo || existingAccount.checkNo,
             checkDate: hafiza.checkDate || existingAccount.checkDate,
-            description: hafiza.description || existingAccount.description,
             specialty: hafiza.specialty || existingAccount.specialty,
             name: hafiza.name || existingAccount.name,
             hafizaAmount: hAmount,
-            income: hAmount, // تحديث الإيراد تلقائياً تبعاً لتعديل مبلغ الحافظة
+            income: hAmount, // المزامنة التلقائية للإيراد تتبع مبلغ الحافظة المعدل
           });
           updatedCount++;
-        } else {
-          unchangedCount++;
         }
       }
     });
 
-    // إرسال الإشعارات بناءً على العمليات الفعلية
     if (addedCount > 0 || updatedCount > 0) {
-      toast.success(`اكتملت المزامنة الذكية! تم إضافة (${addedCount}) قيود جديدة، وتحديث واجهة الحساب الجاري بـ (${updatedCount}) تعديلات فورية من الحوافظ.`);
+      toast.success(`تمت المزامنة بنجاح! إضافة (${addedCount}) قيود ببيان جديد، وتحديث (${updatedCount}) سجلات حالية بالبيانات المعدلة.`);
     } else {
-      toast.info(`المطابقة مستقرة ومحدثة! لم يتم رصد أي تعديلات جديدة داخل خلايا تبويب الحوافظ.`);
+      toast.info("المطابقة مستقرة! لم يتم رصد أي بيانات أو تعديلات جديدة في عمود البيان.");
     }
   };
 
@@ -317,23 +308,23 @@ export default function AccountsTab() {
 
   return (
     <div className="w-full space-y-6" dir="rtl">
-      {/* قسم كروت الإحصائيات */}
+      {/* قسم كروت الإحصائيات الفورية */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between group">
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-xs text-slate-400 font-bold">إجمالي الإيرادات</span>
             <span className="text-2xl font-black text-emerald-600 mt-2 font-mono">{fmt(totalIncome)}</span>
           </div>
           <div className="p-3.5 bg-emerald-50 rounded-2xl text-emerald-600"><ArrowUpRight className="w-6 h-6" /></div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between group">
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-xs text-slate-400 font-bold">إجمالي المصروفات</span>
             <span className="text-2xl font-black text-rose-600 mt-2 font-mono">{fmt(totalExpense)}</span>
           </div>
           <div className="p-3.5 bg-rose-50 rounded-2xl text-rose-600"><ArrowDownLeft className="w-6 h-6" /></div>
         </div>
-        <div className="bg-gradient-to-br from-[#10528e] to-[#0b3d6d] p-5 rounded-2xl text-white shadow-md flex items-center justify-between group">
+        <div className="bg-gradient-to-br from-[#10528e] to-[#0b3d6d] p-5 rounded-2xl text-white shadow-md flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-xs text-white/70 font-bold">الرصيد الحالي المتوفر</span>
             <span className="text-2xl font-black mt-2 font-mono">{fmt(currentBalance)}</span>
@@ -342,7 +333,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* لوحة الاستمارة والتحكم */}
+      {/* 🛠️ استمارة المدخلات المنظمة بشكل أفقي بالكامل لتوفير المساحة وسهولة الاستخدام */}
       <div className="w-full bg-white shadow-sm border border-slate-100 rounded-2xl overflow-hidden">
         <div className="bg-gradient-to-r from-[#10528e] to-[#0f467a] px-5 py-4 flex flex-wrap justify-between items-center gap-4 border-b">
           <div className="flex items-center gap-2.5">
@@ -350,10 +341,9 @@ export default function AccountsTab() {
             <h2 className="text-sm sm:text-base font-bold text-white">إضافة حركة مالية جديدة أو مزامنة الحوافظ</h2>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {/* زر تشغيل المطابقة والتحديث الذكي الفوري */}
             <button onClick={handleSyncFromHafiza} className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-black hover:from-amber-400 hover:to-amber-500 transition-all active:scale-95 shadow-sm">
               <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" /> 
-              <span>مزامنة وتحديث البيانات الفوري (3 أعمدة ثابتة)</span>
+              <span>تحديث ومطابقة فورية بـ (عمود البيان)</span>
             </button>
             <label className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 text-white border border-white/10 rounded-xl text-xs font-bold cursor-pointer hover:bg-white/20 transition-all">
               <FileSpreadsheet className="w-3.5 h-3.5" /> <span>استيراد Excel</span>
@@ -362,8 +352,9 @@ export default function AccountsTab() {
           </div>
         </div>
 
-        <div className="p-5 bg-slate-50/40">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="p-4 bg-slate-50/40">
+          {/* 💡 هنا تم تعديل الـ Grid ليصبح ممتداً أفقياً بالكامل على الشاشات الكبيرة لتوزيع الحقول بجانب بعضها */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4 items-end">
             <Field label="التاريخ" type="date" icon={<Calendar className="w-4 h-4 text-slate-400" />} v={form.date} on={(v) => setForm({ ...form, date: v })} />
             <Field label="رقم الحافظة" icon={<Hash className="w-4 h-4 text-slate-400" />} v={form.hafizaNo} on={(v) => setForm({ ...form, hafizaNo: v })} />
             <Field label="رقم الإشعار" icon={<Hash className="w-4 h-4 text-slate-400" />} v={form.notifyNo} on={(v) => setForm({ ...form, notifyNo: v })} />
@@ -371,6 +362,7 @@ export default function AccountsTab() {
             <Field label="رقم الشيك" icon={<Hash className="w-4 h-4 text-slate-400" />} v={form.checkNo} on={(v) => setForm({ ...form, checkNo: v })} />
             <Field label="تاريخ الشيك" type="date" icon={<Calendar className="w-4 h-4 text-slate-400" />} v={form.checkDate} on={(v) => setForm({ ...form, checkDate: v })} />
             
+            {/* حقل البيان */}
             <div className="relative">
               <label className="block text-xs font-bold text-slate-500 mb-1.5 mr-1">البيان والشرح</label>
               <div className="relative flex items-center">
@@ -388,6 +380,7 @@ export default function AccountsTab() {
             <Field label="الإيرادات" type="number" icon={<span className="text-xs text-emerald-500 font-bold">ر.ي</span>} v={form.income} on={(v) => setForm({ ...form, income: v })} placeholder="0.00" className="text-emerald-600 font-bold bg-emerald-50/5 focus:border-emerald-500" />
             <Field label="المصروفات" type="number" icon={<span className="text-xs text-rose-500 font-bold">ر.ي</span>} v={form.expense} on={(v) => setForm({ ...form, expense: v })} placeholder="0.00" className="text-rose-600 font-bold bg-rose-50/5 focus:border-rose-500" />
             
+            {/* ربط الهيكل الإيرادي يأخذ مساحة عمودين ليتناسق أفقياً */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-[#10528e] mb-1.5 mr-1 flex items-center gap-1"><Link className="w-3.5 h-3.5" /> ربط بدليل هيكل الإيرادات المعتمد</label>
               <select value={form.revenueKey} onChange={(e) => setForm({ ...form, revenueKey: e.target.value })} className="w-full px-3 py-2 text-sm border border-blue-100 rounded-xl outline-none bg-blue-50/20 text-slate-700 font-medium">
@@ -395,16 +388,17 @@ export default function AccountsTab() {
                 {revenueTypes.map((t) => <option key={t.key} value={t.key}>{t.key} | {t.label}</option>)}
               </select>
             </div>
-          </div>
 
-          <div className="mt-5 flex gap-3 flex-wrap border-t pt-4">
-            <button onClick={submit} className="flex items-center gap-2 px-6 py-2.5 bg-[#10528e] text-white rounded-xl font-bold hover:bg-[#0b3d6d] text-xs sm:text-sm shadow-sm active:scale-95 transition-transform"><Save className="w-4 h-4" /> حفظ السجل المالي</button>
-            <button onClick={() => setForm(emptyForm)} className="flex items-center gap-2 px-5 py-2.5 border text-slate-500 bg-white rounded-xl font-bold text-xs sm:text-sm active:scale-95 transition-transform"><Eraser className="w-4 h-4" /> مسح الحقول</button>
+            {/* أزرار التحكم مدمجة أفقياً في نهاية السطر التعبيري */}
+            <div className="sm:col-span-2 flex gap-2 pt-2">
+              <button onClick={submit} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#10528e] text-white rounded-xl font-bold hover:bg-[#0b3d6d] text-xs shadow-sm active:scale-95 transition-transform"><Save className="w-4 h-4" /> حفظ السجل</button>
+              <button onClick={() => setForm(emptyForm)} className="flex items-center justify-center gap-2 px-3 py-2 border text-slate-500 bg-white rounded-xl font-bold text-xs active:scale-95 transition-transform"><Eraser className="w-4 h-4" /> مسح</button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* جدول مراقبة القيود مع تفعيل ميزة تثبيت رؤوس الأعمدة برمجياً */}
+      {/* جدول كشف الحساب الجاري ورؤوس الأعمدة الثابتة */}
       <div className="w-full bg-white shadow-sm border border-slate-100 rounded-2xl overflow-hidden">
         <div className="bg-slate-800 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-2">
@@ -422,8 +416,6 @@ export default function AccountsTab() {
         <div className="p-4 bg-white">
           <div className="overflow-x-auto overflow-y-auto max-h-[550px] rounded-xl border border-slate-100 shadow-inner relative">
             <table className="w-full text-xs sm:text-sm text-right border-collapse table-auto">
-              
-              {/* الرؤوس الثابتة برمجياً */}
               <thead className="sticky top-0 z-20 bg-slate-100 shadow-[0_1px_0_0_rgba(226,232,240,1)] text-slate-700 font-bold text-xs">
                 <tr>
                   <th className="p-3 text-center w-12 bg-slate-100 sticky top-0 z-20">م</th>
@@ -486,7 +478,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* نافذة التعديل */}
+      {/* نافذة التعديل المنبثقة */}
       <Modal title="✏️ تعديل وتدقيق السجل المالي" isOpen={!!editingRow} onClose={() => setEditingRow(null)}>
         {editingRow && (
           <form onSubmit={handleEditSave} className="space-y-4">
@@ -514,7 +506,7 @@ export default function AccountsTab() {
 
 function Field({ label, v, on, type = "text", placeholder = "", icon, className = "" }: { label: string; v: string; on: (v: string) => void; type?: string; placeholder?: string; icon?: React.ReactNode; className?: string }) {
   return (
-    <div>
+    <div className="w-full">
       <label className="block text-xs font-bold text-slate-500 mb-1.5 mr-1">{label}</label>
       <div className="relative flex items-center">
         {icon && <span className="absolute right-3 z-10">{icon}</span>}
