@@ -40,6 +40,7 @@ export type Hafiza = {
   notifyDate?: string;
   notifyNo?: string;
   notifyAmount?: number;
+  income?: number; // 💡 مضاف لدعم التوافقية عند الربط
 };
 
 export type Account = {
@@ -57,7 +58,7 @@ export type Account = {
   income: number;
   expense: number;
   sourceHafizaId?: string;
-  revenueKey?: string; // 💡 تم إضافة حقل الربط بالإيرادات هنا
+  revenueKey?: string; 
 };
 
 export type Journal = {
@@ -90,6 +91,7 @@ export type CustomTab = {
 type State = {
   trainees: Trainee[];
   hafiza: Hafiza[];
+  hafizas: Hafiza[]; // 💡 تم إضافة الاسم بالجمع هنا للتوافق الكامل مع واجهة الحسابات الجارية
   accounts: Account[];
   journal: Journal[];
   installments: Installment[];
@@ -163,7 +165,6 @@ const recalcInstallment = (i: Installment): Installment => {
   return { ...i, fees, prevDue, totalPaid, remaining: prevDue - totalPaid };
 };
 
-// 💡 دالة جديدة: تحسب الإيرادات ديناميكياً من جدول الحسابات
 const recalculateRevenueMap = (accounts: Account[]): RevenueMap => {
   const newRevenue: RevenueMap = {};
   accounts.forEach((acc) => {
@@ -186,6 +187,7 @@ export const useStore = create<State>()(
     (set, get) => ({
       trainees: seedTrainees as Trainee[],
       hafiza: [],
+      hafizas: [], // 💡 مزامنة المصفوفة بالجمع كقيمة ابتدائية
       accounts: [],
       journal: [],
       installments: (seedInstallments as Installment[]).map(recalcInstallment),
@@ -200,20 +202,33 @@ export const useStore = create<State>()(
       deleteTrainee: (index) => set((s) => ({ trainees: s.trainees.filter((_, i) => i !== index) })),
       importTrainees: (trainees) => set((s) => ({ trainees: [...s.trainees, ...trainees] })),
 
-      // عمليات الحافظة
+      // عمليات الحافظة (محدثة لملء المصفوفة بالجمع والمفرد معاً)
       addHafiza: (h) => {
         const item: Hafiza = {
           ...h, id: uid(), date: h.date || getToday(),
           hafizaAmount: Number(h.hafizaAmount) || 0, notifyAmount: Number(h.notifyAmount) || 0,
         };
-        set((s) => ({ hafiza: [...s.hafiza, item] }));
+        set((s) => {
+          const updated = [...s.hafiza, item];
+          return { hafiza: updated, hafizas: updated };
+        });
         return item;
       },
-      updateHafiza: (id, h) => set((s) => ({ hafiza: s.hafiza.map((x) => (x.id === id ? { ...x, ...h } : x)) })),
-      deleteHafiza: (id) => set((s) => ({ hafiza: s.hafiza.filter((x) => x.id !== id), accounts: s.accounts.filter((a) => a.sourceHafizaId !== id) })),
-      clearHafiza: () => set({ hafiza: [] }),
+      updateHafiza: (id, h) => set((s) => {
+        const updated = s.hafiza.map((x) => (x.id === id ? { ...x, ...h } : x));
+        return { hafiza: updated, hafizas: updated };
+      }),
+      deleteHafiza: (id) => set((s) => {
+        const updated = s.hafiza.filter((x) => x.id !== id);
+        return { 
+          hafiza: updated, 
+          hafizas: updated,
+          accounts: s.accounts.filter((a) => a.sourceHafizaId !== id) 
+        };
+      }),
+      clearHafiza: () => set({ hafiza: [], hafizas: [] }),
 
-      // 💡 عمليات الحسابات (محدثة بمزامنة الإيرادات)
+      // عمليات الحسابات
       addAccount: (a) => {
         const item: Account = {
           ...a,
@@ -225,7 +240,7 @@ export const useStore = create<State>()(
         };
         set((s) => {
           const newAccounts = [...s.accounts, item];
-          return { accounts: newAccounts, revenue: recalculateRevenueMap(newAccounts) }; // تحديث الإيرادات
+          return { accounts: newAccounts, revenue: recalculateRevenueMap(newAccounts) };
         });
         return item;
       },
@@ -233,16 +248,16 @@ export const useStore = create<State>()(
       updateAccount: (id, a) =>
         set((s) => {
           const newAccounts = s.accounts.map((x) => (x.id === id ? { ...x, ...a } : x));
-          return { accounts: newAccounts, revenue: recalculateRevenueMap(newAccounts) }; // تحديث الإيرادات
+          return { accounts: newAccounts, revenue: recalculateRevenueMap(newAccounts) };
         }),
 
       deleteAccount: (id) =>
         set((s) => {
           const newAccounts = s.accounts.filter((x) => x.id !== id);
-          return { accounts: newAccounts, revenue: recalculateRevenueMap(newAccounts) }; // تحديث الإيرادات
+          return { accounts: newAccounts, revenue: recalculateRevenueMap(newAccounts) };
         }),
 
-      clearAccounts: () => set({ accounts: [], revenue: {} }), // مسح الإيرادات المرتبطة بها
+      clearAccounts: () => set({ accounts: [], revenue: {} }),
 
       // عمليات اليومية
       addJournal: (j) => {
@@ -269,19 +284,24 @@ export const useStore = create<State>()(
       setOpeningBalance: (n) => set({ openingBalance: n }),
       setRevenue: (year, month, itemKey, amount) => set((s) => ({ revenue: { ...s.revenue, [`${year}-${month}-${itemKey}`]: amount } })),
 
-      // الاستيراد والتصدير
+      // الاستيراد والتصدير الفاخر والآمن
       importData: (d) =>
         set((s) => {
           const importedAccounts = d.accounts 
             ? [...s.accounts, ...d.accounts.map((a: any) => ({ ...a, id: a.id || uid(), hafizaAmount: Number(a.hafizaAmount) || 0, income: Number(a.income) || 0, expense: Number(a.expense) || 0 }))]
             : s.accounts;
 
+          // 💡 التحقق مما إذا كانت البيانات المستوردة تحتوي على hafiza أو hafizas لمنع السقوط
+          const rawHafiza = d.hafiza || d.hafizas || [];
+          const importedHafiza = [...s.hafiza, ...rawHafiza.map((h: any) => ({ ...h, id: h.id || uid(), hafizaAmount: Number(h.hafizaAmount) || 0, notifyAmount: Number(h.notifyAmount) || 0 }))];
+
           return {
             trainees: d.trainees ? [...s.trainees, ...d.trainees] : s.trainees,
             journal: d.journal ? [...s.journal, ...d.journal.map((j: any) => ({ ...j, id: j.id || uid(), debit: Number(j.debit) || 0, credit: Number(j.credit) || 0 }))] : s.journal,
-            hafiza: d.hafiza ? [...s.hafiza, ...d.hafiza.map((h: any) => ({ ...h, id: h.id || uid(), hafizaAmount: Number(h.hafizaAmount) || 0, notifyAmount: Number(h.notifyAmount) || 0 }))] : s.hafiza,
+            hafiza: importedHafiza,
+            hafizas: importedHafiza, // 💡 إبقاء التزامن فعالاً بالجمع والمفرد هنا
             accounts: importedAccounts,
-            revenue: d.accounts ? recalculateRevenueMap(importedAccounts) : (d.revenue ? { ...s.revenue, ...d.revenue } : s.revenue), // 💡 تحديث الإيرادات عند الاستيراد
+            revenue: d.accounts ? recalculateRevenueMap(importedAccounts) : (d.revenue ? { ...s.revenue, ...d.revenue } : s.revenue), 
             installments: d.installments ? [...s.installments, ...d.installments.map(recalcInstallment)] : s.installments,
             installments2025: d.installments2025 ? [...s.installments2025, ...d.installments2025.map(recalcInstallment)] : s.installments2025,
             openingBalance: d.openingBalance ?? s.openingBalance,
@@ -289,12 +309,15 @@ export const useStore = create<State>()(
         }),
 
       exportAllData: () => ({
-        trainees: get().trainees, hafiza: get().hafiza, accounts: get().accounts, journal: get().journal,
+        trainees: get().trainees, hafiza: get().hafiza, hafizas: get().hafizas, accounts: get().accounts, journal: get().journal,
         installments: get().installments, installments2025: get().installments2025, openingBalance: get().openingBalance,
         revenue: get().revenue, customTabs: get().customTabs,
       }),
-      clearAll: () => set({ hafiza: [], accounts: [], journal: [], installments: [], installments2025: [], revenue: {} }),
-      clearTab: (tab) => set((s) => ({ ...s, [tab]: [] })),
+      clearAll: () => set({ hafiza: [], hafizas: [], accounts: [], journal: [], installments: [], installments2025: [], revenue: {} }),
+      clearTab: (tab) => set((s) => {
+        if(tab === 'hafiza' || tab === 'hafizas') return { ...s, hafiza: [], hafizas: [] };
+        return { ...s, [tab]: [] };
+      }),
 
       // التبويبات المخصصة
       addCustomTab: (name) => { const tab: CustomTab = { id: uid(), name, columns: [], rows: [] }; set((s) => ({ customTabs: [...s.customTabs, tab] })); return tab; },
@@ -320,6 +343,7 @@ export const useStore = create<State>()(
 
 export const useTrainees = () => useStore((s) => s.trainees);
 export const useHafiza = () => useStore((s) => s.hafiza);
+export const useHafizas = () => useStore((s) => s.hafizas); // 💡 مضاف لضمان جلب المصفوفة بالجمع في أي مكان دون مشاكل
 export const useAccounts = () => useStore((s) => s.accounts);
 export const useJournal = () => useStore((s) => s.journal);
 export const useInstallments = () => useStore((s) => s.installments);
