@@ -3,6 +3,7 @@ import { useStore } from "@/lib/store";
 import { Edit, Save, Trash2, AlertOctagon, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import ImportButton from "@/components/ImportButton";
+import TabActions from "@/components/TabActions";
 import type { Journal } from "@/lib/store";
 
 // قائمة الـ 59 حساباً كاملة والمستخرجة حرفياً من رؤوس أعمدة ملف "القيود2026.xlsx"
