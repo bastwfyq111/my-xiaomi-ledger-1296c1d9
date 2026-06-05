@@ -133,7 +133,16 @@ export default function AccountsTab() {
       if (acc.hafizaNo) byHafizaNo.set(String(acc.hafizaNo), acc);
     });
 
-    hafizas.forEach((hafiza: any) => {
+    // 🔒 مزامنة بيانات العام 2026 فقط
+    const hafiza2026 = hafizas.filter(
+      (h: any) => String(h?.date || "").substring(0, 4) === "2026"
+    );
+    if (hafiza2026.length === 0) {
+      toast.info("لا توجد حوافظ تعود للعام 2026 لمزامنتها.");
+      return;
+    }
+
+    hafiza2026.forEach((hafiza: any) => {
       if (!hafiza?.id) return; // المعرّف الفريد شرط أساسي للمزامنة
       const hAmount = Number(hafiza.hafizaAmount || hafiza.income || 0);
 
