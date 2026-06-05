@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from "react";
 import { useStore, type Trainee } from "@/lib/store";
 import { fmt, today } from "@/lib/format";
-import { hafizaPdf } from "@/lib/exportPdf";
 import { DESCRIPTIONS } from "@/lib/accounts";
 import { toast } from "sonner";
 import ImportButton from "./ImportButton";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
-import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser, CheckSquare } from "lucide-react";
+import { Printer, X, Plus, Edit, Trash2, Search, Save, Eraser, CheckSquare, Calendar, Hash, FileText, User, Sparkles } from "lucide-react";
 import TabActions from "./TabActions";
 
+// تعريف أعمدة الجدول الثابتة
 const COLS = [
   { key: "name", label: "الاسم" },
   { key: "batch", label: "الدفعة" },
@@ -40,14 +40,14 @@ export default function HafizaTab() {
   const [nameQuery, setNameQuery] = useState("");
   const [showSugg, setShowSugg] = useState(false);
   
-  // حالة التحكم بالتعديل الفوري داخل الخلايا
+  // التحكم بالتعديل الفوري داخل الخلايا
   const [activeCell, setActiveCell] = useState<{ rowId: string; colKey: string } | null>(null);
   const [cellValue, setCellValue] = useState("");
 
   const { rows: filtered, sortKey, sortDir, toggleSort, filters, setFilter, clearFilters } =
     useTableControls(hafiza, COLS.map((c) => c.key));
 
-  // حساب الإجماليات بشكل ديناميكي وتلقائي بناءً على السطور المعروضة حالياً
+  // احتساب الإجماليات بشكل ديناميكي بناءً على البيانات المصنوعة في البحث والتصفية
   const totalHafizaAmount = useMemo(() => {
     return filtered.reduce((sum, item) => sum + (Number(item.hafizaAmount) || 0), 0);
   }, [filtered]);
@@ -56,6 +56,7 @@ export default function HafizaTab() {
     return filtered.reduce((sum, item) => sum + (Number(item.notifyAmount) || 0), 0);
   }, [filtered]);
 
+  // إعداد قائمة المقترحات لأسماء المتدربين لتسهيل التعبئة السرية
   const nameSuggestions = useMemo(() => {
     const q = nameQuery.trim();
     if (!q) return trainees.slice(0, 8);
@@ -87,7 +88,7 @@ export default function HafizaTab() {
     if (!trainees.find((t) => t.name === form.name)) {
       addTrainee({ name: form.name, batch: form.batch, specialty: form.specialty });
     }
-    toast.success("تم الحفظ بنجاح");
+    toast.success("تم حفظ الحافظة وترحيل البيانات بنجاح");
     setForm(empty);
     setNameQuery("");
   };
@@ -105,7 +106,7 @@ export default function HafizaTab() {
       });
     });
     
-    toast.success(`تم نسخ مبالغ الحافظة إلى مبالغ التوريد لـ (${filtered.length}) سجل بنجاح!`);
+    toast.success(`تمت تسوية ونسخ المبالغ لـ (${filtered.length}) سجل بنجاح!`);
   };
 
   const handleCellClick = (rowId: string, colKey: string, currentVal: any) => {
@@ -129,48 +130,50 @@ export default function HafizaTab() {
     });
 
     setActiveCell(null);
-    toast.success("تم التحديث التلقائي للخلية");
+    toast.success("تم تحديث الخلية تلقائياً");
   };
 
   return (
     <div className="w-full space-y-6 p-0" dir="rtl">
       
-      {/* ========== قسم إضافة حافظة توريد جديدة ========== */}
-      <div className="w-full bg-white shadow-md border border-slate-200/80 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-l from-indigo-600 via-purple-600 to-pink-600 px-4 py-4 flex flex-wrap justify-between items-center gap-3 shadow-inner">
+      {/* ========== 1. نموذج إدخال الحوافظ المطور زرق سماوي ناعم ========== */}
+      <div className="w-full bg-white shadow-sm border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="bg-gradient-to-r from-[#10528e] to-[#0f467a] px-5 py-4 flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
-              <Plus className="w-5 h-5 text-white" />
+            <div className="p-1.5 bg-white/10 rounded-lg text-white">
+              <Plus className="w-4 h-4" />
             </div>
-            <h2 className="text-base sm:text-lg font-extrabold text-white tracking-wide">إضافة حافظة توريد جديدة</h2>
+            <h2 className="text-sm sm:text-base font-bold text-white">إضافة حافظة توريد جديدة للنظام</h2>
           </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1 hover:bg-white/15 transition-colors">
+          <div className="bg-white/10 text-white border border-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition-all">
             <ImportButton kind="hafiza" />
           </div>
         </div>
         
-        <div className="p-4 sm:p-5 bg-slate-50/30">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            <div className="relative sm:col-span-2">
-              <label className="block text-xs font-bold text-slate-700 mb-1">الاسم *</label>
-              <div className="relative">
+        <div className="p-4 bg-slate-50/40">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 items-end">
+            
+            {/* حقل البحث الذكي عن الاسم */}
+            <div className="relative col-span-2">
+              <label className="block text-xs font-bold text-slate-500 mb-1.5 mr-1">الاسم الكامل للمتدرب *</label>
+              <div className="relative flex items-center">
+                <span className="absolute right-3 z-10"><User className="w-4 h-4 text-slate-400" /></span>
                 <input
                   value={nameQuery}
                   onChange={(e) => { setNameQuery(e.target.value); setForm({ ...form, name: e.target.value }); setShowSugg(true); }}
                   onFocus={() => setShowSugg(true)}
                   onBlur={() => setTimeout(() => setShowSugg(false), 200)}
-                  placeholder="ابحث أو اكتب اسم المتدرب..."
-                  className="w-full pl-3 pr-9 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white transition-all shadow-sm"
+                  placeholder="ابحث أو اكتب اسم المتدرب الجديد..."
+                  className="w-full pr-9 pl-3 py-2 text-sm border border-slate-300 rounded-xl outline-none focus:border-[#10528e] bg-white text-slate-800 font-medium transition-colors shadow-sm"
                 />
-                <Search className="w-4 h-4 text-slate-400 absolute right-3 top-3" />
               </div>
               {showSugg && nameSuggestions.length > 0 && (
-                <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                <ul className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-300 rounded-xl shadow-xl max-h-60 overflow-y-auto">
                   {nameSuggestions.map((t) => (
                     <li key={t.name}>
-                      <button type="button" onMouseDown={() => pickName(t)} className="w-full text-right px-4 py-2.5 hover:bg-indigo-50/50 border-b last:border-0 transition-colors">
+                      <button type="button" onMouseDown={() => pickName(t)} className="w-full text-right px-4 py-2.5 hover:bg-blue-50/50 border-b border-slate-100 last:border-0 transition-colors">
                         <div className="font-bold text-sm text-slate-800">{t.name}</div>
-                        <div className="text-xs text-indigo-600 mt-0.5 font-medium">{t.specialty} — {t.batch}</div>
+                        <div className="text-xs text-[#10528e] mt-0.5 font-bold">{t.specialty} — {t.batch}</div>
                       </button>
                     </li>
                   ))}
@@ -178,21 +181,25 @@ export default function HafizaTab() {
               )}
             </div>
             
-            <Field label="الدفعة" v={form.batch} on={(v) => setForm({ ...form, batch: v })} />
-            <Field label="التخصص" v={form.specialty} on={(v) => setForm({ ...form, specialty: v })} />
-            <Field label="التاريخ" type="date" v={form.date} on={(v) => setForm({ ...form, date: v })} />
-            <Field label="رقم الحافظة *" v={form.hafizaNo} on={(v) => setForm({ ...form, hafizaNo: v })} />
-            <Field label="مبلغ الحافظة *" type="number" v={form.hafizaAmount} on={(v) => setForm({ ...form, hafizaAmount: v })} />
+            <Field label="الدفعة" icon={<Sparkles className="w-4 h-4 text-slate-400" />} v={form.batch} on={(v) => setForm({ ...form, batch: v })} />
+            <Field label="التخصص الطبي" icon={<FileText className="w-4 h-4 text-slate-400" />} v={form.specialty} on={(v) => setForm({ ...form, specialty: v })} />
+            <Field label="التاريخ" type="date" icon={<Calendar className="w-4 h-4 text-slate-400" />} v={form.date} on={(v) => setForm({ ...form, date: v })} />
+            <Field label="رقم الحافظة *" icon={<Hash className="w-4 h-4 text-slate-400" />} v={form.hafizaNo} on={(v) => setForm({ ...form, hafizaNo: v })} />
+            <Field label="مبلغ الحافظة *" type="number" icon={<span className="text-xs text-slate-400 font-bold">ر.ي</span>} v={form.hafizaAmount} on={(v) => setForm({ ...form, hafizaAmount: v })} />
             
+            {/* حقل البيان المتكامل */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">البيان</label>
-              <input
-                list="hafiza-descriptions"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="اكتب أو اختر..."
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white transition-all shadow-sm"
-              />
+              <label className="block text-xs font-bold text-slate-500 mb-1.5 mr-1">البيان والشرح</label>
+              <div className="relative flex items-center">
+                <span className="absolute right-3 z-10"><FileText className="w-4 h-4 text-slate-400" /></span>
+                <input
+                  list="hafiza-descriptions"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="اكتب أو اختر..."
+                  className="w-full pr-9 pl-3 py-2 text-sm border border-slate-300 rounded-xl outline-none focus:border-[#10528e] bg-white text-slate-800 font-medium transition-colors shadow-sm"
+                />
+              </div>
               <datalist id="hafiza-descriptions">
                 {Array.from(new Set([...DESCRIPTIONS, ...hafiza.map((h) => h.description).filter(Boolean)])).map((d) => (
                   <option key={d} value={d} />
@@ -200,41 +207,43 @@ export default function HafizaTab() {
               </datalist>
             </div>
             
-            <Field label="تاريخ التوريد" type="date" v={form.notifyDate} on={(v) => setForm({ ...form, notifyDate: v })} />
-            <Field label="رقم الاشعار" v={form.notifyNo} on={(v) => setForm({ ...form, notifyNo: v })} />
-            <Field label="مبلغ التوريد" type="number" v={form.notifyAmount} on={(v) => setForm({ ...form, notifyAmount: v })} />
+            <Field label="تاريخ التوريد" type="date" icon={<Calendar className="w-4 h-4 text-slate-400" />} v={form.notifyDate} on={(v) => setForm({ ...form, notifyDate: v })} />
+            <Field label="رقم الاشعار" icon={<Hash className="w-4 h-4 text-slate-400" />} v={form.notifyNo} on={(v) => setForm({ ...form, notifyNo: v })} />
+            <Field label="مبلغ التوريد" type="number" icon={<span className="text-xs text-slate-400 font-bold">ر.ي</span>} v={form.notifyAmount} on={(v) => setForm({ ...form, notifyAmount: v })} />
           </div>
           
-          <div className="mt-5 flex gap-3 flex-wrap border-t border-slate-100 pt-4">
-            <button onClick={submit} className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold hover:from-indigo-700 hover:to-purple-700 active:scale-95 transition-all text-sm shadow-md shadow-indigo-200 focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2">
-              <Save className="w-4 h-4" /> حفظ وترحيل تلقائي
+          {/* أزرار العمليات التفاعلية للنموذج */}
+          <div className="mt-5 flex gap-2 flex-wrap border-t border-slate-200/60 pt-4">
+            <button onClick={submit} className="flex items-center gap-2 px-5 py-2 bg-[#10528e] text-white rounded-xl font-bold hover:bg-[#0b3d6d] active:scale-95 transition-all text-xs shadow-sm">
+              <Save className="w-4 h-4" /> حفظ وترحيل الحافظة
             </button>
-            <button onClick={() => { setForm(empty); setNameQuery(""); }} className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 text-slate-700 bg-white rounded-lg font-semibold hover:bg-slate-50 hover:border-slate-300 active:scale-95 transition-all text-sm shadow-sm">
-              <Eraser className="w-4 h-4 text-slate-500" /> مسح الحقول
+            <button onClick={() => { setForm(empty); setNameQuery(""); }} className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-500 bg-white rounded-xl font-bold hover:bg-slate-100 active:scale-95 transition-all text-xs shadow-sm">
+              <Eraser className="w-4 h-4" /> تصفية الحقول
             </button>
           </div>
         </div>
       </div>
 
-      {/* ========== سجل حوافظ التوريد الذكي الجدول التفاعلي ========== */}
-      <div className="w-full bg-white shadow-md border border-blue-100 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-l from-blue-600 to-cyan-600 px-4 py-4 flex flex-wrap justify-between items-center gap-3">
+      {/* ========== 2. جدول مراقبة وتدقيق الحوافظ (بحدود سوداء واحتواء نصوص متميز) ========== */}
+      <div className="w-full bg-white shadow-sm border border-black rounded-xl overflow-hidden">
+        <div className="bg-slate-800 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">📑 سجل حوافظ التوريد <span className="bg-white/20 text-white px-2 py-0.5 rounded-full text-xs font-mono">{hafiza.length}</span></h2>
-            <p className="text-xs text-blue-50/80 mt-0.5">اضغط مباشرة على أي خلية لتعديل قيمتها فوراً • صف الإجمالي في الأسفل ديناميكي</p>
+            <h2 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">📑 كشف قيود حوافظ التوريد المعينة ({hafiza.length})</h2>
           </div>
           <div className="flex gap-2 flex-wrap items-center">
+            {/* زر تسوية المبالغ الذهبي التفاعلي والبارز */}
             <button 
               onClick={handleCopyAmountsToNotify} 
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-extrabold rounded-lg text-xs shadow-md transition-all font-tajawal"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black rounded-xl text-xs shadow-sm transition-all"
             >
-              <CheckSquare className="w-4 h-4" /> نسخ المبالغ للتوريد ⚡
+              <CheckSquare className="w-3.5 h-3.5" /> نسخ المبالغ للتوريد ⚡
             </button>
             
-            <button onClick={clearFilters} className="px-3 py-1.5 bg-blue-700/40 hover:bg-blue-700/60 active:scale-95 text-white rounded-lg text-xs font-bold transition-all border border-blue-400/30">
-              مسح التصفية
-            </button>
-            {/* تم دمج زر الطباعة داخل TabActions لمنع التكرار */}
+            {Object.values(filters).some(Boolean) && (
+              <button onClick={clearFilters} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 active:scale-95 text-white rounded-xl text-xs font-bold transition-all">
+                مسح مرشحات البحث
+              </button>
+            )}
             <TabActions
               title="حوافظ التوريد" rows={hafiza} columns={COLS} fileName="حوافظ-التوريد"
               numericKeys={["hafizaAmount","notifyAmount"]} onClear={clearHafiza}
@@ -242,36 +251,37 @@ export default function HafizaTab() {
           </div>
         </div>
         
-        <div className="p-3 sm:p-4">
-          <div className="overflow-auto max-h-[60vh] rounded-lg border border-indigo-200 shadow-sm relative">
-            <table className="w-full text-xs sm:text-sm">
-              <thead className="font-bold text-slate-800 sticky top-0 z-20">
-                <tr className="bg-gradient-to-l from-indigo-100 via-purple-50 to-pink-50">
-                  <th className="p-2.5 text-center w-10 bg-indigo-100">م</th>
+        <div className="bg-white">
+          <div className="overflow-x-auto overflow-y-auto max-h-[550px] relative">
+            <table className="w-full text-xs sm:text-sm text-right border-collapse border border-black table-auto">
+              <thead className="sticky top-0 z-20 shadow-sm text-slate-900 font-bold text-xs bg-slate-100">
+                <tr>
+                  <th className="p-2 border border-black text-center w-10 bg-slate-100 sticky top-0 z-20">م</th>
                   {COLS.map((c) => (
-                    <th key={c.key} className="p-2.5 text-right whitespace-nowrap cursor-pointer select-none hover:bg-indigo-200/60 transition-colors" onClick={() => toggleSort(c.key)}>
-                      <div className="flex items-center gap-1">
-                        {c.label} <span className="text-[10px] text-indigo-500">{sortIndicator(sortKey === c.key, sortDir)}</span>
+                    <th key={c.key} className="p-2 border border-black whitespace-normal break-words min-w-[85px] cursor-pointer hover:bg-slate-200 transition-colors select-none sticky top-0 z-20 bg-slate-100" onClick={() => toggleSort(c.key)}>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span>{c.label}</span> 
+                        <span className="text-[10px] text-[#10528e] font-mono">{sortIndicator(sortKey === c.key, sortDir)}</span>
                       </div>
                     </th>
                   ))}
-                  <th className="p-2.5 text-center">إجراءات</th>
+                  <th className="p-2 border border-black text-center bg-slate-100 sticky top-0 z-20 min-w-[60px]">إجراءات</th>
                 </tr>
-                <tr className="bg-white border-t border-indigo-100">
-                  <th className="p-1.5"></th>
+                <tr className="bg-slate-50">
+                  <th className="p-1 border border-black bg-slate-50"></th>
                   {COLS.map((c) => (
-                    <th key={c.key} className="p-1.5">
+                    <th key={c.key} className="p-1 border border-black bg-slate-50">
                       <input value={filters[c.key] || ""} onChange={(e) => setFilter(c.key, e.target.value)}
-                        placeholder="بحث..." className="w-full px-2 py-1 text-xs border border-indigo-200 rounded outline-none focus:border-indigo-500 bg-white shadow-inner" />
+                        placeholder="تصفية..." className="w-full px-1.5 py-1 text-[11px] border border-slate-300 rounded bg-white outline-none focus:border-black font-medium transition-colors" />
                     </th>
                   ))}
-                  <th className="p-1.5"></th>
+                  <th className="p-1 border border-black bg-slate-50"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="text-slate-700 font-medium bg-white">
                 {filtered.map((h, i) => (
-                  <tr key={h.id} className="hover:bg-indigo-50/20 transition-colors group">
-                    <td className="p-2.5 text-center text-slate-400 font-mono bg-slate-50/50">{i + 1}</td>
+                  <tr key={h.id} className="hover:bg-slate-100 transition-colors group">
+                    <td className="p-2 border border-black text-center font-mono bg-slate-50/50">{i + 1}</td>
                     
                     {COLS.map((col) => {
                       const isEditing = activeCell?.rowId === h.id && activeCell?.colKey === col.key;
@@ -279,9 +289,11 @@ export default function HafizaTab() {
                         <td 
                           key={col.key} 
                           onClick={() => handleCellClick(h.id, col.key, (h as any)[col.key])}
-                          className={`p-2 cursor-pointer transition-all border border-transparent hover:border-indigo-300 hover:bg-yellow-50/40 relative ${
-                            col.key === 'hafizaAmount' ? 'font-mono font-bold text-emerald-700 bg-emerald-50/10' : 
-                            col.key === 'notifyAmount' ? 'font-mono font-bold text-blue-700 bg-blue-50/10' : 'text-slate-700'
+                          className={`p-2 border border-black text-center whitespace-normal break-words transition-all ${
+                            col.key === 'name' ? 'font-bold text-slate-900 min-w-[120px] text-right' :
+                            col.key === 'description' ? 'min-w-[140px] text-right' :
+                            col.key === 'hafizaAmount' ? 'font-mono font-bold text-emerald-700 bg-emerald-50/20 min-w-[90px]' : 
+                            col.key === 'notifyAmount' ? 'font-mono font-bold text-blue-700 bg-blue-50/20 min-w-[90px]' : 'font-mono min-w-[80px]'
                           }`}
                         >
                           {isEditing ? (
@@ -292,10 +304,10 @@ export default function HafizaTab() {
                               onChange={(e) => setCellValue(e.target.value)}
                               onBlur={() => handleCellSave(h)}
                               onKeyDown={(e) => { if (e.key === 'Enter') handleCellSave(h); if (e.key === 'Escape') setActiveCell(null); }}
-                              className="w-full p-1 border-2 border-indigo-500 rounded outline-none bg-white text-slate-900 shadow-md font-sans text-xs z-10"
+                              className="w-full p-1 border border-black rounded bg-white text-slate-900 font-sans text-xs outline-none"
                             />
                           ) : (
-                            <span className="block min-h-[20px] w-full">
+                            <span className="block min-h-[18px] w-full">
                               {col.key === "hafizaAmount" || col.key === "notifyAmount" 
                                 ? fmt((h as any)[col.key]) 
                                 : ((h as any)[col.key] || "—")}
@@ -305,48 +317,46 @@ export default function HafizaTab() {
                       );
                     })}
 
-                    <td className="p-2 text-center whitespace-nowrap">
+                    <td className="p-2 border border-black text-center bg-slate-50/50">
                       <button 
-                        onClick={(e) => { e.stopPropagation(); if (confirm("هل أنت متأكد من حذف هذه الحافظة نهائياً؟")) deleteHafiza(h.id); }} 
-                        className="p-1.5 bg-rose-50 text-rose-600 rounded-md hover:bg-rose-500 hover:text-white active:scale-90 transition-all opacity-80 group-hover:opacity-100" 
-                        title="حذف السجل"
+                        onClick={(e) => { e.stopPropagation(); if (confirm("هل تريد حذف هذا القيد بالتأكيد؟")) deleteHafiza(h.id); }} 
+                        className="p-1 text-rose-600 hover:bg-rose-100 rounded transition-colors" 
+                        title="حذف القيد"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={12} className="p-8 text-center text-slate-400 bg-slate-50 font-medium">
-                      لا توجد بيانات مطابقة للبحث حالياً
+                    <td colSpan={COLS.length + 2} className="p-12 text-center text-slate-400 bg-slate-50 font-bold border border-black">
+                      لا توجد سجلات مطابقة لمرشحات البحث الحالية.
                     </td>
                   </tr>
                 )}
               </tbody>
 
-              {/* ========== صف الإجماليات المضاف والمميز بلون ذهبي رمادي أنيق ========== */}
+              {/* صف الإجماليات المالي النهائي والمدقق بحدود سوداء صلبة */}
               {filtered.length > 0 && (
-                <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300 sticky bottom-0 z-10 text-slate-800">
+                <tfoot className="bg-slate-100 font-bold border-t-2 border-black sticky bottom-0 z-10 text-slate-900 text-xs">
                   <tr>
-                    <td className="p-3 text-center bg-slate-200">∑</td>
-                    <td className="p-3 text-right text-slate-900 font-extrabold text-sm">الإجمالي المالي للتقرير</td>
-                    <td className="p-3">—</td>
-                    <td className="p-3">—</td>
-                    <td className="p-3">—</td>
-                    <td className="p-3">—</td>
-                    <td className="p-3">—</td>
-                    {/* إجمالي عمود المبلغ */}
-                    <td className="p-3 font-mono font-extrabold text-emerald-800 bg-emerald-100/80 text-sm">
+                    <td className="p-2 border border-black text-center bg-slate-200">∑</td>
+                    <td className="p-2 border border-black text-right font-black text-slate-900">إجمالي التقارير الحالية</td>
+                    <td className="p-2 border border-black text-center">—</td>
+                    <td className="p-2 border border-black text-center">—</td>
+                    <td className="p-2 border border-black text-center">—</td>
+                    <td className="p-2 border border-black text-center">—</td>
+                    <td className="p-2 border border-black text-center">—</td>
+                    <td className="p-2 border border-black font-mono font-black text-emerald-800 bg-emerald-100 text-center">
                       {fmt(totalHafizaAmount)}
                     </td>
-                    <td className="p-3">—</td>
-                    <td className="p-3">—</td>
-                    {/* إجمالي عمود مبلغ التوريد */}
-                    <td className="p-3 font-mono font-extrabold text-blue-800 bg-blue-100/80 text-sm">
+                    <td className="p-2 border border-black text-center">—</td>
+                    <td className="p-2 border border-black text-center">—</td>
+                    <td className="p-2 border border-black font-mono font-black text-blue-800 bg-blue-100 text-center">
                       {fmt(totalNotifyAmount)}
                     </td>
-                    <td className="p-3 bg-slate-200"></td>
+                    <td className="p-2 border border-black bg-slate-200"></td>
                   </tr>
                 </tfoot>
               )}
@@ -358,16 +368,20 @@ export default function HafizaTab() {
   );
 }
 
-function Field({ label, v, on, type = "text" }: { label: string; v: string; on: (v: string) => void; type?: string }) {
+// مكون الحقل الفرعي المدعوم بأيقونات دلالية للمستخدم
+function Field({ label, v, on, type = "text", icon, className = "" }: { label: string; v: string; on: (v: string) => void; type?: string; icon?: React.ReactNode; className?: string }) {
   return (
-    <div>
-      <label className="block text-xs font-bold text-slate-700 mb-1">{label}</label>
-      <input
-        type={type}
-        value={v}
-        onChange={(e) => on(e.target.value)}
-        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white transition-all shadow-sm"
-      />
+    <div className="w-full">
+      <label className="block text-xs font-bold text-slate-500 mb-1.5 mr-1">{label}</label>
+      <div className="relative flex items-center">
+        {icon && <span className="absolute right-3 z-10">{icon}</span>}
+        <input 
+          type={type} 
+          value={v} 
+          onChange={(e) => on(e.target.value)} 
+          className={`w-full ${icon ? "pr-9" : "px-3"} pl-3 py-2 text-sm border border-slate-300 rounded-xl outline-none focus:border-[#10528e] bg-white text-slate-800 font-medium shadow-sm transition-colors ${className}`} 
+        />
+      </div>
     </div>
   );
 }
