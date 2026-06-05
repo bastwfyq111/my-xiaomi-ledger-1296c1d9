@@ -173,9 +173,10 @@ export default function RevenueTab() {
         </div>
 
         {/* صندوق الحماية من الضيق: يسمح بالتمرير الجانبي اللطيف والجداول تبدأ من اليمين */}
-        <div className="w-full overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:thin]">
+        <div className="w-full overflow-auto max-h-[65vh] [-ms-overflow-style:none] [scrollbar-width:thin] relative">
           <table className="w-full min-w-[950px] text-right border-collapse text-xs md:text-sm">
-            <thead>
+            <thead className="sticky top-0 z-20 shadow-sm">
+
               <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200/80">
                 <th rowSpan={2} className="border-l border-b border-slate-200 p-3 text-right min-w-[300px]">بيان مفردات الموارد المعتمدة</th>
                 <th rowSpan={2} className="border-l border-b border-slate-200 p-3 text-center w-14">الباب</th>

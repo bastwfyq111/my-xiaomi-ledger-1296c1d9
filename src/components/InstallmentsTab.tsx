@@ -398,9 +398,10 @@ export default function InstallmentsTab() {
         {importError && <div className="bg-red-50 border-b border-red-200 p-3 flex gap-2"><AlertCircle className="w-5 h-5 text-red-600" /><p className="text-sm text-red-700">{importError}</p></div>}
         <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2025} columns={3} />
-          <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
+          <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
             <table className="w-full text-xs sm:text-sm">
-              <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700">
+              <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
+
                 <tr>
                   <th className="p-2 text-center">#</th>
                   <th className="p-2 text-right min-w-[150px]">اسم المتدرب</th>
@@ -489,9 +490,10 @@ export default function InstallmentsTab() {
         </div>
         <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2026} columns={3} />
-          <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
+          <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
             <table className="w-full text-xs sm:text-sm">
-              <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700">
+              <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
+
                 <tr>
                   <th className="p-2 text-center">#</th>
                   <th className="p-2 text-right min-w-[150px]">اسم المتدرب</th>

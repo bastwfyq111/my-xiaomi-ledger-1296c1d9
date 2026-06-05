@@ -292,9 +292,10 @@ export default function ExpensesTab() {
           <h3 className="text-base sm:text-lg font-bold">كشف حساب السنة</h3>
           <p className="text-xs opacity-90">ملخص جميع الأشهر للعام {year}م</p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[65vh] relative">
           <table className="w-full text-xs border-collapse">
-            <thead className="bg-slate-100 text-slate-800 font-bold">
+            <thead className="bg-slate-100 text-slate-800 font-bold sticky top-0 z-20 shadow-sm">
+
               <tr>
                 <th className="border border-slate-200 p-1 min-w-[240px]">البيان</th>
                 {MONTHS.map(m => (

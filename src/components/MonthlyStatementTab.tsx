@@ -227,9 +227,10 @@ export default function MonthlyStatementTab() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[65vh] relative">
           <table className="w-full text-sm border-collapse text-right">
-            <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
+            <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300 sticky top-0 z-20 shadow-sm">
+
               <tr>
                 <th rowSpan={2} className="border-b border-l border-slate-300 px-3 py-3 text-right min-w-[280px] bg-slate-100 text-slate-900 font-extrabold">
                   بيان الحسابات (طبقاً للنظام المحاسبي الموحد)

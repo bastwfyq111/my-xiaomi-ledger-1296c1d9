@@ -133,7 +133,16 @@ export default function AccountsTab() {
       if (acc.hafizaNo) byHafizaNo.set(String(acc.hafizaNo), acc);
     });
 
-    hafizas.forEach((hafiza: any) => {
+    // 🔒 مزامنة بيانات العام 2026 فقط
+    const hafiza2026 = hafizas.filter(
+      (h: any) => String(h?.date || "").substring(0, 4) === "2026"
+    );
+    if (hafiza2026.length === 0) {
+      toast.info("لا توجد حوافظ تعود للعام 2026 لمزامنتها.");
+      return;
+    }
+
+    hafiza2026.forEach((hafiza: any) => {
       if (!hafiza?.id) return; // المعرّف الفريد شرط أساسي للمزامنة
       const hAmount = Number(hafiza.hafizaAmount || hafiza.income || 0);
 
@@ -356,7 +365,7 @@ export default function AccountsTab() {
 
         <div className="p-4 bg-slate-50/40">
           {/* 💡 هنا تم تعديل الـ Grid ليصبح ممتداً أفقياً بالكامل على الشاشات الكبيرة لتوزيع الحقول بجانب بعضها */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4 items-end">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3 items-end">
             <Field label="التاريخ" type="date" icon={<Calendar className="w-4 h-4 text-slate-400" />} v={form.date} on={(v) => setForm({ ...form, date: v })} />
             <Field label="رقم الحافظة" icon={<Hash className="w-4 h-4 text-slate-400" />} v={form.hafizaNo} on={(v) => setForm({ ...form, hafizaNo: v })} />
             <Field label="رقم الإشعار" icon={<Hash className="w-4 h-4 text-slate-400" />} v={form.notifyNo} on={(v) => setForm({ ...form, notifyNo: v })} />

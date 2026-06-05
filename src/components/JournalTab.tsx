@@ -149,7 +149,7 @@ export default function JournalTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
           <input 
             placeholder="رقم الاستمارة" 
             value={form.formNo || ""} 
@@ -267,9 +267,10 @@ export default function JournalTab() {
 
       {/* جدول استعراض قيود اليومية العامة */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[60vh] relative">
           <table className="w-full text-sm">
-            <thead className="bg-slate-800 text-white">
+            <thead className="bg-slate-800 text-white sticky top-0 z-20 shadow-md">
+
               <tr>
                 <th className="p-3 text-right font-semibold">رقم الاستمارة</th>
                 <th className="p-3 text-right font-semibold">التسوية</th>
