@@ -13,7 +13,6 @@ import {
 import TabActions from "./TabActions";
 import schema from "@/data/revenueTemplate.json";
 
-// تعريف أعمدة الجدول الرئيسي
 const COLS = [
   { key: "date", label: "التاريخ" },
   { key: "hafizaNo", label: "رقم الحافظة" },
@@ -75,9 +74,6 @@ export default function AccountsTab() {
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
-  // =========================================================
-  // ⚡ مزامنة ذكية من "حوافظ التوريد" إلى "الحساب"
-  // =========================================================
   const handleSyncFromHafiza = () => {
     if (!hafizas || hafizas.length === 0) {
       toast.error("لا توجد بيانات في تبويب حوافظ التوريد لجلبها!");
@@ -165,7 +161,7 @@ export default function AccountsTab() {
           notifyDate: hafiza.notifyDate || existing.notifyDate,
           checkNo: hafiza.checkNo || existing.checkNo,
           checkDate: hafiza.checkDate || existing.checkDate,
-          description: String(hafiza.description || existing.description || "").trim(),
+          description: String(hafiza.description || "").trim(),
           specialty: hafiza.specialty || existing.specialty,
           name: hafiza.name || existing.name,
           hafizaAmount: supplyAmount,
@@ -245,7 +241,6 @@ export default function AccountsTab() {
   };
 
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // كود الاستيراد كما هو
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -293,7 +288,7 @@ export default function AccountsTab() {
 
   return (
     <div className="w-full space-y-6" dir="rtl">
-      {/* قسم كروت الإحصائيات */}
+      {/* قسم البطاقات الإحصائية */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
           <div className="flex flex-col">
@@ -318,7 +313,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* استمارة المدخلات */}
+      {/* نموذج الإدخال السريع */}
       <div className="w-full bg-white shadow-sm border border-slate-100 rounded-2xl overflow-hidden">
         <div className="bg-gradient-to-r from-[#10528e] to-[#0f467a] px-5 py-4 flex flex-wrap justify-between items-center gap-4 border-b">
           <div className="flex items-center gap-2.5">
@@ -327,8 +322,8 @@ export default function AccountsTab() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={handleSyncFromHafiza} className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-black hover:from-amber-400 hover:to-amber-500 transition-all active:scale-95 shadow-sm">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" /> 
-              <span>تحديث ومطابقة فورية بـ (عمود البيان)</span>
+              <RefreshCw className="w-3.5 h-3.5" /> 
+              <span>تحديث ومطابقة فورية لعام 2026</span>
             </button>
             <label className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 text-white border border-white/10 rounded-xl text-xs font-bold cursor-pointer hover:bg-white/20 transition-all">
               <FileSpreadsheet className="w-3.5 h-3.5" /> <span>استيراد Excel</span>
@@ -379,7 +374,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* 🛠️ جدول الحساب مع الحدود السوداء واحتواء النص */}
+      {/* جدول مراقبة القيود المحسن لشاشات الهواتف مع حدود سوداء والربط السريع */}
       <div className="w-full bg-white shadow-sm border border-black rounded-xl overflow-hidden">
         <div className="bg-slate-800 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-2">
@@ -396,7 +391,6 @@ export default function AccountsTab() {
 
         <div className="bg-white">
           <div className="overflow-x-auto overflow-y-auto max-h-[550px] relative">
-            {/* تمت إضافة border-black للجدول بالكامل هنا */}
             <table className="w-full text-xs sm:text-sm text-right border-collapse border border-black table-auto">
               <thead className="sticky top-0 z-20 shadow-sm text-slate-900 font-bold text-xs bg-slate-100">
                 <tr>
@@ -437,14 +431,36 @@ export default function AccountsTab() {
                       <td className="p-2 border border-black whitespace-normal break-words font-mono min-w-[85px] text-center">{acc.notifyDate || "—"}</td>
                       <td className="p-2 border border-black whitespace-normal break-words font-mono text-center">{acc.checkNo || "—"}</td>
                       <td className="p-2 border border-black whitespace-normal break-words font-mono min-w-[85px] text-center">{acc.checkDate || "—"}</td>
-                      {/* حقل البيان أصبح يدعم نزول النص (Wrap) ليناسب الشاشة */}
                       <td className="p-2 border border-black whitespace-normal break-words min-w-[140px] text-slate-800">{acc.description || "—"}</td>
                       <td className="p-2 border border-black whitespace-normal break-words min-w-[100px]">{acc.specialty || "—"}</td>
                       <td className="p-2 border border-black whitespace-normal break-words font-bold min-w-[120px]">{acc.name || "—"}</td>
                       <td className="p-2 border border-black font-mono text-center">{Number(acc.hafizaAmount) > 0 ? fmt(Number(acc.hafizaAmount)) : "—"}</td>
                       <td className="p-2 border border-black font-mono font-bold text-emerald-700 text-center bg-emerald-50/30">{Number(acc.income) > 0 ? fmt(Number(acc.income)) : "—"}</td>
                       <td className="p-2 border border-black font-mono font-bold text-rose-700 text-center bg-rose-50/30">{Number(acc.expense) > 0 ? fmt(Number(acc.expense)) : "—"}</td>
-                      <td className="p-2 border border-black font-mono font-bold text-teal-800 text-center whitespace-normal break-words min-w-[90px]">{acc.revenueKey || "—"}</td>
+                      
+                      {/* 🛠️ إصلاح عمود رمز الإيراد: تحويله لقائمة قابلة للربط الفوري وموائمة للهاتف */}
+                      <td className="p-1 border border-black text-center bg-slate-50 min-w-[110px]">
+                        <select
+                          value={acc.revenueKey || ""}
+                          onChange={(e) => {
+                            const newKey = e.target.value;
+                            updateAccount(acc.id, {
+                              ...acc,
+                              revenueKey: newKey || undefined
+                            });
+                            toast.success("تم ربط وتحديث رمز الإيراد بنجاح");
+                          }}
+                          className="w-full p-1 text-[11px] font-bold text-teal-900 bg-teal-50/30 border border-teal-200 rounded outline-none focus:border-black cursor-pointer"
+                        >
+                          <option value="">— ربط الرمز —</option>
+                          {revenueTypes.map((t) => (
+                            <option key={t.key} value={t.key}>
+                              {t.key}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+
                       <td className="p-2 border border-black font-mono font-black text-[#10528e] text-center bg-blue-50/30">{fmt(acc.balance)}</td>
                       <td className="p-2 border border-black text-center bg-slate-50/50">
                         <div className="flex justify-center gap-1.5">
@@ -461,7 +477,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* نافذة التعديل المنبثقة */}
+      {/* نافذة التعديل المنبثقة الشاملة */}
       <Modal title="✏️ تعديل وتدقيق السجل المالي" isOpen={!!editingRow} onClose={() => setEditingRow(null)}>
         {editingRow && (
           <form onSubmit={handleEditSave} className="space-y-4">
