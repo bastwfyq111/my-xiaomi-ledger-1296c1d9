@@ -86,6 +86,7 @@ export default function AccountsTab() {
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
+  // دالة المطابقة اليدوية (معدلة لاستخدام notifyAmount)
   const handleSyncFromHafiza = () => {
     if (!hafizas || hafizas.length === 0) {
       toast.error("لا توجد بيانات في تبويب حوافظ التوريد!");
@@ -93,7 +94,10 @@ export default function AccountsTab() {
     }
 
     const normalizeStr = (val: any) => String(val ?? "").trim();
-    const normalizeNum = (val: any) => Number(val ?? 0);
+    const normalizeNum = (val: any): number => {
+      const num = Number(val);
+      return isNaN(num) ? 0 : num;
+    };
     const cleanDate = (dateStr: string) => String(dateStr ?? "").replace(/[^\d]/g, "");
 
     const hafiza2026 = hafizas.filter((h: any) => cleanDate(h?.date).substring(0, 4) === "2026");
@@ -118,7 +122,10 @@ export default function AccountsTab() {
     hafiza2026.forEach((hafiza: any) => {
       if (!hafiza?.id) return;
 
-      // تجهيز البيانات مع مراعاة اختلاف المسميات
+      // استخراج مبلغ التوريد من الحقل المناسب
+      const notifyAmountValue = hafiza.notifyAmount ?? hafiza.supplyAmount ?? hafiza.tawreedAmount ?? 0;
+      const incomeValue = normalizeNum(notifyAmountValue);
+
       const mappedData = {
         date: hafiza.date || today(),
         hafizaNo: normalizeStr(hafiza.hafizaNo),
@@ -130,7 +137,7 @@ export default function AccountsTab() {
         specialty: normalizeStr(hafiza.specialty),
         name: normalizeStr(hafiza.name),
         hafizaAmount: normalizeNum(hafiza.hafizaAmount || hafiza.amount),
-        income: normalizeNum(hafiza.supplyAmount || hafiza.tawreedAmount || hafiza.income),
+        income: incomeValue,
         expense: 0,
       };
 
