@@ -365,7 +365,7 @@ export default function AccountsTab() {
 
         <div className="p-4 bg-slate-50/40">
           {/* 💡 هنا تم تعديل الـ Grid ليصبح ممتداً أفقياً بالكامل على الشاشات الكبيرة لتوزيع الحقول بجانب بعضها */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4 items-end">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3 items-end">
             <Field label="التاريخ" type="date" icon={<Calendar className="w-4 h-4 text-slate-400" />} v={form.date} on={(v) => setForm({ ...form, date: v })} />
             <Field label="رقم الحافظة" icon={<Hash className="w-4 h-4 text-slate-400" />} v={form.hafizaNo} on={(v) => setForm({ ...form, hafizaNo: v })} />
             <Field label="رقم الإشعار" icon={<Hash className="w-4 h-4 text-slate-400" />} v={form.notifyNo} on={(v) => setForm({ ...form, notifyNo: v })} />
