@@ -16,7 +16,7 @@ const COLS = [
   { key: "date", label: "التاريخ" },
   { key: "hafizaNo", label: "رقم الحافظة" },
   { key: "description", label: "البيان" },
-  { key: "hafizaAmount", label: "المبلغ" },
+  { key: "hafizaAmount", label:"مبلغ الحافظة " },
   { key: "notifyDate", label: "تاريخ التوريد" },
   { key: "notifyNo", label: "رقم الاشعار" },
   { key: "notifyAmount", label: "مبلغ التوريد" },
