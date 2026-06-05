@@ -74,6 +74,7 @@ export default function AccountsTab() {
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
+  // دالة المطابقة الذكية والتطهير لعام 2026
   const handleSyncFromHafiza = () => {
     if (!hafizas || hafizas.length === 0) {
       toast.error("لا توجد بيانات في تبويب حوافظ التوريد لجلبها!");
@@ -97,6 +98,7 @@ export default function AccountsTab() {
 
     let addedCount = 0;
     let updatedCount = 0;
+    let deletedCount = 0;
 
     const byHafizaId = new Map<string, any>();
     const byHafizaNo = new Map<string, any>();
@@ -104,6 +106,15 @@ export default function AccountsTab() {
     accounts.forEach((acc: any) => {
       if (acc.sourceHafizaId) byHafizaId.set(String(acc.sourceHafizaId), acc);
       if (acc.hafizaNo) byHafizaNo.set(String(acc.hafizaNo), acc);
+    });
+
+    const activeHafizaIds = new Set(hafiza2026.map((h: any) => String(h.id)));
+    
+    accounts.forEach((acc: any) => {
+      if (acc.sourceHafizaId && !activeHafizaIds.has(String(acc.sourceHafizaId))) {
+        deleteAccount(acc.id);
+        deletedCount++;
+      }
     });
 
     hafiza2026.forEach((hafiza: any) => {
@@ -172,10 +183,12 @@ export default function AccountsTab() {
       }
     });
 
-    if (addedCount > 0 || updatedCount > 0) {
-      toast.success(`تمت المزامنة لعام 2026! إضافة (${addedCount}) سجل، وتحديث (${updatedCount}) سجل.`);
+    if (addedCount > 0 || updatedCount > 0 || deletedCount > 0) {
+      toast.success(
+        `اكتملت المطابقة لعام 2026: إضافة (${addedCount})، تحديث (${updatedCount})، وحذف وتطهير (${deletedCount}) سجلات قديمة.`
+      );
     } else {
-      toast.info("جميع سجلات عام 2026 متطابقة تماماً.");
+      toast.info("تطابق تام وموزون! لا توجد فروقات مالية أو قيود معلقة.");
     }
   };
 
@@ -202,15 +215,24 @@ export default function AccountsTab() {
   const totalExpense = useMemo(() => accounts.reduce((sum, a) => sum + (Number(a.expense) || 0), 0), [accounts]);
   const currentBalance = totalIncome - totalExpense;
 
+  // احتساب الرصيد التراكمي الموزون محاسبياً حسب الأرشيف الكامل
   const filteredWithBalance = useMemo(() => {
+    const sortedAccounts = [...accounts].sort((a, b) => new Set([a.date]).has(b.date) ? 0 : a.date > b.date ? 1 : -1);
+    
+    const balanceMap = new Map<string, number>();
     let runningBalance = 0;
-    return filtered.map((row) => {
+    sortedAccounts.forEach((row) => {
       const inc = Number(row.income) || 0;
       const exp = Number(row.expense) || 0;
       runningBalance = runningBalance + inc - exp;
-      return { ...row, balance: runningBalance };
+      balanceMap.set(row.id, runningBalance);
     });
-  }, [filtered]);
+
+    return filtered.map((row) => ({
+      ...row,
+      balance: balanceMap.get(row.id) ?? 0
+    }));
+  }, [filtered, accounts]);
 
   const submit = () => {
     if (!form.description && !form.name) {
@@ -223,7 +245,7 @@ export default function AccountsTab() {
       name: form.name, hafizaAmount: Number(form.hafizaAmount) || 0, income: Number(form.income) || 0,
       expense: Number(form.expense) || 0, revenueKey: form.revenueKey || undefined,
     });
-    toast.success("تم إضافة القيود وتحديث الأرصدة");
+    toast.success("تم إضافة القيود وترحيلها بنجاح");
     setForm(emptyForm);
   };
 
@@ -236,7 +258,7 @@ export default function AccountsTab() {
       income: Number(editingRow.income) || 0,
       expense: Number(editingRow.expense) || 0,
     });
-    toast.success("تم التحديث الفوري للسجل المالي");
+    toast.success("تم التحديث والترحيل الفوري للسجل المالي");
     setEditingRow(null);
   };
 
@@ -313,17 +335,17 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* نموذج الإدخال السريع */}
+      {/* نموذج الإدخال والمطابقة */}
       <div className="w-full bg-white shadow-sm border border-slate-100 rounded-2xl overflow-hidden">
         <div className="bg-gradient-to-r from-[#10528e] to-[#0f467a] px-5 py-4 flex flex-wrap justify-between items-center gap-4 border-b">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-white/10 rounded-lg text-white"><Plus className="w-4 h-4" /></div>
-            <h2 className="text-sm sm:text-base font-bold text-white">إضافة حركة مالية أو مزامنة الحوافظ</h2>
+            <h2 className="text-sm sm:text-base font-bold text-white">إضافة حركة مالية أو مزامنة وتطهير القيود</h2>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={handleSyncFromHafiza} className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-black hover:from-amber-400 hover:to-amber-500 transition-all active:scale-95 shadow-sm">
               <RefreshCw className="w-3.5 h-3.5" /> 
-              <span>تحديث ومطابقة فورية لعام 2026</span>
+              <span>تحديث ومطابقة فورية لعام 2026 ⚡</span>
             </button>
             <label className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 text-white border border-white/10 rounded-xl text-xs font-bold cursor-pointer hover:bg-white/20 transition-all">
               <FileSpreadsheet className="w-3.5 h-3.5" /> <span>استيراد Excel</span>
@@ -374,7 +396,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* جدول مراقبة القيود المحسن لشاشات الهواتف مع حدود سوداء والربط السريع */}
+      {/* جدول مراقبة القيود المحسن بحدود سوداء */}
       <div className="w-full bg-white shadow-sm border border-black rounded-xl overflow-hidden">
         <div className="bg-slate-800 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-2">
@@ -438,25 +460,20 @@ export default function AccountsTab() {
                       <td className="p-2 border border-black font-mono font-bold text-emerald-700 text-center bg-emerald-50/30">{Number(acc.income) > 0 ? fmt(Number(acc.income)) : "—"}</td>
                       <td className="p-2 border border-black font-mono font-bold text-rose-700 text-center bg-rose-50/30">{Number(acc.expense) > 0 ? fmt(Number(acc.expense)) : "—"}</td>
                       
-                      {/* 🛠️ إصلاح عمود رمز الإيراد: تحويله لقائمة قابلة للربط الفوري وموائمة للهاتف */}
+                      {/* 🌟 تعديل جوهري لربط وترحيل المبالغ للكشف الشهري فورياً عند تغيير الاختيار */}
                       <td className="p-1 border border-black text-center bg-slate-50 min-w-[110px]">
                         <select
                           value={acc.revenueKey || ""}
                           onChange={(e) => {
                             const newKey = e.target.value;
-                            updateAccount(acc.id, {
-                              ...acc,
-                              revenueKey: newKey || undefined
-                            });
-                            toast.success("تم ربط وتحديث رمز الإيراد بنجاح");
+                            updateAccount(acc.id, { ...acc, revenueKey: newKey || undefined });
+                            toast.success("تم ربط رمز الإيراد وترحيله للكشف الشهري بنجاح 📊");
                           }}
                           className="w-full p-1 text-[11px] font-bold text-teal-900 bg-teal-50/30 border border-teal-200 rounded outline-none focus:border-black cursor-pointer"
                         >
                           <option value="">— ربط الرمز —</option>
                           {revenueTypes.map((t) => (
-                            <option key={t.key} value={t.key}>
-                              {t.key}
-                            </option>
+                            <option key={t.key} value={t.key}>{t.key}</option>
                           ))}
                         </select>
                       </td>
@@ -477,7 +494,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* نافذة التعديل المنبثقة الشاملة */}
+      {/* نافذة التعديل المنبثقة */}
       <Modal title="✏️ تعديل وتدقيق السجل المالي" isOpen={!!editingRow} onClose={() => setEditingRow(null)}>
         {editingRow && (
           <form onSubmit={handleEditSave} className="space-y-4">
