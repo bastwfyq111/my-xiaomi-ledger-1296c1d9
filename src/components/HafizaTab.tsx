@@ -280,7 +280,7 @@ export default function HafizaTab() {
                       return (
                         <td 
                           key={col.key} 
-                          onClick={() => handleCellClick(h.id, col.key, h[col.key])}
+                          onClick={() => handleCellClick(h.id, col.key, (h as any)[col.key])}
                           className={`p-2 cursor-pointer transition-all border border-transparent hover:border-indigo-300 hover:bg-yellow-50/40 relative ${
                             col.key === 'hafizaAmount' ? 'font-mono font-bold text-emerald-700 bg-emerald-50/10' : 
                             col.key === 'notifyAmount' ? 'font-mono font-bold text-blue-700 bg-blue-50/10' : 'text-slate-700'
