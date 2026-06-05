@@ -234,9 +234,7 @@ export default function HafizaTab() {
             <button onClick={clearFilters} className="px-3 py-1.5 bg-blue-700/40 hover:bg-blue-700/60 active:scale-95 text-white rounded-lg text-xs font-bold transition-all border border-blue-400/30">
               مسح التصفية
             </button>
-            <button onClick={() => hafizaPdf(filtered)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-700 rounded-lg text-xs font-bold shadow-md hover:bg-blue-50 active:scale-95 transition-all">
-              <Printer className="w-4 h-4" /> طباعة / PDF
-            </button>
+            {/* تم دمج زر الطباعة داخل TabActions لمنع التكرار */}
             <TabActions
               title="حوافظ التوريد" rows={hafiza} columns={COLS} fileName="حوافظ-التوريد"
               numericKeys={["hafizaAmount","notifyAmount"]} onClear={clearHafiza}
