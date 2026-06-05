@@ -1,3 +1,4 @@
+// store.ts (النسخة المعدلة بالكامل)
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import seedTrainees from "@/data/trainees.json";
@@ -150,6 +151,9 @@ type State = {
   getTotalExpenses: () => number;
   getOverdueInstallments: (year?: '2025') => Installment[];
   getInstallmentByIndex: (index: number, year?: '2025') => Installment | undefined;
+
+  // دوال المزامنة التلقائية (جديدة)
+  syncHafizaToAccount: (hafiza: Hafiza) => void;
 };
 
 // ==========================================
@@ -165,11 +169,9 @@ const recalcInstallment = (i: Installment): Installment => {
   return { ...i, fees, prevDue, totalPaid, remaining: prevDue - totalPaid };
 };
 
-// دالة تحديث خريطة الإيرادات بناءً على الرموز المدخلة يدوياً
 const recalculateRevenueMap = (accounts: Account[]): RevenueMap => {
   const newRevenue: RevenueMap = {};
   accounts.forEach((acc) => {
-    // إذا كان السجل يحتوي على رمز إيراد مدخل يدوياً ومبلغ إيرادات أكبر من صفر
     if (acc.revenueKey && acc.income > 0) {
       const d = new Date(acc.date);
       const year = isNaN(d.getFullYear()) ? 2026 : d.getFullYear();
@@ -198,13 +200,69 @@ export const useStore = create<State>()(
       revenue: {},
       customTabs: [],
 
+      // ========== دوال المزامنة التلقائية ==========
+      syncHafizaToAccount: (hafiza: Hafiza) => {
+        const year = hafiza.date?.split('-')[0];
+        if (year !== '2026') return;
+
+        const existingAccount = get().accounts.find(acc => acc.sourceHafizaId === hafiza.id);
+
+        const mappedData = {
+          date: hafiza.date,
+          hafizaNo: hafiza.hafizaNo || '',
+          notifyNo: hafiza.notifyNo || '',
+          notifyDate: hafiza.notifyDate || '',
+          checkNo: '',
+          checkDate: '',
+          description: hafiza.description,
+          specialty: hafiza.specialty,
+          name: hafiza.name,
+          hafizaAmount: Number(hafiza.hafizaAmount) || 0,
+          income: Number(hafiza.notifyAmount) || 0,
+          expense: 0,
+          sourceHafizaId: hafiza.id,
+        };
+
+        if (!existingAccount) {
+          const newAccount: Account = {
+            id: uid(),
+            ...mappedData,
+            revenueKey: undefined,
+          };
+          set(state => ({ accounts: [...state.accounts, newAccount] }));
+          set(state => ({ revenue: recalculateRevenueMap(state.accounts) }));
+        } else {
+          const hasDiff = (
+            existingAccount.date !== mappedData.date ||
+            existingAccount.hafizaNo !== mappedData.hafizaNo ||
+            existingAccount.notifyNo !== mappedData.notifyNo ||
+            existingAccount.notifyDate !== mappedData.notifyDate ||
+            existingAccount.description !== mappedData.description ||
+            existingAccount.specialty !== mappedData.specialty ||
+            existingAccount.name !== mappedData.name ||
+            existingAccount.hafizaAmount !== mappedData.hafizaAmount ||
+            existingAccount.income !== mappedData.income
+          );
+          if (hasDiff) {
+            set(state => ({
+              accounts: state.accounts.map(acc =>
+                acc.id === existingAccount.id
+                  ? { ...acc, ...mappedData, revenueKey: acc.revenueKey }
+                  : acc
+              ),
+            }));
+            set(state => ({ revenue: recalculateRevenueMap(state.accounts) }));
+          }
+        }
+      },
+
       // عمليات المتدربين
       addTrainee: (t) => set((s) => ({ trainees: [...s.trainees, t] })),
       updateTrainee: (index, t) => set((s) => ({ trainees: s.trainees.map((tr, i) => (i === index ? t : tr)) })),
       deleteTrainee: (index) => set((s) => ({ trainees: s.trainees.filter((_, i) => i !== index) })),
       importTrainees: (trainees) => set((s) => ({ trainees: [...s.trainees, ...trainees] })),
 
-      // عمليات الحافظة
+      // عمليات الحافظة (معدلة)
       addHafiza: (h) => {
         const item: Hafiza = {
           ...h, id: uid(), date: h.date || getToday(),
@@ -214,23 +272,38 @@ export const useStore = create<State>()(
           const updated = [...s.hafiza, item];
           return { hafiza: updated, hafizas: updated };
         });
+        get().syncHafizaToAccount(item);
         return item;
       },
       updateHafiza: (id, h) => set((s) => {
         const updated = s.hafiza.map((x) => (x.id === id ? { ...x, ...h } : x));
+        const updatedHafiza = updated.find(x => x.id === id);
+        if (updatedHafiza) {
+          setTimeout(() => get().syncHafizaToAccount(updatedHafiza), 0);
+        }
         return { hafiza: updated, hafizas: updated };
       }),
-      deleteHafiza: (id) => set((s) => {
-        const updated = s.hafiza.filter((x) => x.id !== id);
-        return { 
-          hafiza: updated, 
-          hafizas: updated,
-          accounts: s.accounts.filter((a) => a.sourceHafizaId !== id) 
-        };
-      }),
-      clearHafiza: () => set({ hafiza: [], hafizas: [] }),
+      deleteHafiza: (id) => {
+        const linkedAccount = get().accounts.find(acc => acc.sourceHafizaId === id);
+        if (linkedAccount) {
+          set(state => ({ accounts: state.accounts.filter(acc => acc.id !== linkedAccount.id) }));
+          set(state => ({ revenue: recalculateRevenueMap(state.accounts) }));
+        }
+        set((s) => {
+          const updated = s.hafiza.filter((x) => x.id !== id);
+          return { hafiza: updated, hafizas: updated };
+        });
+      },
+      clearHafiza: () => {
+        const hafizaIds = get().hafiza.map(h => h.id);
+        set(state => ({
+          accounts: state.accounts.filter(acc => !acc.sourceHafizaId || !hafizaIds.includes(acc.sourceHafizaId)),
+        }));
+        set(state => ({ revenue: recalculateRevenueMap(state.accounts) }));
+        set({ hafiza: [], hafizas: [] });
+      },
 
-      // عمليات الحسابات الجارية (تتكامل مع الحماية اليدوية لرمز الإيراد والمصروفات)
+      // عمليات الحسابات الجارية (لم تتغير)
       addAccount: (a) => {
         const item: Account = {
           ...a,
@@ -246,19 +319,16 @@ export const useStore = create<State>()(
         });
         return item;
       },
-
       updateAccount: (id, a) =>
         set((s) => {
           const newAccounts = s.accounts.map((x) => (x.id === id ? { ...x, ...a } : x));
           return { accounts: newAccounts, revenue: recalculateRevenueMap(newAccounts) };
         }),
-
       deleteAccount: (id) =>
         set((s) => {
           const newAccounts = s.accounts.filter((x) => x.id !== id);
           return { accounts: newAccounts, revenue: recalculateRevenueMap(newAccounts) };
         }),
-
       clearAccounts: () => set({ accounts: [], revenue: {} }),
 
       // عمليات اليومية العامة
@@ -342,7 +412,7 @@ export const useStore = create<State>()(
   )
 );
 
-// تصدير الـ Hooks المخصصة لسهولة الاستخدام في المكونات
+// تصدير الـ Hooks المخصصة
 export const useTrainees = () => useStore((s) => s.trainees);
 export const useHafiza = () => useStore((s) => s.hafiza);
 export const useHafizas = () => useStore((s) => s.hafizas); 
