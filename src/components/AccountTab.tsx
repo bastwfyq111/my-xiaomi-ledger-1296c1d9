@@ -110,92 +110,94 @@ export default function AccountsTab() {
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
   // =========================================================
-  // ⚡ خوارزمية المطابقة والتحديث الفوري المعتمدة كلياً على عمود البيان
+  // ⚡ مزامنة أحادية الاتجاه من "حوافظ التوريد" إلى "الحساب"
+  //    تعتمد على المعرّف الفريد sourceHafizaId (مع التراجع إلى رقم الحافظة)
+  //    - تضيف السجلات الجديدة فقط
+  //    - تحدّث القيم المعدّلة على السجلات المرتبطة
+  //    - لا تكرّر السجلات ولا تحذف أي بيانات سابقة في تبويب الحساب
   // =========================================================
   const handleSyncFromHafiza = () => {
     if (!hafizas || hafizas.length === 0) {
       toast.error("لا توجد بيانات في تبويب حوافظ التوريد لجلبها!");
       return;
     }
-    
+
     let addedCount = 0;
     let updatedCount = 0;
-    
-    // تصفية حوافظ عام 2026 فقط
-    const h2026 = hafizas.filter((h: any) => (h.date ? String(h.date).substring(0, 4) : "") === "2026");
-    
-    if (h2026.length === 0) {
-      toast.info("لم يتم العثور على أي حوافظ تابعة لعام 2026.");
-      return;
-    }
 
-    const SIMILARITY_THRESHOLD = 0.95; // نسبة تطابق نصي شبه تامة للبيان
+    // فهرسة الحسابات الحالية بمعرّف الحافظة المصدر (أو رقم الحافظة كاحتياط)
+    const byHafizaId = new Map<string, any>();
+    const byHafizaNo = new Map<string, any>();
+    accounts.forEach((acc: any) => {
+      if (acc.sourceHafizaId) byHafizaId.set(String(acc.sourceHafizaId), acc);
+      if (acc.hafizaNo) byHafizaNo.set(String(acc.hafizaNo), acc);
+    });
 
-    h2026.forEach((hafiza: any) => {
-      const hDesc = String(hafiza.description || "").trim();
+    hafizas.forEach((hafiza: any) => {
+      if (!hafiza?.id) return; // المعرّف الفريد شرط أساسي للمزامنة
       const hAmount = Number(hafiza.hafizaAmount || hafiza.income || 0);
 
-      if (hDesc === "") return; // تخطي القيود التي لا تحتوي على بيان
+      // البحث عن سجل مرتبط مسبقاً بهذه الحافظة
+      const existing =
+        byHafizaId.get(String(hafiza.id)) ||
+        (hafiza.hafizaNo ? byHafizaNo.get(String(hafiza.hafizaNo)) : undefined);
 
-      // 🔍 البحث عن تطابق داخل عمود البيان فقط في جدول الحساب الجاري
-      const existingAccount = accounts.find((acc: any) => {
-        const accDesc = String(acc.description || "").trim();
-        return getSimilarity(hDesc, accDesc) >= SIMILARITY_THRESHOLD;
-      });
-
-      if (!existingAccount) {
-        // أ) البيان غير موجود مسبقاً 👈 إضافة قيد جديد تماماً
+      if (!existing) {
+        // إضافة سجل جديد فقط — دون المساس بأي بيانات قديمة
         addAccount({
           date: hafiza.date || today(),
           hafizaNo: hafiza.hafizaNo || "",
           notifyNo: hafiza.notifyNo || "",
           notifyDate: hafiza.notifyDate || "",
-          checkNo: hafiza.checkNo || "",
-          checkDate: hafiza.checkDate || "",
-          description: hDesc,
+          checkNo: "",
+          checkDate: "",
+          description: String(hafiza.description || "").trim(),
           specialty: hafiza.specialty || "",
           name: hafiza.name || "",
           hafizaAmount: hAmount,
-          income: hAmount, 
+          income: hAmount,
           expense: 0,
           revenueKey: hafiza.revenueKey || undefined,
+          sourceHafizaId: hafiza.id,
         });
         addedCount++;
-      } else {
-        // ب) البيان متطابق وموجود مسبقاً 👈 فحص هل حدث أي تعديل في باقي قيم الصف؟
-        const isDataChanged = 
-          existingAccount.name !== hafiza.name ||
-          Number(existingAccount.hafizaAmount) !== hAmount ||
-          existingAccount.hafizaNo !== hafiza.hafizaNo ||
-          existingAccount.notifyNo !== hafiza.notifyNo ||
-          existingAccount.date !== hafiza.date ||
-          existingAccount.specialty !== hafiza.specialty ||
-          existingAccount.checkNo !== hafiza.checkNo;
+        return;
+      }
 
-        if (isDataChanged) {
-          // حدث تعديل في حوافظ التوريد لنفس البيان! 👈 تحديث القيم في الحساب الجاري فوراً
-          updateAccount(existingAccount.id, {
-            ...existingAccount,
-            date: hafiza.date || existingAccount.date,
-            hafizaNo: hafiza.hafizaNo || existingAccount.hafizaNo,
-            notifyNo: hafiza.notifyNo || existingAccount.notifyNo,
-            notifyDate: hafiza.notifyDate || existingAccount.notifyDate,
-            checkNo: hafiza.checkNo || existingAccount.checkNo,
-            checkDate: hafiza.checkDate || existingAccount.checkDate,
-            specialty: hafiza.specialty || existingAccount.specialty,
-            name: hafiza.name || existingAccount.name,
-            hafizaAmount: hAmount,
-            income: hAmount, // المزامنة التلقائية للإيراد تتبع مبلغ الحافظة المعدل
-          });
-          updatedCount++;
-        }
+      // مقارنة الحقول القادمة من الحافظة فقط — والإبقاء على باقي بيانات الحساب كما هي
+      const isChanged =
+        existing.name !== (hafiza.name || "") ||
+        Number(existing.hafizaAmount) !== hAmount ||
+        existing.hafizaNo !== (hafiza.hafizaNo || "") ||
+        existing.notifyNo !== (hafiza.notifyNo || "") ||
+        existing.notifyDate !== (hafiza.notifyDate || "") ||
+        existing.date !== (hafiza.date || "") ||
+        existing.specialty !== (hafiza.specialty || "") ||
+        existing.description !== String(hafiza.description || "").trim();
+
+      if (isChanged) {
+        updateAccount(existing.id, {
+          date: hafiza.date || existing.date,
+          hafizaNo: hafiza.hafizaNo || existing.hafizaNo,
+          notifyNo: hafiza.notifyNo || existing.notifyNo,
+          notifyDate: hafiza.notifyDate || existing.notifyDate,
+          specialty: hafiza.specialty || existing.specialty,
+          name: hafiza.name || existing.name,
+          description: String(hafiza.description || existing.description || "").trim(),
+          hafizaAmount: hAmount,
+          income: hAmount,
+          sourceHafizaId: hafiza.id, // ربط دائم لمنع التكرار مستقبلاً
+        });
+        updatedCount++;
       }
     });
 
     if (addedCount > 0 || updatedCount > 0) {
-      toast.success(`تمت المزامنة بنجاح! إضافة (${addedCount}) قيود ببيان جديد، وتحديث (${updatedCount}) سجلات حالية بالبيانات المعدلة.`);
+      toast.success(
+        `تمت المزامنة بنجاح! إضافة (${addedCount}) سجل جديد، وتحديث (${updatedCount}) سجل مرتبط — بدون أي تكرار أو حذف.`
+      );
     } else {
-      toast.info("المطابقة مستقرة! لم يتم رصد أي بيانات أو تعديلات جديدة في عمود البيان.");
+      toast.info("لا توجد تغييرات جديدة للمزامنة — جميع السجلات محدّثة.");
     }
   };
 
