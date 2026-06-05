@@ -243,26 +243,26 @@ export default function HafizaTab() {
         </div>
         
         <div className="p-3 sm:p-4">
-          <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
+          <div className="overflow-auto max-h-[60vh] rounded-lg border border-indigo-200 shadow-sm relative">
             <table className="w-full text-xs sm:text-sm">
-              <thead className="bg-slate-50 font-bold border-b border-slate-200 text-slate-700">
-                <tr>
-                  <th className="p-2.5 text-center w-10">م</th>
+              <thead className="font-bold text-slate-800 sticky top-0 z-20">
+                <tr className="bg-gradient-to-l from-indigo-100 via-purple-50 to-pink-50">
+                  <th className="p-2.5 text-center w-10 bg-indigo-100">م</th>
                   {COLS.map((c) => (
-                    <th key={c.key} className="p-2.5 text-right whitespace-nowrap cursor-pointer select-none hover:bg-slate-100 transition-colors" onClick={() => toggleSort(c.key)}>
+                    <th key={c.key} className="p-2.5 text-right whitespace-nowrap cursor-pointer select-none hover:bg-indigo-200/60 transition-colors" onClick={() => toggleSort(c.key)}>
                       <div className="flex items-center gap-1">
-                        {c.label} <span className="text-[10px] text-slate-400">{sortIndicator(sortKey === c.key, sortDir)}</span>
+                        {c.label} <span className="text-[10px] text-indigo-500">{sortIndicator(sortKey === c.key, sortDir)}</span>
                       </div>
                     </th>
                   ))}
                   <th className="p-2.5 text-center">إجراءات</th>
                 </tr>
-                <tr className="bg-slate-50/50 border-t border-slate-200">
+                <tr className="bg-white border-t border-indigo-100">
                   <th className="p-1.5"></th>
                   {COLS.map((c) => (
                     <th key={c.key} className="p-1.5">
                       <input value={filters[c.key] || ""} onChange={(e) => setFilter(c.key, e.target.value)}
-                        placeholder="بحث..." className="w-full px-2 py-1 text-xs border border-slate-200 rounded outline-none focus:border-blue-400 bg-white shadow-inner" />
+                        placeholder="بحث..." className="w-full px-2 py-1 text-xs border border-indigo-200 rounded outline-none focus:border-indigo-500 bg-white shadow-inner" />
                     </th>
                   ))}
                   <th className="p-1.5"></th>
