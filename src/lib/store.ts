@@ -1,4 +1,3 @@
-// store.ts (النسخة المعدلة بالكامل)
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import seedTrainees from "@/data/trainees.json";
@@ -152,7 +151,6 @@ type State = {
   getOverdueInstallments: (year?: '2025') => Installment[];
   getInstallmentByIndex: (index: number, year?: '2025') => Installment | undefined;
 
-  // دوال المزامنة التلقائية (جديدة)
   syncHafizaToAccount: (hafiza: Hafiza) => void;
 };
 
@@ -200,12 +198,31 @@ export const useStore = create<State>()(
       revenue: {},
       customTabs: [],
 
-      // ========== دوال المزامنة التلقائية ==========
+      // ========== دالة المزامنة التلقائية المحسّنة ==========
       syncHafizaToAccount: (hafiza: Hafiza) => {
         const year = hafiza.date?.split('-')[0];
         if (year !== '2026') return;
 
-        const existingAccount = get().accounts.find(acc => acc.sourceHafizaId === hafiza.id);
+        // البحث عن حساب مرتبط
+        let existingAccount = get().accounts.find(acc => acc.sourceHafizaId === hafiza.id);
+        if (!existingAccount && hafiza.hafizaNo) {
+          existingAccount = get().accounts.find(acc => acc.hafizaNo === hafiza.hafizaNo);
+          if (existingAccount) {
+            // ربط الحساب الموجود بهذه الحافظة
+            set(state => ({
+              accounts: state.accounts.map(acc =>
+                acc.id === existingAccount!.id ? { ...acc, sourceHafizaId: hafiza.id } : acc
+              )
+            }));
+          }
+        }
+
+        // استخراج مبلغ التوريد بأمان (يدعم عدة أسماء للحقل)
+        const getNotifyAmount = (h: Hafiza): number => {
+          const val = h.notifyAmount ?? h.supplyAmount ?? h.tawreedAmount ?? 0;
+          const num = Number(val);
+          return isNaN(num) ? 0 : num;
+        };
 
         const mappedData = {
           date: hafiza.date,
@@ -218,7 +235,7 @@ export const useStore = create<State>()(
           specialty: hafiza.specialty,
           name: hafiza.name,
           hafizaAmount: Number(hafiza.hafizaAmount) || 0,
-          income: Number(hafiza.notifyAmount) || 0,
+          income: getNotifyAmount(hafiza),
           expense: 0,
           sourceHafizaId: hafiza.id,
         };
@@ -246,7 +263,7 @@ export const useStore = create<State>()(
           if (hasDiff) {
             set(state => ({
               accounts: state.accounts.map(acc =>
-                acc.id === existingAccount.id
+                acc.id === existingAccount!.id
                   ? { ...acc, ...mappedData, revenueKey: acc.revenueKey }
                   : acc
               ),
@@ -262,7 +279,7 @@ export const useStore = create<State>()(
       deleteTrainee: (index) => set((s) => ({ trainees: s.trainees.filter((_, i) => i !== index) })),
       importTrainees: (trainees) => set((s) => ({ trainees: [...s.trainees, ...trainees] })),
 
-      // عمليات الحافظة (معدلة)
+      // عمليات الحافظة (معدلة لاستدعاء المزامنة)
       addHafiza: (h) => {
         const item: Hafiza = {
           ...h, id: uid(), date: h.date || getToday(),
@@ -303,7 +320,7 @@ export const useStore = create<State>()(
         set({ hafiza: [], hafizas: [] });
       },
 
-      // عمليات الحسابات الجارية (لم تتغير)
+      // عمليات الحسابات الجارية (بدون تغيير)
       addAccount: (a) => {
         const item: Account = {
           ...a,
