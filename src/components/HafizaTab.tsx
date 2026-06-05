@@ -299,8 +299,8 @@ export default function HafizaTab() {
                           ) : (
                             <span className="block min-h-[20px] w-full">
                               {col.key === "hafizaAmount" || col.key === "notifyAmount" 
-                                ? fmt(h[col.key]) 
-                                : (h[col.key] || "—")}
+                                ? fmt((h as any)[col.key]) 
+                                : ((h as any)[col.key] || "—")}
                             </span>
                           )}
                         </td>
