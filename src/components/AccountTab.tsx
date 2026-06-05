@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { useTableControls, sortIndicator } from "@/hooks/useTableControls";
 import { 
-  Printer, X, Plus, Edit, Trash2, Save, Eraser, 
+  X, Plus, Edit, Trash2, Save, Eraser, 
   FileSpreadsheet, Link, RefreshCw, Calendar, 
   Hash, FileText, User, ArrowUpRight, ArrowDownLeft, Wallet
 } from "lucide-react";
@@ -74,121 +74,118 @@ export default function AccountsTab() {
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
-  // دالة المطابقة الذكية والتطهير لعام 2026
+  // دالة المطابقة الذكية الشاملة للأعمدة الصفرية والفارغة لعام 2026
   const handleSyncFromHafiza = () => {
     if (!hafizas || hafizas.length === 0) {
-      toast.error("لا توجد بيانات في تبويب حوافظ التوريد لجلبها!");
+      toast.error("لا توجد بيانات في تبويب حوافظ التوريد لترحيلها والمطابقة!");
       return;
     }
 
-    const cleanDate = (dateStr: string) => {
-      if (!dateStr) return "";
-      return String(dateStr).replace(/[^\d]/g, ""); 
-    };
+    const normalizeStr = (val: any) => String(val || "").trim();
+    const normalizeNum = (val: any) => Number(val || 0);
+    const cleanDate = (dateStr: string) => String(dateStr || "").replace(/[^\d]/g, "");
 
+    // 1. تصفية حوافظ عام 2026 فقط
     const hafiza2026 = hafizas.filter((h: any) => {
       const cleaned = cleanDate(h?.date);
       return cleaned.substring(0, 4) === "2026";
     });
 
     if (hafiza2026.length === 0) {
-      toast.info("لا توجد حوافظ تعود للعام 2026 لمزامنتها.");
+      toast.info("لا توجد حوافظ تعود للعام 2026 لترحيلها.");
       return;
     }
 
     let addedCount = 0;
     let updatedCount = 0;
-    let deletedCount = 0;
+    let skippedCount = 0;
 
+    // 2. بناء كشاف للبحث السريع في تبويب الحسابات الحالي لمنع التكرار
     const byHafizaId = new Map<string, any>();
     const byHafizaNo = new Map<string, any>();
     
     accounts.forEach((acc: any) => {
-      if (acc.sourceHafizaId) byHafizaId.set(String(acc.sourceHafizaId), acc);
-      if (acc.hafizaNo) byHafizaNo.set(String(acc.hafizaNo), acc);
+      if (acc.sourceHafizaId) byHafizaId.set(normalizeStr(acc.sourceHafizaId), acc);
+      if (acc.hafizaNo) byHafizaNo.set(normalizeStr(acc.hafizaNo), acc);
     });
 
-    const activeHafizaIds = new Set(hafiza2026.map((h: any) => String(h.id)));
-    
-    accounts.forEach((acc: any) => {
-      if (acc.sourceHafizaId && !activeHafizaIds.has(String(acc.sourceHafizaId))) {
-        deleteAccount(acc.id);
-        deletedCount++;
-      }
-    });
-
+    // 3. تطبيق منطق المطابقة الصارم
     hafiza2026.forEach((hafiza: any) => {
-      if (!hafiza?.id) return; 
+      if (!hafiza?.id) return;
 
-      const supplyAmount = Number(hafiza.hafizaAmount || hafiza.amount || hafiza.income || 0);
+      const supplyAmount = normalizeNum(hafiza.hafizaAmount || hafiza.amount || hafiza.income || 0);
 
+      // البحث عن السجل المطابق برقم الحافظة أو المعرف الفرعي
       const existing =
-        byHafizaId.get(String(hafiza.id)) ||
-        (hafiza.hafizaNo ? byHafizaNo.get(String(hafiza.hafizaNo)) : undefined);
+        byHafizaId.get(normalizeStr(hafiza.id)) ||
+        (hafiza.hafizaNo ? byHafizaNo.get(normalizeStr(hafiza.hafizaNo)) : undefined);
 
       if (!existing) {
+        // [حالة سجل جديد]: يتم إدخاله بالكامل بكافة بياناته وأصفاره
         addAccount({
           date: hafiza.date || today(),
-          hafizaNo: hafiza.hafizaNo || "",
-          notifyNo: hafiza.notifyNo || "",
+          hafizaNo: normalizeStr(hafiza.hafizaNo),
+          notifyNo: normalizeStr(hafiza.notifyNo),
           notifyDate: hafiza.notifyDate || "",
-          checkNo: hafiza.checkNo || "",
+          checkNo: normalizeStr(hafiza.checkNo),
           checkDate: hafiza.checkDate || "",
-          description: String(hafiza.description || "").trim(),
-          specialty: hafiza.specialty || "",
-          name: hafiza.name || "",
+          description: normalizeStr(hafiza.description),
+          specialty: normalizeStr(hafiza.specialty),
+          name: normalizeStr(hafiza.name),
           hafizaAmount: supplyAmount, 
           income: supplyAmount, 
           expense: 0,
-          revenueKey: undefined, 
+          revenueKey: undefined,
           sourceHafizaId: hafiza.id,
         });
         addedCount++;
         return;
       }
 
-      const isDateChanged = cleanDate(existing.date) !== cleanDate(hafiza.date);
-      const isNotifyDateChanged = cleanDate(existing.notifyDate) !== cleanDate(hafiza.notifyDate);
-      const isCheckDateChanged = cleanDate(existing.checkDate) !== cleanDate(hafiza.checkDate);
+      // [حالة السجل موجود مسبقاً]: التحقق هل البيانات متطابقة تماماً (بما فيها الصفر والفراغ)؟
+      const hasColumnDifferences =
+        cleanDate(existing.date) !== cleanDate(hafiza.date) ||
+        cleanDate(existing.notifyDate) !== cleanDate(hafiza.notifyDate) ||
+        cleanDate(existing.checkDate) !== cleanDate(hafiza.checkDate) ||
+        normalizeStr(existing.hafizaNo) !== normalizeStr(hafiza.hafizaNo) ||
+        normalizeStr(existing.notifyNo) !== normalizeStr(hafiza.notifyNo) ||
+        normalizeStr(existing.checkNo) !== normalizeStr(hafiza.checkNo) ||
+        normalizeStr(existing.description) !== normalizeStr(hafiza.description) ||
+        normalizeStr(existing.specialty) !== normalizeStr(hafiza.specialty) ||
+        normalizeStr(existing.name) !== normalizeStr(hafiza.name) ||
+        normalizeNum(existing.hafizaAmount) !== supplyAmount ||
+        normalizeNum(existing.income) !== supplyAmount;
 
-      const isChanged =
-        isDateChanged ||
-        isNotifyDateChanged ||
-        isCheckDateChanged ||
-        existing.hafizaNo !== (hafiza.hafizaNo || existing.hafizaNo) ||
-        existing.notifyNo !== (hafiza.notifyNo || existing.notifyNo) ||
-        existing.checkNo !== (hafiza.checkNo || existing.checkNo) ||
-        existing.description !== String(hafiza.description || existing.description || "").trim() ||
-        existing.specialty !== (hafiza.specialty || existing.specialty) ||
-        existing.name !== (hafiza.name || existing.name) ||
-        Number(existing.income) !== supplyAmount;
-
-      if (isChanged) {
+      if (hasColumnDifferences) {
+        // إذا كان هناك اختلاف (مثلا كان القيد قديما يحتوي مبلغا والآن أصبح 0)، يتم تحديثه ليطابق الحوافظ تماماً
         updateAccount(existing.id, {
           ...existing, 
           date: hafiza.date || existing.date,
-          hafizaNo: hafiza.hafizaNo || existing.hafizaNo,
-          notifyNo: hafiza.notifyNo || existing.notifyNo,
-          notifyDate: hafiza.notifyDate || existing.notifyDate,
-          checkNo: hafiza.checkNo || existing.checkNo,
-          checkDate: hafiza.checkDate || existing.checkDate,
-          description: String(hafiza.description || "").trim(),
-          specialty: hafiza.specialty || existing.specialty,
-          name: hafiza.name || existing.name,
+          hafizaNo: normalizeStr(hafiza.hafizaNo),
+          notifyNo: normalizeStr(hafiza.notifyNo),
+          notifyDate: hafiza.notifyDate || "",
+          checkNo: normalizeStr(hafiza.checkNo),
+          checkDate: hafiza.checkDate || "",
+          description: normalizeStr(hafiza.description),
+          specialty: normalizeStr(hafiza.specialty),
+          name: normalizeStr(hafiza.name),
           hafizaAmount: supplyAmount,
           income: supplyAmount, 
           sourceHafizaId: hafiza.id,
         });
         updatedCount++;
+      } else {
+        // البيانات متطابقة تماماً حتى بقيمة الصفر والفراغات الحالية -> يتم تركه كما هو وتخطيه منعاً للتكرار
+        skippedCount++;
       }
     });
 
-    if (addedCount > 0 || updatedCount > 0 || deletedCount > 0) {
+    if (addedCount > 0 || updatedCount > 0) {
       toast.success(
-        `اكتملت المطابقة لعام 2026: إضافة (${addedCount})، تحديث (${updatedCount})، وحذف وتطهير (${deletedCount}) سجلات قديمة.`
+        `اكتملت عملية المطابقة الدقيقة 2026: إضافة (${addedCount}) حوافظ جديدة، وتحديث (${updatedCount}) سجلات متغيرة. وتخطي وحماية (${skippedCount}) سجلات متطابقة تماماً (بأصفارها وفراغاتها) منعاً للتكرار الثنائي.`
       );
     } else {
-      toast.info("تطابق تام وموزون! لا توجد فروقات مالية أو قيود معلقة.");
+      toast.info(`تطابق تام ومحمي من التكرار! جميع القيود الـ (${skippedCount}) متطابقة بالكامل في كل الحقول (بما فيها الحقول الصفرية والفارغة) مع تبويب الحساب.`);
     }
   };
 
@@ -215,7 +212,6 @@ export default function AccountsTab() {
   const totalExpense = useMemo(() => accounts.reduce((sum, a) => sum + (Number(a.expense) || 0), 0), [accounts]);
   const currentBalance = totalIncome - totalExpense;
 
-  // احتساب الرصيد التراكمي الموزون محاسبياً حسب الأرشيف الكامل
   const filteredWithBalance = useMemo(() => {
     const sortedAccounts = [...accounts].sort((a, b) => new Set([a.date]).has(b.date) ? 0 : a.date > b.date ? 1 : -1);
     
@@ -245,7 +241,7 @@ export default function AccountsTab() {
       name: form.name, hafizaAmount: Number(form.hafizaAmount) || 0, income: Number(form.income) || 0,
       expense: Number(form.expense) || 0, revenueKey: form.revenueKey || undefined,
     });
-    toast.success("تم إضافة القيود وترحيلها بنجاح");
+    toast.success("تم حفظ القيد يدوياً");
     setForm(emptyForm);
   };
 
@@ -258,7 +254,7 @@ export default function AccountsTab() {
       income: Number(editingRow.income) || 0,
       expense: Number(editingRow.expense) || 0,
     });
-    toast.success("تم التحديث والترحيل الفوري للسجل المالي");
+    toast.success("تم تعديل السجل بنجاح");
     setEditingRow(null);
   };
 
@@ -310,7 +306,7 @@ export default function AccountsTab() {
 
   return (
     <div className="w-full space-y-6" dir="rtl">
-      {/* قسم البطاقات الإحصائية */}
+      {/* قسم الإحصائيات المالية للسيولة */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
           <div className="flex flex-col">
@@ -335,17 +331,17 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* نموذج الإدخال والمطابقة */}
+      {/* لوحة التحكم والربط الصارم */}
       <div className="w-full bg-white shadow-sm border border-slate-100 rounded-2xl overflow-hidden">
         <div className="bg-gradient-to-r from-[#10528e] to-[#0f467a] px-5 py-4 flex flex-wrap justify-between items-center gap-4 border-b">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-white/10 rounded-lg text-white"><Plus className="w-4 h-4" /></div>
-            <h2 className="text-sm sm:text-base font-bold text-white">إضافة حركة مالية أو مزامنة وتطهير القيود</h2>
+            <h2 className="text-sm sm:text-base font-bold text-white">إضافة حركة مالية يدويّة أو عمل ترحيل مطابق صارم للأعمدة</h2>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={handleSyncFromHafiza} className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-black hover:from-amber-400 hover:to-amber-500 transition-all active:scale-95 shadow-sm">
               <RefreshCw className="w-3.5 h-3.5" /> 
-              <span>تحديث ومطابقة فورية لعام 2026 ⚡</span>
+              <span>مطابقة شاملة لكافة الأعمدة والأصفار لعام 2026 ⚡</span>
             </button>
             <label className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 text-white border border-white/10 rounded-xl text-xs font-bold cursor-pointer hover:bg-white/20 transition-all">
               <FileSpreadsheet className="w-3.5 h-3.5" /> <span>استيراد Excel</span>
@@ -396,12 +392,12 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* جدول مراقبة القيود المحسن بحدود سوداء */}
+      {/* جدول القيود الرئيسي المحاط بحدود سوداء غامقة جاهزة للطباعة والتدقيق المحاسبي */}
       <div className="w-full bg-white shadow-sm border border-black rounded-xl overflow-hidden">
         <div className="bg-slate-800 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-            <h2 className="text-xs sm:text-sm font-bold text-white">جدول مراقبة قيود الحساب الجاري ({accounts.length})</h2>
+            <h2 className="text-xs sm:text-sm font-bold text-white">جدول مراقبة قيود الحساب الجاري الموزون ({accounts.length})</h2>
           </div>
           <div className="flex gap-2 flex-wrap">
             {Object.values(filters).some(Boolean) && (
@@ -460,14 +456,13 @@ export default function AccountsTab() {
                       <td className="p-2 border border-black font-mono font-bold text-emerald-700 text-center bg-emerald-50/30">{Number(acc.income) > 0 ? fmt(Number(acc.income)) : "—"}</td>
                       <td className="p-2 border border-black font-mono font-bold text-rose-700 text-center bg-rose-50/30">{Number(acc.expense) > 0 ? fmt(Number(acc.expense)) : "—"}</td>
                       
-                      {/* 🌟 تعديل جوهري لربط وترحيل المبالغ للكشف الشهري فورياً عند تغيير الاختيار */}
                       <td className="p-1 border border-black text-center bg-slate-50 min-w-[110px]">
                         <select
                           value={acc.revenueKey || ""}
                           onChange={(e) => {
                             const newKey = e.target.value;
                             updateAccount(acc.id, { ...acc, revenueKey: newKey || undefined });
-                            toast.success("تم ربط رمز الإيراد وترحيله للكشف الشهري بنجاح 📊");
+                            toast.success("تم ربط رمز الإيراد بنجاح 📊");
                           }}
                           className="w-full p-1 text-[11px] font-bold text-teal-900 bg-teal-50/30 border border-teal-200 rounded outline-none focus:border-black cursor-pointer"
                         >
@@ -494,7 +489,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* نافذة التعديل المنبثقة */}
+      {/* نافذة التعديل والتدقيق */}
       <Modal title="✏️ تعديل وتدقيق السجل المالي" isOpen={!!editingRow} onClose={() => setEditingRow(null)}>
         {editingRow && (
           <form onSubmit={handleEditSave} className="space-y-4">
@@ -511,7 +506,7 @@ export default function AccountsTab() {
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t">
               <button type="button" onClick={() => setEditingRow(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs sm:text-sm hover:bg-slate-200">إلغاء</button>
-              <button type="submit" className="px-5 py-2 bg-[#10528e] text-white rounded-xl font-bold text-xs sm:text-sm hover:bg-[#0b3d6d] shadow-sm">حفظ التعديلات المدققة</button>
+              <button type="submit" className="px-5 py-2 bg-[#10528e] text-white rounded-xl font-bold text-xs sm:text-sm hover:bg-[#0b3d6d] shadow-sm">حفظ التعديلات</button>
             </div>
           </form>
         )}
