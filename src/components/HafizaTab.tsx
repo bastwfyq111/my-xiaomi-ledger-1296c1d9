@@ -150,7 +150,7 @@ export default function HafizaTab() {
         </div>
         
         <div className="p-4 sm:p-5 bg-slate-50/30">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             <div className="relative sm:col-span-2">
               <label className="block text-xs font-bold text-slate-700 mb-1">الاسم *</label>
               <div className="relative">
