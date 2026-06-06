@@ -86,7 +86,7 @@ export default function AccountsTab() {
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
-  // مطابقة شاملة معتمدة على sourceHafizaId (مفتاح فريد) لمنع التكرار مع توزيع المبالغ حسب شهر التوريد الفعلي
+  // مطابقة شاملة معتمدة على sourceHafizaId (مفتاح فريد) لمنع التكرار
   const handleSyncFromHafiza = () => {
     const source = (hafiza && hafiza.length > 0) ? hafiza : (useStore.getState().hafiza || []);
     if (!source || source.length === 0) {
@@ -112,6 +112,7 @@ export default function AccountsTab() {
     let updatedCount = 0;
     let skippedCount = 0;
 
+    // فهرس ديناميكي يُحدَّث داخل الحلقة لمنع التكرار حتى لو تكرر الزر
     const currentAccounts = useStore.getState().accounts;
     const byHafizaId = new Map<string, any>();
     const byHafizaNo = new Map<string, any>();
@@ -123,7 +124,7 @@ export default function AccountsTab() {
         linkedAccountIds.add(acc.id);
       }
     });
-    
+    // فقط الحسابات غير المرتبطة سابقاً تكون متاحة للربط برقم الحافظة (مرة واحدة)
     currentAccounts.forEach((acc: any) => {
       if (acc.hafizaNo && !linkedAccountIds.has(acc.id) && !byHafizaNo.has(normalizeStr(acc.hafizaNo))) {
         byHafizaNo.set(normalizeStr(acc.hafizaNo), acc);
@@ -152,7 +153,9 @@ export default function AccountsTab() {
         expense: 0,
       };
 
+      // 1) مطابقة بمعرف الحافظة (مفتاح فريد قوي)
       let existing = byHafizaId.get(hid);
+      // 2) أو ربط حساب يدوي قديم برقم الحافظة لمرة واحدة فقط
       if (!existing && mappedData.hafizaNo) {
         existing = byHafizaNo.get(mappedData.hafizaNo);
         if (existing) byHafizaNo.delete(mappedData.hafizaNo);
@@ -164,6 +167,7 @@ export default function AccountsTab() {
           revenueKey: undefined,
           sourceHafizaId: hafizaRow.id,
         });
+        // تسجيل فوري في الفهرس لمنع التكرار داخل نفس الحلقة
         byHafizaId.set(hid, { ...created, sourceHafizaId: hafizaRow.id });
         addedCount++;
         return;
@@ -250,26 +254,7 @@ export default function AccountsTab() {
       name: form.name, hafizaAmount: Number(form.hafizaAmount) || 0, income: Number(form.income) || 0,
       expense: Number(form.expense) || 0, revenueKey: form.revenueKey || undefined,
     });
-    
-    // عند الإدخال اليدوي، إذا كان هناك ربط برمز الإيرادات، نقوم بترحيل المبلغ إلى حقل الشهر الصحيح
-    if (form.revenueKey && form.income && form.notifyDate) {
-      const sDate = new Date(form.notifyDate);
-      if (!isNaN(sDate.getTime())) {
-        const sYear = sDate.getFullYear();
-        const sMonth = sDate.getMonth() + 1;
-        const currentRevenue = useStore.getState().revenue || {};
-        const revenueKeyString = `${sYear}-${sMonth}-${form.revenueKey}`;
-        const currentAmount = currentRevenue[revenueKeyString] || 0;
-        useStore.setState({
-          revenue: {
-            ...currentRevenue,
-            [revenueKeyString]: currentAmount + (Number(form.income) || 0)
-          }
-        });
-      }
-    }
-
-    toast.success("تم حفظ القيد يدوياً وترحيله للشهر المناسب");
+    toast.success("تم حفظ القيد يدوياً");
     setForm(emptyForm);
   };
 
@@ -420,7 +405,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* جدول القيود بحدود سوداء بالكامل واحتواء تلقائي */}
+      {/* جدول القيود */}
       <div className="w-full bg-white shadow-sm border border-black rounded-xl overflow-hidden">
         <div className="bg-slate-800 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-2">
@@ -440,16 +425,16 @@ export default function AccountsTab() {
             <table className="w-full text-xs sm:text-sm text-right border-collapse border border-black table-auto">
               <thead className="sticky top-0 z-20 shadow-sm text-slate-900 font-bold text-xs bg-slate-100">
                 <tr>
-                  <th className="p-2 border border-black text-center bg-slate-100 sticky top-0 z-20 whitespace-nowrap">م</th>
+                  <th className="p-2 border border-black text-center w-10 bg-slate-100 sticky top-0 z-20">م</th>
                   {COLS.map((c) => (
-                    <th key={c.key} className="p-2 border border-black cursor-pointer hover:bg-slate-200 transition-colors select-none sticky top-0 z-20 bg-slate-100 whitespace-nowrap" onClick={() => toggleSort(c.key)}>
+                    <th key={c.key} className="p-2 border border-black whitespace-normal break-words min-w-[80px] cursor-pointer hover:bg-slate-200 transition-colors select-none sticky top-0 z-20 bg-slate-100" onClick={() => toggleSort(c.key)}>
                       <div className="flex items-center justify-center gap-1.5">
                         <span>{c.label}</span>
                         <span className="text-[10px] text-[#10528e] font-mono">{sortIndicator(sortKey === c.key, sortDir)}</span>
                       </div>
                     </th>
                   ))}
-                  <th className="p-2 border border-black text-center bg-slate-100 sticky top-0 z-20 whitespace-nowrap">إجراءات</th>
+                  <th className="p-2 border border-black text-center bg-slate-100 sticky top-0 z-20 min-w-[60px]">إجراءات</th>
                 </tr>
                 <tr className="bg-slate-50">
                   <th className="p-1 border border-black bg-slate-50"></th>
@@ -470,45 +455,27 @@ export default function AccountsTab() {
                 ) : (
                   filteredWithBalance.map((acc, index) => (
                     <tr key={acc.id} className="hover:bg-slate-100 transition-colors group">
-                      <td className="p-2 border border-black text-center font-mono bg-slate-50/50 whitespace-nowrap">{index + 1}</td>
-                      <td className="p-2 border border-black font-mono text-center whitespace-nowrap">{acc.date}</td>
-                      <td className="p-2 border border-black font-mono font-bold text-center whitespace-nowrap">{acc.hafizaNo || "—"}</td>
-                      <td className="p-2 border border-black font-mono text-center whitespace-nowrap">{acc.notifyNo || "—"}</td>
-                      <td className="p-2 border border-black font-mono text-center whitespace-nowrap">{acc.notifyDate || "—"}</td>
-                      <td className="p-2 border border-black font-mono text-center whitespace-nowrap">{acc.checkNo || "—"}</td>
-                      <td className="p-2 border border-black font-mono text-center whitespace-nowrap">{acc.checkDate || "—"}</td>
-                      <td className="p-2 border border-black text-slate-800 whitespace-nowrap">{acc.description || "—"}</td>
-                      <td className="p-2 border border-black whitespace-nowrap">{acc.specialty || "—"}</td>
-                      <td className="p-2 border border-black font-bold whitespace-nowrap">{acc.name || "—"}</td>
-                      <td className="p-2 border border-black font-mono text-center whitespace-nowrap">{Number(acc.hafizaAmount) > 0 ? fmt(Number(acc.hafizaAmount)) : "—"}</td>
-                      <td className="p-2 border border-black font-mono font-bold text-emerald-700 text-center bg-emerald-50/30 whitespace-nowrap">{Number(acc.income) > 0 ? fmt(Number(acc.income)) : "—"}</td>
-                      <td className="p-2 border border-black font-mono font-bold text-rose-700 text-center bg-rose-50/30 whitespace-nowrap">{Number(acc.expense) > 0 ? fmt(Number(acc.expense)) : "—"}</td>
+                      <td className="p-2 border border-black text-center font-mono bg-slate-50/50">{index + 1}</td>
+                      <td className="p-2 border border-black whitespace-normal break-words font-mono min-w-[85px] text-center">{acc.date}</td>
+                      <td className="p-2 border border-black whitespace-normal break-words font-mono font-bold text-center">{acc.hafizaNo || "—"}</td>
+                      <td className="p-2 border border-black whitespace-normal break-words font-mono text-center">{acc.notifyNo || "—"}</td>
+                      <td className="p-2 border border-black whitespace-normal break-words font-mono min-w-[85px] text-center">{acc.notifyDate || "—"}</td>
+                      <td className="p-2 border border-black whitespace-normal break-words font-mono text-center">{acc.checkNo || "—"}</td>
+                      <td className="p-2 border border-black whitespace-normal break-words font-mono min-w-[85px] text-center">{acc.checkDate || "—"}</td>
+                      <td className="p-2 border border-black whitespace-normal break-words min-w-[140px] text-slate-800">{acc.description || "—"}</td>
+                      <td className="p-2 border border-black whitespace-normal break-words min-w-[100px]">{acc.specialty || "—"}</td>
+                      <td className="p-2 border border-black whitespace-normal break-words font-bold min-w-[120px]">{acc.name || "—"}</td>
+                      <td className="p-2 border border-black font-mono text-center">{Number(acc.hafizaAmount) > 0 ? fmt(Number(acc.hafizaAmount)) : "—"}</td>
+                      <td className="p-2 border border-black font-mono font-bold text-emerald-700 text-center bg-emerald-50/30">{Number(acc.income) > 0 ? fmt(Number(acc.income)) : "—"}</td>
+                      <td className="p-2 border border-black font-mono font-bold text-rose-700 text-center bg-rose-50/30">{Number(acc.expense) > 0 ? fmt(Number(acc.expense)) : "—"}</td>
                       
-                      <td className="p-1 border border-black text-center bg-slate-50 whitespace-nowrap">
+                      <td className="p-1 border border-black text-center bg-slate-50 min-w-[110px]">
                         <select
                           value={acc.revenueKey || ""}
                           onChange={(e) => {
                             const newKey = e.target.value;
                             updateAccount(acc.id, { ...acc, revenueKey: newKey || undefined });
-                            
-                            // إصلاح التوزيع عند التغيير المباشر من الجدول: استخراج الشهر من تاريخ التوريد الخاص بالسطر نفسه
-                            if (newKey && acc.income && acc.notifyDate) {
-                              const sDate = new Date(acc.notifyDate);
-                              if (!isNaN(sDate.getTime())) {
-                                const sYear = sDate.getFullYear();
-                                const sMonth = sDate.getMonth() + 1;
-                                const currentRevenue = useStore.getState().revenue || {};
-                                const revenueKeyString = `${sYear}-${sMonth}-${newKey}`;
-                                const currentAmount = currentRevenue[revenueKeyString] || 0;
-                                useStore.setState({
-                                  revenue: {
-                                    ...currentRevenue,
-                                    [revenueKeyString]: currentAmount + (Number(acc.income) || 0)
-                                  }
-                                });
-                              }
-                            }
-                            toast.success("تم ربط رمز الإيراد وترحيله للشهر الفعلي بنجاح 📊");
+                            toast.success("تم ربط رمز الإيراد بنجاح 📊");
                           }}
                           className="w-full p-1 text-[11px] font-bold text-teal-900 bg-teal-50/30 border border-teal-200 rounded outline-none focus:border-black cursor-pointer"
                         >
@@ -519,8 +486,8 @@ export default function AccountsTab() {
                         </select>
                       </td>
 
-                      <td className="p-2 border border-black font-mono font-black text-[#10528e] text-center bg-blue-50/30 whitespace-nowrap">{fmt(acc.balance)}</td>
-                      <td className="p-2 border border-black text-center bg-slate-50/50 whitespace-nowrap">
+                      <td className="p-2 border border-black font-mono font-black text-[#10528e] text-center bg-blue-50/30">{fmt(acc.balance)}</td>
+                      <td className="p-2 border border-black text-center bg-slate-50/50">
                         <div className="flex justify-center gap-1.5">
                           <button onClick={() => setEditingRow(acc)} className="p-1 text-emerald-600 hover:bg-emerald-100 rounded transition-colors"><Edit className="w-4 h-4" /></button>
                           <button onClick={() => { if (confirm("هل أنت متأكد من الحذف؟")) deleteAccount(acc.id); }} className="p-1 text-rose-600 hover:bg-rose-100 rounded transition-colors"><Trash2 className="w-4 h-4" /></button>
