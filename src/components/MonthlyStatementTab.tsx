@@ -68,7 +68,7 @@ function lastDayOfMonth(y: number, m: number) {
 }
 
 export default function MonthlyStatementTab() {
-  const { journal, clearJournal } = useStore(); // استدعاء دالة مسح البيانات من المخزن
+  const { journal, accounts, clearJournal } = useStore(); // استدعاء دالة مسح البيانات من المخزن
   const [year, setYear] = useState(new Date().getFullYear());
   const [mode, setMode] = useState<"month" | "quarter">("month");
   const [month, setMonth] = useState(new Date().getMonth() + 1); 
