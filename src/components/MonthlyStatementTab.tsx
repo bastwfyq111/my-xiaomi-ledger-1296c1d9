@@ -381,6 +381,66 @@ export default function MonthlyStatementTab() {
           </table>
         </div>
       </div>
+
+      {/* جدول تجميع إيرادات الحساب حسب رمز الإيراد للفترة المختارة */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-teal-700 to-teal-900 text-white p-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="font-bold text-base">📊 تجميع إيرادات الحساب حسب رمز الإيراد</h3>
+            <p className="text-xs opacity-80 mt-0.5">مصدر البيانات: تبويب الحساب — للفترة: {periodLabel}</p>
+          </div>
+          <div className="bg-white/10 border border-white/10 rounded-full px-3 py-1 text-xs font-bold">
+            عدد الرموز: {revenueByCode.length} | عدد السجلات: {revenueTotals.count}
+          </div>
+        </div>
+        <div className="overflow-auto max-h-[50vh] relative">
+          <table className="w-full text-sm border-collapse text-right">
+            <thead className="bg-teal-50 text-teal-900 font-bold border-b border-teal-200 sticky top-0 z-20 shadow-sm">
+              <tr>
+                <th className="border px-2 py-2 text-center w-12">م</th>
+                <th className="border px-2 py-2 text-center w-28">رمز الإيراد</th>
+                <th className="border px-3 py-2 text-right">بيان الإيراد (من قالب الإيرادات)</th>
+                <th className="border px-2 py-2 text-center w-24">عدد السجلات</th>
+                <th className="border px-2 py-2 text-center w-32">إيراد الفترة السابقة</th>
+                <th className="border px-2 py-2 text-center w-32">إيراد الفترة الحالية</th>
+                <th className="border px-2 py-2 text-center w-32">الإجمالي التراكمي</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {revenueByCode.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-slate-500 font-medium">
+                    لا توجد سجلات في تبويب الحساب لها رمز إيراد ضمن الفترة المختارة.
+                  </td>
+                </tr>
+              ) : (
+                revenueByCode.map((r, i) => (
+                  <tr key={r.code} className="hover:bg-teal-50/40 transition-colors">
+                    <td className="border px-2 py-2 text-center font-mono text-slate-500">{i + 1}</td>
+                    <td className="border px-2 py-2 text-center font-mono font-extrabold text-teal-800 bg-teal-50/40">{r.code}</td>
+                    <td className="border px-3 py-2 text-right font-medium text-slate-800">{r.label}</td>
+                    <td className="border px-2 py-2 text-center font-mono text-slate-600">{r.count}</td>
+                    <td className="border px-2 py-2 text-left font-mono text-slate-700">{r.prev ? fmt(r.prev) : "—"}</td>
+                    <td className="border px-2 py-2 text-left font-mono text-teal-700 font-bold bg-teal-50/30">{r.cur ? fmt(r.cur) : "—"}</td>
+                    <td className="border px-2 py-2 text-left font-mono text-emerald-700 font-black bg-emerald-50/30">{fmt(r.total)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            {revenueByCode.length > 0 && (
+              <tfoot>
+                <tr className="bg-slate-900 text-white font-extrabold">
+                  <td colSpan={3} className="border px-3 py-2 text-right">الإجمالي العام لرموز الإيراد</td>
+                  <td className="border px-2 py-2 text-center font-mono">{revenueTotals.count}</td>
+                  <td className="border px-2 py-2 text-left font-mono text-slate-200">{fmt(revenueTotals.prev)}</td>
+                  <td className="border px-2 py-2 text-left font-mono text-teal-300">{fmt(revenueTotals.cur)}</td>
+                  <td className="border px-2 py-2 text-left font-mono text-emerald-400">{fmt(revenueTotals.total)}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
