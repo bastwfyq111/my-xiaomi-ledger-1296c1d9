@@ -430,7 +430,7 @@ export default function AccountsTab() {
                     <th key={c.key} className="p-2 border border-black whitespace-normal break-words min-w-[80px] cursor-pointer hover:bg-slate-200 transition-colors select-none sticky top-0 z-20 bg-slate-100" onClick={() => toggleSort(c.key)}>
                       <div className="flex items-center justify-center gap-1.5">
                         <span>{c.label}</span>
-                        <span className="text-[10px] text-[#10528e] font-mono">{sortIndicator(c.key, sortKey, sortDir)}</span>
+                        <span className="text-[10px] text-[#10528e] font-mono">{sortIndicator(sortKey === c.key, sortDir)}</span>
                       </div>
                     </th>
                   ))}
