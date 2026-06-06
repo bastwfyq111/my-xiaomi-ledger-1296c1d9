@@ -3,25 +3,24 @@ import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import schemaJson from "@/lib/expensesSchema.json";
 
-// ====== نوع الصف في شجرة الاستخدامات ======
+// ====== نوع الصف ======
 type Row = { n: string; b: number | ""; c: number | ""; d: number | ""; e: number | ""; lv: "header" | "bab" | "fasl" | "band" | "type" | "sub" };
 const schema = schemaJson as { rows: Row[]; totals: string[] };
 
 // ====== أسماء الأشهر ======
 const MONTHS = ["يناير","فبراير","مارس","ابريل","مايو","يونيو","يوليو","اغسطس","سبتمبر","اكتوبر","نوفمبر","ديسمبر"];
 const QUARTERS = [
-  { key: "p1", label: "المدة الأولى", months: [0,1,2] },
-  { key: "p2", label: "المدة الثانية", months: [3,4,5] },
-  { key: "p3", label: "المدة الثالثة", months: [6,7,8] },
+  { key: "p1", label: "المدة الأولى",  months: [0,1,2]   },
+  { key: "p2", label: "المدة الثانية", months: [3,4,5]   },
+  { key: "p3", label: "المدة الثالثة", months: [6,7,8]   },
   { key: "p4", label: "المدة الرابعة", months: [9,10,11] },
 ];
 
 const YEAR_DEFAULT = 2025;
-const STORAGE_KEY = "expenses-data-v1";
+const STORAGE_KEY  = "expenses-data-v1";
 
-type Cell = { f: number; r: number }; // فلس، ريال
-type Store = Record<string, Cell>; // key = `${year}-${monthIdx}-${rowIdx}`
-
+type Cell  = { f: number; r: number };
+type Store = Record<string, Cell>;
 const emptyCell: Cell = { f: 0, r: 0 };
 
 function loadStore(): Store {
@@ -29,40 +28,72 @@ function loadStore(): Store {
 }
 function saveStore(s: Store) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
 
-// تحديد ما إذا كان الصف ورقة ادخال (نوع) أم تجميعي
 const isLeaf = (r: Row) => r.lv === "type";
 
-// ===== حساب الصفوف التجميعية: لكل صف نحدد أبناءه (الصفوف التالية حتى مستوى أعلى) =====
+// ===== حساب التجميعات =====
 function computeAggregates(values: Cell[]): Cell[] {
-  // values مصفوفة بطول schema.rows.length تحتوي قيم الصفوف الورقية، نملأ التجميعيات.
   const rows = schema.rows;
-  const out = values.map(v => ({ ...v }));
-  // نمر بالعكس: لكل صف غير ورقي نجمع أبناءه (الصفوف بمستوى أعمق حتى نلتقي بصف بنفس مستواه أو أعلى)
-  const levelRank: Record<string, number> = { header: 0, bab: 1, fasl: 2, band: 3, type: 4, sub: 5 };
+  const out  = values.map(v => ({ ...v }));
+  const rank: Record<string, number> = { header:0, bab:1, fasl:2, band:3, type:4, sub:5 };
   for (let i = rows.length - 1; i >= 0; i--) {
     const r = rows[i];
-    if (isLeaf(r)) continue;
-    if (r.lv === "sub") continue;
-    let sumF = 0, sumR = 0;
-    const myRank = levelRank[r.lv];
+    if (isLeaf(r) || r.lv === "sub") continue;
+    let sf = 0, sr = 0;
+    const my = rank[r.lv];
     for (let j = i + 1; j < rows.length; j++) {
-      const child = rows[j];
-      const childRank = levelRank[child.lv];
-      if (childRank <= myRank) break;
-      if (isLeaf(child)) {
-        sumF += out[j].f;
-        sumR += out[j].r;
-      }
+      if (rank[rows[j].lv] <= my) break;
+      if (isLeaf(rows[j])) { sf += out[j].f; sr += out[j].r; }
     }
-    // تطبيع: الفلس قد يتجاوز 100 → ينقل للريال (بافتراض 100 فلس = 1 ريال)
-    sumR += Math.floor(sumF / 100);
-    sumF = sumF % 100;
-    out[i] = { f: sumF, r: sumR };
+    sr += Math.floor(sf / 100); sf = sf % 100;
+    out[i] = { f: sf, r: sr };
   }
   return out;
 }
 
-// ===== أنماط الألوان =====
+// ===== مجاميع الأبواب =====
+interface BabTotal { label: string; babNum: number | null; cur: Cell; prev: Cell; total: Cell; }
+
+function addTwo(a: Cell, b: Cell): Cell {
+  let f = a.f + b.f, r = a.r + b.r;
+  r += Math.floor(f / 100); f = f % 100;
+  return { f, r };
+}
+
+function computeBabTotals(cur: Cell[], prev: Cell[]): BabTotal[] {
+  const rows = schema.rows;
+  const babMap = new Map<number, { label: string; indices: number[] }>();
+  let cb: number | null = null;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.lv === "bab" && typeof r.b === "number") {
+      cb = r.b;
+      if (!babMap.has(cb)) babMap.set(cb, { label: r.n, indices: [] });
+    }
+    if (r.lv === "type" && cb !== null) babMap.get(cb)!.indices.push(i);
+  }
+  const sum = (idxs: number[], vals: Cell[]): Cell => {
+    let f = 0, r = 0;
+    idxs.forEach(i => { f += vals[i].f; r += vals[i].r; });
+    r += Math.floor(f / 100); f = f % 100;
+    return { f, r };
+  };
+  const labels: Record<number, string> = {
+    1: "جملة الباب الأول : أجور وتعويضات العاملين",
+    2: "جملة الباب الثاني : نفقات على السلع والخدمات والممتلكات",
+  };
+  const result: BabTotal[] = [];
+  let gc: Cell = emptyCell, gp: Cell = emptyCell;
+  babMap.forEach((val, bn) => {
+    const c = sum(val.indices, cur);
+    const p = sum(val.indices, prev);
+    gc = addTwo(gc, c); gp = addTwo(gp, p);
+    result.push({ label: labels[bn] || val.label, babNum: bn, cur: c, prev: p, total: addTwo(c, p) });
+  });
+  result.push({ label: "الاجمالي العام للاستخدامات", babNum: null, cur: gc, prev: gp, total: addTwo(gc, gp) });
+  return result;
+}
+
+// ===== ألوان الصفوف =====
 const rowClass = (lv: Row["lv"]) => {
   switch (lv) {
     case "header": return "bg-teal-700 text-white font-bold";
@@ -74,49 +105,63 @@ const rowClass = (lv: Row["lv"]) => {
   }
 };
 
-const fmtNum = (n: number) => n === 0 ? "0" : n.toLocaleString("en-US");
+const fmt = (n: number) => n === 0 ? "0" : n.toLocaleString("en-US");
 
-// ============================================================
-// ============ المكون الرئيسي ================================
+// ===== ثوابت ألوان الأعمدة =====
+// الشهر الجاري  → أصفر برتقالي
+// الأشهر السابقة → أزرق فاتح
+// الجملة         → أخضر فاتح
+const CUR_H  = "bg-amber-300 text-amber-900";   // رأس الشهر الجاري
+const CUR_C  = "bg-amber-50";                    // خلايا الشهر الجاري
+const PREV_H = "bg-sky-300 text-sky-900";        // رأس الأشهر السابقة
+const PREV_C = "bg-sky-50";                      // خلايا الأشهر السابقة
+const TOT_H  = "bg-emerald-200 text-emerald-900";// رأس الجملة
+const TOT_C  = "bg-emerald-50";                  // خلايا الجملة
+
+// ===== خلية رأس موحدة =====
+const TH = ({ children, cls = "", rowSpan = 1, colSpan = 1 }: { children: React.ReactNode; cls?: string; rowSpan?: number; colSpan?: number }) => (
+  <th
+    rowSpan={rowSpan} colSpan={colSpan}
+    className={`border border-black px-2 py-1 whitespace-nowrap text-center text-xs font-bold ${cls}`}
+  >{children}</th>
+);
+
+// ===== خلية بيانات موحدة =====
+const TD = ({ children, cls = "", right = false }: { children: React.ReactNode; cls?: string; right?: boolean }) => (
+  <td className={`border border-black px-2 py-1 whitespace-nowrap font-mono text-xs ${right ? "text-right" : "text-center"} ${cls}`}>
+    {children}
+  </td>
+);
+
 // ============================================================
 export default function ExpensesTab() {
   const [store, setStore] = useState<Store>(() => loadStore());
-  const [year] = useState<number>(YEAR_DEFAULT);
-  // التبويب الفرعي: cover | m0..m11 | p1..p4 | final | year
-  const [view, setView] = useState<string>("cover");
+  const [year]            = useState<number>(YEAR_DEFAULT);
+  const [view, setView]   = useState<string>("cover");
 
   useEffect(() => { saveStore(store); }, [store]);
 
-  // ========= بناء قيم الأشهر (مصفوفة 12 × صفوف) =========
-  const monthlyLeaves: Cell[][] = useMemo(() => {
-    return MONTHS.map((_, m) =>
-      schema.rows.map((_, idx) => store[`${year}-${m}-${idx}`] || emptyCell)
-    );
-  }, [store, year]);
+  const monthlyLeaves: Cell[][] = useMemo(() =>
+    MONTHS.map((_, m) => schema.rows.map((_, idx) => store[`${year}-${m}-${idx}`] || emptyCell)),
+  [store, year]);
 
-  // قيم كل شهر مع التجميعات
   const monthlyComputed: Cell[][] = useMemo(
     () => monthlyLeaves.map(v => computeAggregates(v)),
     [monthlyLeaves]
   );
 
-  // =================== تحديث خلية ===================
-  const updateCell = (monthIdx: number, rowIdx: number, field: "f" | "r", val: number) => {
+  const updateCell = (mi: number, ri: number, field: "f" | "r", val: number) => {
     setStore(prev => {
-      const key = `${year}-${monthIdx}-${rowIdx}`;
-      const cur = prev[key] || emptyCell;
+      const key  = `${year}-${mi}-${ri}`;
+      const cur  = prev[key] || emptyCell;
       const next = { ...cur, [field]: val };
-      if (next.f === 0 && next.r === 0) {
-        const { [key]: _, ...rest } = prev;
-        return rest;
-      }
+      if (next.f === 0 && next.r === 0) { const { [key]: _, ...rest } = prev; return rest; }
       return { ...prev, [key]: next };
     });
   };
 
-  // ====== دالة جمع كل الصفوف لمصفوفة قيم ======
   const sumCells = (arrs: Cell[][]): Cell[] => {
-    if (arrs.length === 0) return schema.rows.map(() => emptyCell);
+    if (!arrs.length) return schema.rows.map(() => emptyCell);
     return schema.rows.map((_, idx) => {
       let f = 0, r = 0;
       arrs.forEach(a => { f += a[idx].f; r += a[idx].r; });
@@ -125,7 +170,55 @@ export default function ExpensesTab() {
     });
   };
 
-  // ========= عرض الغلاف =========
+  // ========= ملخص الأبواب =========
+  const renderBabSummary = (curVals: Cell[], prevVals: Cell[], curLabel: string, prevLabel: string) => {
+    const totals = computeBabTotals(curVals, prevVals);
+    return (
+      <div className="mt-3 rounded-xl overflow-hidden border-2 border-black shadow" dir="rtl">
+        <div className="bg-teal-800 text-white text-center py-2 font-bold text-sm tracking-wide">
+          إجمالي الاستخدامات — ملخص حسب الأبواب
+        </div>
+        <div className="overflow-x-auto">
+          <table className="border-collapse" style={{ width: "max-content", minWidth: "100%" }}>
+            <thead className="font-bold text-xs">
+              <tr>
+                <TH rowSpan={2} cls="bg-slate-200 text-slate-800 min-w-[240px] text-right">البيان</TH>
+                <TH colSpan={2} cls={CUR_H}>{curLabel}</TH>
+                <TH colSpan={2} cls={PREV_H}>{prevLabel}</TH>
+                <TH colSpan={2} cls={TOT_H}>الجملة</TH>
+              </tr>
+              <tr className="text-[11px]">
+                <TH cls={CUR_H}>ف</TH>   <TH cls={CUR_H}>ريال</TH>
+                <TH cls={PREV_H}>ف</TH>  <TH cls={PREV_H}>ريال</TH>
+                <TH cls={TOT_H}>ف</TH>   <TH cls={TOT_H}>ريال</TH>
+              </tr>
+            </thead>
+            <tbody>
+              {totals.map((t, i) => {
+                const isGrand = t.babNum === null;
+                const base = isGrand
+                  ? "bg-teal-700 text-white font-bold"
+                  : i % 2 === 0 ? "bg-white font-semibold" : "bg-slate-50 font-semibold";
+                return (
+                  <tr key={i} className={base}>
+                    <td className="border border-black px-2 py-1.5 text-right whitespace-nowrap text-xs font-semibold">{t.label}</td>
+                    <TD cls={isGrand ? "" : CUR_C}>{fmt(t.cur.f)}</TD>
+                    <TD cls={isGrand ? "" : CUR_C}>{fmt(t.cur.r)}</TD>
+                    <TD cls={isGrand ? "" : PREV_C}>{fmt(t.prev.f)}</TD>
+                    <TD cls={isGrand ? "" : PREV_C}>{fmt(t.prev.r)}</TD>
+                    <TD cls={isGrand ? "" : TOT_C}>{fmt(t.total.f)}</TD>
+                    <TD cls={isGrand ? "" : TOT_C}>{fmt(t.total.r)}</TD>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // ========= الغلاف =========
   const renderCover = () => (
     <div className="bg-white rounded-2xl border-2 border-teal-700 p-8 text-center space-y-4 shadow-md max-w-3xl mx-auto" dir="rtl">
       <div className="space-y-1">
@@ -144,18 +237,14 @@ export default function ExpensesTab() {
     </div>
   );
 
-  // ========= جدول كشف شهري/مدة/سنوي =========
+  // ========= الجدول الرئيسي =========
   const renderSheet = (opts: {
-    title: string;
-    subtitle: string;
-    currentLabel: string;
-    previousLabel: string;
-    currentValues: Cell[];
-    previousValues: Cell[];
-    editable: boolean;
-    editMonthIdx?: number;
+    title: string; subtitle: string;
+    currentLabel: string; previousLabel: string;
+    currentValues: Cell[]; previousValues: Cell[];
+    editable: boolean; editMonthIdx?: number;
   }) => {
-    const totalValues: Cell[] = schema.rows.map((_, idx) => {
+    const totalValues = schema.rows.map((_, idx) => {
       let f = opts.currentValues[idx].f + opts.previousValues[idx].f;
       let r = opts.currentValues[idx].r + opts.previousValues[idx].r;
       r += Math.floor(f / 100); f = f % 100;
@@ -163,226 +252,236 @@ export default function ExpensesTab() {
     });
 
     return (
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm" dir="rtl">
-        <div className="bg-gradient-to-r from-teal-700 to-emerald-700 text-white p-3 rounded-t-xl text-center">
-          <h3 className="text-base sm:text-lg font-bold">{opts.title}</h3>
-          <p className="text-xs opacity-90">{opts.subtitle}</p>
-          <p className="text-[10px] opacity-80 mt-0.5">المجلس اليمني للاختصاصات الطبية فرع - صعدة</p>
+      <div className="space-y-0" dir="rtl">
+        <div className="bg-white rounded-xl border-2 border-black shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-teal-700 to-emerald-700 text-white p-3 text-center">
+            <h3 className="text-base sm:text-lg font-bold">{opts.title}</h3>
+            <p className="text-xs opacity-90">{opts.subtitle}</p>
+            <p className="text-[10px] opacity-75 mt-0.5">المجلس اليمني للاختصاصات الطبية فرع - صعدة</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="border-collapse" style={{ width: "max-content", minWidth: "100%" }}>
+              <thead className="sticky top-0 z-10 font-bold text-xs">
+                <tr>
+                  <TH rowSpan={2} cls="bg-slate-200 text-slate-800 min-w-[240px] text-right">بيان مفردات الاستخدامات</TH>
+                  <TH rowSpan={2} cls="bg-slate-200 text-slate-800">الباب</TH>
+                  <TH rowSpan={2} cls="bg-slate-200 text-slate-800">الفصل</TH>
+                  <TH rowSpan={2} cls="bg-slate-200 text-slate-800">البند</TH>
+                  <TH rowSpan={2} cls="bg-slate-200 text-slate-800">النوع</TH>
+                  <TH colSpan={2} cls={CUR_H}>{opts.currentLabel}</TH>
+                  <TH colSpan={2} cls={PREV_H}>{opts.previousLabel}</TH>
+                  <TH colSpan={2} cls={TOT_H}>الجملة</TH>
+                </tr>
+                <tr className="text-[11px]">
+                  <TH cls={CUR_H}>ف</TH>   <TH cls={CUR_H}>ريال</TH>
+                  <TH cls={PREV_H}>ف</TH>  <TH cls={PREV_H}>ريال</TH>
+                  <TH cls={TOT_H}>ف</TH>   <TH cls={TOT_H}>ريال</TH>
+                </tr>
+              </thead>
+              <tbody>
+                {schema.rows.map((r, idx) => {
+                  const cur  = opts.currentValues[idx];
+                  const prev = opts.previousValues[idx];
+                  const tot  = totalValues[idx];
+                  const editable = opts.editable && isLeaf(r) && opts.editMonthIdx !== undefined;
+                  return (
+                    <tr key={idx} className={rowClass(r.lv)}>
+                      <td className="border border-black px-2 py-1 text-right whitespace-nowrap text-xs">{r.n}</td>
+                      <TD>{r.b || ""}</TD>
+                      <TD>{r.c || ""}</TD>
+                      <TD>{r.d || ""}</TD>
+                      <TD>{r.e || ""}</TD>
+                      {editable ? (
+                        <>
+                          <td className={`border border-black p-0.5 ${CUR_C}`}>
+                            <input type="number" min={0} value={cur.f || ""} onChange={e => updateCell(opts.editMonthIdx!, idx, "f", Number(e.target.value)||0)}
+                              className="w-14 text-center text-xs px-1 py-0.5 outline-none bg-transparent focus:ring-1 focus:ring-amber-500 rounded" />
+                          </td>
+                          <td className={`border border-black p-0.5 ${CUR_C}`}>
+                            <input type="number" min={0} value={cur.r || ""} onChange={e => updateCell(opts.editMonthIdx!, idx, "r", Number(e.target.value)||0)}
+                              className="w-24 text-center text-xs px-1 py-0.5 outline-none bg-transparent focus:ring-1 focus:ring-amber-500 rounded" />
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <TD cls={CUR_C}>{fmt(cur.f)}</TD>
+                          <TD cls={CUR_C}>{fmt(cur.r)}</TD>
+                        </>
+                      )}
+                      <TD cls={PREV_C}>{fmt(prev.f)}</TD>
+                      <TD cls={PREV_C}>{fmt(prev.r)}</TD>
+                      <TD cls={`${TOT_C} font-semibold`}>{fmt(tot.f)}</TD>
+                      <TD cls={`${TOT_C} font-semibold`}>{fmt(tot.r)}</TD>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse">
-            <thead className="sticky top-0 bg-slate-100 text-slate-800 font-bold z-10">
-              <tr className="border-b border-slate-300">
-                <th rowSpan={2} className="border border-slate-200 p-1 min-w-[260px]">بيان مفردات الاستخدامات</th>
-                <th rowSpan={2} className="border border-slate-200 p-1 w-10">الباب</th>
-                <th rowSpan={2} className="border border-slate-200 p-1 w-10">الفصل</th>
-                <th rowSpan={2} className="border border-slate-200 p-1 w-10">البند</th>
-                <th rowSpan={2} className="border border-slate-200 p-1 w-10">النوع</th>
-                <th colSpan={2} className="border border-slate-200 p-1 bg-amber-50">{opts.currentLabel}</th>
-                <th colSpan={2} className="border border-slate-200 p-1 bg-sky-50">{opts.previousLabel}</th>
-                <th colSpan={2} className="border border-slate-200 p-1 bg-emerald-50">الجملة</th>
-              </tr>
-              <tr className="border-b border-slate-300 text-[10px]">
-                <th className="border border-slate-200 p-1 bg-amber-50 w-12">ف</th>
-                <th className="border border-slate-200 p-1 bg-amber-50 w-20">ريال</th>
-                <th className="border border-slate-200 p-1 bg-sky-50 w-12">ف</th>
-                <th className="border border-slate-200 p-1 bg-sky-50 w-20">ريال</th>
-                <th className="border border-slate-200 p-1 bg-emerald-50 w-12">ف</th>
-                <th className="border border-slate-200 p-1 bg-emerald-50 w-20">ريال</th>
-              </tr>
-            </thead>
-            <tbody>
-              {schema.rows.map((r, idx) => {
-                const cur = opts.currentValues[idx];
-                const prev = opts.previousValues[idx];
-                const tot = totalValues[idx];
-                const editableLeaf = opts.editable && isLeaf(r) && opts.editMonthIdx !== undefined;
-                return (
-                  <tr key={idx} className={`${rowClass(r.lv)} border-b border-slate-200`}>
-                    <td className="border border-slate-200 px-2 py-1 text-right">{r.n}</td>
-                    <td className="border border-slate-200 text-center font-mono">{r.b || ""}</td>
-                    <td className="border border-slate-200 text-center font-mono">{r.c || ""}</td>
-                    <td className="border border-slate-200 text-center font-mono">{r.d || ""}</td>
-                    <td className="border border-slate-200 text-center font-mono">{r.e || ""}</td>
-                    {editableLeaf ? (
-                      <>
-                        <td className="border border-slate-200 p-0.5">
-                          <input type="number" min={0} value={cur.f || ""} onChange={e => updateCell(opts.editMonthIdx!, idx, "f", Number(e.target.value) || 0)} className="w-full text-center text-xs px-1 py-0.5 border border-transparent focus:border-teal-500 outline-none bg-transparent" />
-                        </td>
-                        <td className="border border-slate-200 p-0.5">
-                          <input type="number" min={0} value={cur.r || ""} onChange={e => updateCell(opts.editMonthIdx!, idx, "r", Number(e.target.value) || 0)} className="w-full text-center text-xs px-1 py-0.5 border border-transparent focus:border-teal-500 outline-none bg-transparent" />
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="border border-slate-200 text-center font-mono">{fmtNum(cur.f)}</td>
-                        <td className="border border-slate-200 text-center font-mono">{fmtNum(cur.r)}</td>
-                      </>
-                    )}
-                    <td className="border border-slate-200 text-center font-mono">{fmtNum(prev.f)}</td>
-                    <td className="border border-slate-200 text-center font-mono">{fmtNum(prev.r)}</td>
-                    <td className="border border-slate-200 text-center font-mono font-semibold">{fmtNum(tot.f)}</td>
-                    <td className="border border-slate-200 text-center font-mono font-semibold">{fmtNum(tot.r)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {renderBabSummary(opts.currentValues, opts.previousValues, opts.currentLabel, opts.previousLabel)}
       </div>
     );
   };
 
-  // ========= عرض شهر معين =========
-  const renderMonth = (m: number) => {
-    const cur = monthlyComputed[m];
-    const prev = sumCells(monthlyComputed.slice(0, m));
-    return renderSheet({
-      title: "كشف الحساب الشهري",
-      subtitle: `عن شهر ${MONTHS[m]} من العام المالي ${year}م`,
-      currentLabel: "الشهر الجاري",
-      previousLabel: "الأشهر السابقة",
-      currentValues: cur,
-      previousValues: prev,
-      editable: true,
-      editMonthIdx: m,
-    });
-  };
+  const renderMonth = (m: number) => renderSheet({
+    title: "كشف الحساب الشهري",
+    subtitle: `عن شهر ${MONTHS[m]} من العام المالي ${year}م`,
+    currentLabel: "الشهر الجاري", previousLabel: "الأشهر السابقة",
+    currentValues: monthlyComputed[m],
+    previousValues: sumCells(monthlyComputed.slice(0, m)),
+    editable: true, editMonthIdx: m,
+  });
 
-  // ========= عرض مدة (ربع سنة) =========
   const renderQuarter = (qIdx: number) => {
     const q = QUARTERS[qIdx];
-    const cur = sumCells(q.months.map(mi => monthlyComputed[mi]));
     const prevMonths: number[] = [];
     for (let p = 0; p < qIdx; p++) prevMonths.push(...QUARTERS[p].months);
-    const prev = sumCells(prevMonths.map(mi => monthlyComputed[mi]));
     return renderSheet({
       title: "كشف حساب المدة",
       subtitle: `${q.label} من العام المالي ${year}م`,
-      currentLabel: q.label,
-      previousLabel: "المدد السابقة",
-      currentValues: cur,
-      previousValues: prev,
+      currentLabel: q.label, previousLabel: "المدد السابقة",
+      currentValues: sumCells(q.months.map(mi => monthlyComputed[mi])),
+      previousValues: sumCells(prevMonths.map(mi => monthlyComputed[mi])),
       editable: false,
     });
   };
 
-  // ========= العرض النهائي =========
-  const renderFinal = () => {
-    const cur = sumCells(monthlyComputed);
-    const prev = schema.rows.map(() => emptyCell);
-    return renderSheet({
-      title: "كشف الحساب النهائي (الأخيرة)",
-      subtitle: `إجمالي العام المالي ${year}م`,
-      currentLabel: "إجمالي العام",
-      previousLabel: "—",
-      currentValues: cur,
-      previousValues: prev,
-      editable: false,
-    });
-  };
+  const renderFinal = () => renderSheet({
+    title: "كشف الحساب النهائي (الأخيرة)",
+    subtitle: `إجمالي العام المالي ${year}م`,
+    currentLabel: "إجمالي العام", previousLabel: "—",
+    currentValues: sumCells(monthlyComputed),
+    previousValues: schema.rows.map(() => emptyCell),
+    editable: false,
+  });
 
   // ========= كشف السنة =========
   const renderYear = () => {
     const cur = sumCells(monthlyComputed);
-    return (
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm" dir="rtl">
-        <div className="bg-gradient-to-r from-indigo-700 to-purple-700 text-white p-3 rounded-t-xl text-center">
-          <h3 className="text-base sm:text-lg font-bold">كشف حساب السنة</h3>
-          <p className="text-xs opacity-90">ملخص جميع الأشهر للعام {year}م</p>
-        </div>
-        <div className="overflow-auto max-h-[65vh] relative">
-          <table className="w-full text-xs border-collapse">
-            <thead className="bg-slate-100 text-slate-800 font-bold sticky top-0 z-20 shadow-sm">
+    const monthBabTotals = MONTHS.map((_, mi) =>
+      computeBabTotals(monthlyComputed[mi], sumCells(monthlyComputed.slice(0, mi)))
+    );
+    const yearTotals = computeBabTotals(cur, schema.rows.map(() => emptyCell));
 
-              <tr>
-                <th className="border border-slate-200 p-1 min-w-[240px]">البيان</th>
-                {MONTHS.map(m => (
-                  <th key={m} className="border border-slate-200 p-1 min-w-[70px]">{m}</th>
-                ))}
-                <th className="border border-slate-200 p-1 bg-emerald-50 min-w-[90px]">المجموع</th>
-              </tr>
-            </thead>
-            <tbody>
-              {schema.rows.map((r, idx) => (
-                <tr key={idx} className={`${rowClass(r.lv)} border-b border-slate-200`}>
-                  <td className="border border-slate-200 px-2 py-1 text-right">{r.n}</td>
-                  {MONTHS.map((_, mi) => (
-                    <td key={mi} className="border border-slate-200 text-center font-mono">
-                      {fmtNum(monthlyComputed[mi][idx].r)}
-                    </td>
-                  ))}
-                  <td className="border border-slate-200 text-center font-mono font-bold bg-emerald-50">
-                    {fmtNum(cur[idx].r)}
-                  </td>
+    return (
+      <div className="space-y-4" dir="rtl">
+        {/* جدول تفصيل الأشهر */}
+        <div className="rounded-xl border-2 border-black overflow-hidden shadow-sm">
+          <div className="bg-gradient-to-r from-indigo-700 to-purple-700 text-white p-3 text-center">
+            <h3 className="text-base sm:text-lg font-bold">كشف حساب السنة</h3>
+            <p className="text-xs opacity-90">ملخص جميع الأشهر للعام {year}م</p>
+          </div>
+          <div className="overflow-auto max-h-[65vh]">
+            <table className="border-collapse" style={{ width: "max-content", minWidth: "100%" }}>
+              <thead className="font-bold text-xs sticky top-0 z-20">
+                <tr>
+                  <TH cls="bg-slate-200 text-slate-800 min-w-[220px] text-right">البيان</TH>
+                  {MONTHS.map(m => <TH key={m} cls="bg-slate-100 text-slate-800">{m}</TH>)}
+                  <TH cls={TOT_H}>المجموع</TH>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {schema.rows.map((r, idx) => (
+                  <tr key={idx} className={rowClass(r.lv)}>
+                    <td className="border border-black px-2 py-1 text-right whitespace-nowrap text-xs">{r.n}</td>
+                    {MONTHS.map((_, mi) => (
+                      <TD key={mi}>{fmt(monthlyComputed[mi][idx].r)}</TD>
+                    ))}
+                    <TD cls={`${TOT_C} font-bold`}>{fmt(cur[idx].r)}</TD>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ملخص الأبواب شهرياً */}
+        <div className="rounded-xl border-2 border-black overflow-hidden shadow-sm">
+          <div className="bg-teal-800 text-white p-3 text-center">
+            <h3 className="text-base font-bold">ملخص إجمالي الاستخدامات حسب الأبواب — شهرياً</h3>
+            <p className="text-xs opacity-80">المبالغ بالريال — الشهر الجاري فقط</p>
+          </div>
+          <div className="overflow-auto">
+            <table className="border-collapse" style={{ width: "max-content", minWidth: "100%" }}>
+              <thead className="font-bold text-xs sticky top-0 z-10">
+                <tr>
+                  <TH cls="bg-slate-200 text-slate-800 min-w-[260px] text-right">البيان</TH>
+                  {MONTHS.map(m => <TH key={m} cls={CUR_H}>{m}</TH>)}
+                  <TH cls={TOT_H}>المجموع</TH>
+                </tr>
+              </thead>
+              <tbody>
+                {monthBabTotals[0].map((bt, btIdx) => {
+                  const isGrand = bt.babNum === null;
+                  const base = isGrand
+                    ? "bg-teal-700 text-white font-bold"
+                    : btIdx % 2 === 0 ? "bg-white font-semibold" : "bg-slate-50 font-semibold";
+                  return (
+                    <tr key={btIdx} className={base}>
+                      <td className="border border-black px-2 py-1.5 text-right whitespace-nowrap text-xs">{bt.label}</td>
+                      {MONTHS.map((_, mi) => (
+                        <TD key={mi} cls={isGrand ? "" : CUR_C}>{fmt(monthBabTotals[mi][btIdx].cur.r)}</TD>
+                      ))}
+                      <TD cls={isGrand ? "" : TOT_C}>{fmt(yearTotals[btIdx]?.cur.r ?? 0)}</TD>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
   };
 
-  // ====== شريط التبويبات الفرعي ======
-  const subTabs: { key: string; label: string; group: string }[] = [
+  // ====== شريط التبويبات ======
+  const subTabs = [
     { key: "cover", label: "الغلاف", group: "intro" },
     ...MONTHS.map((m, i) => ({ key: `m${i}`, label: m, group: "month" })),
     ...QUARTERS.map(q => ({ key: q.key, label: q.label, group: "period" })),
     { key: "final", label: "الأخيرة", group: "final" },
-    { key: "year", label: "كشف السنة", group: "year" },
+    { key: "year",  label: "كشف السنة", group: "year" },
   ];
-
-  const groupClass = (g: string) => {
-    if (g === "intro") return "bg-slate-700";
-    if (g === "month") return "bg-teal-700";
-    if (g === "period") return "bg-amber-600";
-    if (g === "final") return "bg-rose-700";
-    return "bg-indigo-700";
-  };
+  const groupCls = (g: string) =>
+    g === "intro" ? "bg-slate-700" : g === "month" ? "bg-teal-700" :
+    g === "period" ? "bg-amber-600" : g === "final" ? "bg-rose-700" : "bg-indigo-700";
 
   return (
     <div className="space-y-3" dir="rtl">
-      {/* شريط التبويبات الفرعي + أزرار الطباعة والتصدير والمسح */}
+      {/* شريط التبويبات + أزرار */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="bg-slate-100 p-1.5 rounded-xl border border-slate-200 overflow-x-auto flex-1 min-w-0">
           <div className="flex gap-1 w-max min-w-full">
-            {subTabs.map(t => {
-              const active = view === t.key;
-              return (
-                <button
-                  key={t.key}
-                  onClick={() => setView(t.key)}
-                  className={`px-2.5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
-                    active
-                      ? `${groupClass(t.group)} text-white shadow-md`
-                      : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
+            {subTabs.map(t => (
+              <button key={t.key} onClick={() => setView(t.key)}
+                className={`px-2.5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
+                  view === t.key ? `${groupCls(t.group)} text-white shadow-md` : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
+                }`}
+              >{t.label}</button>
+            ))}
           </div>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => {
+          <button onClick={() => {
               const el = document.getElementById("expenses-view-content");
               if (!el) return;
               const w = window.open("", "_blank", "width=1200,height=800");
               if (!w) return;
               w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>المصروفات - ${view}</title>
-                <style>@page{size:A4 landscape;margin:8mm}body{font-family:Tajawal,Cairo,Tahoma,Arial,sans-serif;padding:10px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #94a3b8;padding:4px 6px;text-align:right}thead th{background:#0b3d6d;color:#fff}</style>
+                <style>@page{size:A4 landscape;margin:8mm}body{font-family:Tajawal,Cairo,Tahoma,Arial,sans-serif;padding:10px}
+                table{width:100%;border-collapse:collapse;font-size:11px}
+                th,td{border:1px solid black;padding:4px 6px;text-align:right;white-space:nowrap}
+                thead th{background:#0b3d6d;color:#fff}
+                .cur{background:#fef9c3}.prev{background:#e0f2fe}.tot{background:#d1fae5}</style>
                 </head><body><h2 style="text-align:center;color:#10528e">جدول المصروفات - ${year}م</h2>${el.innerHTML}
                 <script>window.onload=()=>setTimeout(()=>window.print(),300)</script></body></html>`);
               w.document.close();
             }}
             className="px-3 py-1.5 bg-white text-[#10528e] border border-[#10528e]/30 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-50"
           >🖨️ طباعة</button>
-          <button
-            onClick={() => {
+          <button onClick={() => {
               const el = document.getElementById("expenses-view-content");
               if (!el) return;
               const tables = el.querySelectorAll("table");
@@ -397,8 +496,7 @@ export default function ExpensesTab() {
             }}
             className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-emerald-700"
           >📊 Excel</button>
-          <button
-            onClick={() => {
+          <button onClick={() => {
               if (!confirm("هل أنت متأكد من مسح جميع بيانات المصروفات؟")) return;
               setStore({});
               localStorage.removeItem(STORAGE_KEY);
@@ -411,17 +509,20 @@ export default function ExpensesTab() {
 
       {/* محتوى التبويب */}
       <div id="expenses-view-content">
-        {view === "cover" && renderCover()}
-        {view.startsWith("m") && view.length <= 3 && renderMonth(Number(view.slice(1)))}
-        {view.startsWith("p") && renderQuarter(Number(view.slice(1)) - 1)}
-        {view === "final" && renderFinal()}
-        {view === "year" && renderYear()}
+        {view === "cover"                            && renderCover()}
+        {view.startsWith("m") && view.length <= 3   && renderMonth(Number(view.slice(1)))}
+        {view.startsWith("p")                        && renderQuarter(Number(view.slice(1)) - 1)}
+        {view === "final"                            && renderFinal()}
+        {view === "year"                             && renderYear()}
       </div>
 
-
-      {/* تذييل توضيحي */}
-      <div className="text-[10px] text-slate-500 text-center bg-slate-50 p-2 rounded-lg border border-slate-200">
-        الصفوف ذات اللون الأبيض (النوع) قابلة للإدخال — والباقي يُحسب تلقائياً. الأشهر السابقة والجملة محسوبة آلياً. المدد السنوية والربعية للقراءة فقط.
+      {/* مفتاح الألوان */}
+      <div className="flex flex-wrap gap-3 justify-center text-[10px] bg-slate-50 p-2 rounded-lg border border-slate-200" dir="rtl">
+        <span className="flex items-center gap-1"><span className={`inline-block w-4 h-4 rounded ${CUR_C} border border-black`}></span> الشهر / المدة الجارية</span>
+        <span className="flex items-center gap-1"><span className={`inline-block w-4 h-4 rounded ${PREV_C} border border-black`}></span> الأشهر / المدد السابقة</span>
+        <span className="flex items-center gap-1"><span className={`inline-block w-4 h-4 rounded ${TOT_C} border border-black`}></span> الجملة</span>
+        <span className="text-slate-400">|</span>
+        <span className="text-slate-500">الصفوف البيضاء (النوع) قابلة للإدخال — الباقي يُحسب تلقائياً</span>
       </div>
     </div>
   );
