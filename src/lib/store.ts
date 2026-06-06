@@ -218,7 +218,8 @@ export const useStore = create<State>()(
         }
 
         // استخراج مبلغ التوريد بأمان (يدعم عدة أسماء للحقل)
-        const getNotifyAmount = (h: Hafiza): number => {
+        // استخراج مبلغ التوريد بأمان (يدعم عدة أسماء للحقل)
+        const getNotifyAmount = (h: any): number => {
           const val = h.notifyAmount ?? h.supplyAmount ?? h.tawreedAmount ?? 0;
           const num = Number(val);
           return isNaN(num) ? 0 : num;
