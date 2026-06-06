@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { fmt } from "@/lib/format";
 import schema from "@/data/monthlyStatement.json";
+import revenueSchema from "@/data/revenueTemplate.json";
 import { exportMonthlyStatement } from "@/lib/exportImport";
 import { monthlyStatementPdf } from "@/lib/exportPdf";
 import { AlertOctagon, FileSpreadsheet, FileText } from "lucide-react";
@@ -67,7 +68,7 @@ function lastDayOfMonth(y: number, m: number) {
 }
 
 export default function MonthlyStatementTab() {
-  const { journal, clearJournal } = useStore(); // استدعاء دالة مسح البيانات من المخزن
+  const { journal, accounts, clearJournal } = useStore(); // استدعاء دالة مسح البيانات من المخزن
   const [year, setYear] = useState(new Date().getFullYear());
   const [mode, setMode] = useState<"month" | "quarter">("month");
   const [month, setMonth] = useState(new Date().getMonth() + 1); 
@@ -119,6 +120,54 @@ export default function MonthlyStatementTab() {
       { prevDebit: 0, prevCredit: 0, curDebit: 0, curCredit: 0 },
     );
   }, [data]);
+
+  // بناء خريطة رموز الإيراد (رمز -> تسمية كاملة) من قالب الإيرادات
+  const revenueLabelByKey = useMemo(() => {
+    const map: Record<string, string> = {};
+    (revenueSchema as any).chapters?.forEach((ch: any) =>
+      ch.sections?.forEach((sec: any) =>
+        sec.items?.forEach((it: any) =>
+          it.types?.forEach((t: any) => {
+            map[`${ch.no}-${sec.no}-${it.no}-${t.no}`] =
+              `${ch.title} ← ${sec.title || ""} ← ${it.title || ""} ← ${t.title}`;
+          })
+        )
+      )
+    );
+    return map;
+  }, []);
+
+  // تجميع إيرادات الحساب حسب رمز الإيراد للفترة المختارة
+  const revenueByCode = useMemo(() => {
+    const agg: Record<string, { prev: number; cur: number; count: number }> = {};
+    (accounts || []).forEach((acc: any) => {
+      const code = acc.revenueKey;
+      if (!code) return;
+      const income = Number(acc.income) || 0;
+      if (!income) return;
+      const d = new Date(acc.date);
+      if (isNaN(d.getTime()) || d.getFullYear() !== year) return;
+      const m = d.getMonth() + 1;
+      const isCurrent = m >= startMonth && m <= endMonth;
+      const isPrev = m < startMonth;
+      if (!isCurrent && !isPrev) return;
+      if (!agg[code]) agg[code] = { prev: 0, cur: 0, count: 0 };
+      if (isCurrent) agg[code].cur += income;
+      else agg[code].prev += income;
+      agg[code].count++;
+    });
+    return Object.entries(agg)
+      .map(([code, v]) => ({ code, label: revenueLabelByKey[code] || code, ...v, total: v.prev + v.cur }))
+      .sort((a, b) => a.code.localeCompare(b.code));
+  }, [accounts, year, startMonth, endMonth, revenueLabelByKey]);
+
+  const revenueTotals = useMemo(
+    () => revenueByCode.reduce(
+      (a, r) => ({ prev: a.prev + r.prev, cur: a.cur + r.cur, total: a.total + r.total, count: a.count + r.count }),
+      { prev: 0, cur: 0, total: 0, count: 0 }
+    ),
+    [revenueByCode]
+  );
 
   // دالة مسح البيانات مع التأكيد
   const handleClearAllData = () => {
@@ -329,6 +378,66 @@ export default function MonthlyStatementTab() {
                 </td>
               </tr>
             </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* جدول تجميع إيرادات الحساب حسب رمز الإيراد للفترة المختارة */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-teal-700 to-teal-900 text-white p-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="font-bold text-base">📊 تجميع إيرادات الحساب حسب رمز الإيراد</h3>
+            <p className="text-xs opacity-80 mt-0.5">مصدر البيانات: تبويب الحساب — للفترة: {periodLabel}</p>
+          </div>
+          <div className="bg-white/10 border border-white/10 rounded-full px-3 py-1 text-xs font-bold">
+            عدد الرموز: {revenueByCode.length} | عدد السجلات: {revenueTotals.count}
+          </div>
+        </div>
+        <div className="overflow-auto max-h-[50vh] relative">
+          <table className="w-full text-sm border-collapse text-right">
+            <thead className="bg-teal-50 text-teal-900 font-bold border-b border-teal-200 sticky top-0 z-20 shadow-sm">
+              <tr>
+                <th className="border px-2 py-2 text-center w-12">م</th>
+                <th className="border px-2 py-2 text-center w-28">رمز الإيراد</th>
+                <th className="border px-3 py-2 text-right">بيان الإيراد (من قالب الإيرادات)</th>
+                <th className="border px-2 py-2 text-center w-24">عدد السجلات</th>
+                <th className="border px-2 py-2 text-center w-32">إيراد الفترة السابقة</th>
+                <th className="border px-2 py-2 text-center w-32">إيراد الفترة الحالية</th>
+                <th className="border px-2 py-2 text-center w-32">الإجمالي التراكمي</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {revenueByCode.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-slate-500 font-medium">
+                    لا توجد سجلات في تبويب الحساب لها رمز إيراد ضمن الفترة المختارة.
+                  </td>
+                </tr>
+              ) : (
+                revenueByCode.map((r, i) => (
+                  <tr key={r.code} className="hover:bg-teal-50/40 transition-colors">
+                    <td className="border px-2 py-2 text-center font-mono text-slate-500">{i + 1}</td>
+                    <td className="border px-2 py-2 text-center font-mono font-extrabold text-teal-800 bg-teal-50/40">{r.code}</td>
+                    <td className="border px-3 py-2 text-right font-medium text-slate-800">{r.label}</td>
+                    <td className="border px-2 py-2 text-center font-mono text-slate-600">{r.count}</td>
+                    <td className="border px-2 py-2 text-left font-mono text-slate-700">{r.prev ? fmt(r.prev) : "—"}</td>
+                    <td className="border px-2 py-2 text-left font-mono text-teal-700 font-bold bg-teal-50/30">{r.cur ? fmt(r.cur) : "—"}</td>
+                    <td className="border px-2 py-2 text-left font-mono text-emerald-700 font-black bg-emerald-50/30">{fmt(r.total)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            {revenueByCode.length > 0 && (
+              <tfoot>
+                <tr className="bg-slate-900 text-white font-extrabold">
+                  <td colSpan={3} className="border px-3 py-2 text-right">الإجمالي العام لرموز الإيراد</td>
+                  <td className="border px-2 py-2 text-center font-mono">{revenueTotals.count}</td>
+                  <td className="border px-2 py-2 text-left font-mono text-slate-200">{fmt(revenueTotals.prev)}</td>
+                  <td className="border px-2 py-2 text-left font-mono text-teal-300">{fmt(revenueTotals.cur)}</td>
+                  <td className="border px-2 py-2 text-left font-mono text-emerald-400">{fmt(revenueTotals.total)}</td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>

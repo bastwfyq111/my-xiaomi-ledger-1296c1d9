@@ -82,13 +82,14 @@ function Field({ label, v, on, type = "text", placeholder = "", icon, className 
 }
 
 export default function AccountsTab() {
-  const { accounts, addAccount, updateAccount, deleteAccount, clearAccounts, hafizas = [] } = useStore();
+  const { accounts, addAccount, updateAccount, deleteAccount, clearAccounts, hafiza = [] } = useStore();
   const [form, setForm] = useState<FormType>(emptyForm);
   const [editingRow, setEditingRow] = useState<any | null>(null);
 
-  // دالة المطابقة اليدوية (معدلة لاستخدام notifyAmount)
+  // مطابقة شاملة معتمدة على sourceHafizaId (مفتاح فريد) لمنع التكرار
   const handleSyncFromHafiza = () => {
-    if (!hafizas || hafizas.length === 0) {
+    const source = (hafiza && hafiza.length > 0) ? hafiza : (useStore.getState().hafiza || []);
+    if (!source || source.length === 0) {
       toast.error("لا توجد بيانات في تبويب حوافظ التوريد!");
       return;
     }
@@ -100,7 +101,7 @@ export default function AccountsTab() {
     };
     const cleanDate = (dateStr: string) => String(dateStr ?? "").replace(/[^\d]/g, "");
 
-    const hafiza2026 = hafizas.filter((h: any) => cleanDate(h?.date).substring(0, 4) === "2026");
+    const hafiza2026 = source.filter((h: any) => cleanDate(h?.date).substring(0, 4) === "2026");
 
     if (hafiza2026.length === 0) {
       toast.info("لا توجد حوافظ لعام 2026.");
@@ -111,46 +112,63 @@ export default function AccountsTab() {
     let updatedCount = 0;
     let skippedCount = 0;
 
+    // فهرس ديناميكي يُحدَّث داخل الحلقة لمنع التكرار حتى لو تكرر الزر
+    const currentAccounts = useStore.getState().accounts;
     const byHafizaId = new Map<string, any>();
     const byHafizaNo = new Map<string, any>();
+    const linkedAccountIds = new Set<string>();
 
-    accounts.forEach((acc: any) => {
-      if (acc.sourceHafizaId) byHafizaId.set(normalizeStr(acc.sourceHafizaId), acc);
-      if (acc.hafizaNo) byHafizaNo.set(normalizeStr(acc.hafizaNo), acc);
+    currentAccounts.forEach((acc: any) => {
+      if (acc.sourceHafizaId) {
+        byHafizaId.set(normalizeStr(acc.sourceHafizaId), acc);
+        linkedAccountIds.add(acc.id);
+      }
+    });
+    // فقط الحسابات غير المرتبطة سابقاً تكون متاحة للربط برقم الحافظة (مرة واحدة)
+    currentAccounts.forEach((acc: any) => {
+      if (acc.hafizaNo && !linkedAccountIds.has(acc.id) && !byHafizaNo.has(normalizeStr(acc.hafizaNo))) {
+        byHafizaNo.set(normalizeStr(acc.hafizaNo), acc);
+      }
     });
 
-    hafiza2026.forEach((hafiza: any) => {
-      if (!hafiza?.id) return;
+    hafiza2026.forEach((hafizaRow: any) => {
+      if (!hafizaRow?.id) return;
+      const hid = normalizeStr(hafizaRow.id);
 
-      // استخراج مبلغ التوريد من الحقل المناسب
-      const notifyAmountValue = hafiza.notifyAmount ?? hafiza.supplyAmount ?? hafiza.tawreedAmount ?? 0;
+      const notifyAmountValue = hafizaRow.notifyAmount ?? hafizaRow.supplyAmount ?? hafizaRow.tawreedAmount ?? 0;
       const incomeValue = normalizeNum(notifyAmountValue);
 
       const mappedData = {
-        date: hafiza.date || today(),
-        hafizaNo: normalizeStr(hafiza.hafizaNo),
-        notifyNo: normalizeStr(hafiza.notifyNo),
-        notifyDate: hafiza.notifyDate || "",
-        checkNo: normalizeStr(hafiza.checkNo),
-        checkDate: hafiza.checkDate || "",
-        description: normalizeStr(hafiza.description),
-        specialty: normalizeStr(hafiza.specialty),
-        name: normalizeStr(hafiza.name),
-        hafizaAmount: normalizeNum(hafiza.hafizaAmount || hafiza.amount),
+        date: hafizaRow.date || today(),
+        hafizaNo: normalizeStr(hafizaRow.hafizaNo),
+        notifyNo: normalizeStr(hafizaRow.notifyNo),
+        notifyDate: hafizaRow.notifyDate || "",
+        checkNo: normalizeStr(hafizaRow.checkNo),
+        checkDate: hafizaRow.checkDate || "",
+        description: normalizeStr(hafizaRow.description),
+        specialty: normalizeStr(hafizaRow.specialty),
+        name: normalizeStr(hafizaRow.name),
+        hafizaAmount: normalizeNum(hafizaRow.hafizaAmount || hafizaRow.amount),
         income: incomeValue,
         expense: 0,
       };
 
-      const existing =
-        byHafizaId.get(normalizeStr(hafiza.id)) ||
-        (hafiza.hafizaNo ? byHafizaNo.get(normalizeStr(hafiza.hafizaNo)) : undefined);
+      // 1) مطابقة بمعرف الحافظة (مفتاح فريد قوي)
+      let existing = byHafizaId.get(hid);
+      // 2) أو ربط حساب يدوي قديم برقم الحافظة لمرة واحدة فقط
+      if (!existing && mappedData.hafizaNo) {
+        existing = byHafizaNo.get(mappedData.hafizaNo);
+        if (existing) byHafizaNo.delete(mappedData.hafizaNo);
+      }
 
       if (!existing) {
-        addAccount({
+        const created = addAccount({
           ...mappedData,
           revenueKey: undefined,
-          sourceHafizaId: hafiza.id,
+          sourceHafizaId: hafizaRow.id,
         });
+        // تسجيل فوري في الفهرس لمنع التكرار داخل نفس الحلقة
+        byHafizaId.set(hid, { ...created, sourceHafizaId: hafizaRow.id });
         addedCount++;
         return;
       }
@@ -160,21 +178,21 @@ export default function AccountsTab() {
         normalizeStr(existing.hafizaNo) !== mappedData.hafizaNo ||
         normalizeStr(existing.notifyNo) !== mappedData.notifyNo ||
         normalizeStr(existing.notifyDate) !== mappedData.notifyDate ||
-        normalizeStr(existing.checkNo) !== mappedData.checkNo ||
-        normalizeStr(existing.checkDate) !== mappedData.checkDate ||
         normalizeStr(existing.description) !== mappedData.description ||
         normalizeStr(existing.specialty) !== mappedData.specialty ||
         normalizeStr(existing.name) !== mappedData.name ||
         normalizeNum(existing.hafizaAmount) !== mappedData.hafizaAmount ||
-        normalizeNum(existing.income) !== mappedData.income;
+        normalizeNum(existing.income) !== mappedData.income ||
+        existing.sourceHafizaId !== hafizaRow.id;
 
       if (hasDiff) {
         updateAccount(existing.id, {
           ...existing,
           ...mappedData,
           revenueKey: existing.revenueKey,
-          sourceHafizaId: hafiza.id,
+          sourceHafizaId: hafizaRow.id,
         });
+        byHafizaId.set(hid, { ...existing, ...mappedData, sourceHafizaId: hafizaRow.id });
         updatedCount++;
       } else {
         skippedCount++;
@@ -412,7 +430,7 @@ export default function AccountsTab() {
                     <th key={c.key} className="p-2 border border-black whitespace-normal break-words min-w-[80px] cursor-pointer hover:bg-slate-200 transition-colors select-none sticky top-0 z-20 bg-slate-100" onClick={() => toggleSort(c.key)}>
                       <div className="flex items-center justify-center gap-1.5">
                         <span>{c.label}</span>
-                        <span className="text-[10px] text-[#10528e] font-mono">{sortIndicator(c.key, sortKey, sortDir)}</span>
+                        <span className="text-[10px] text-[#10528e] font-mono">{sortIndicator(sortKey === c.key, sortDir)}</span>
                       </div>
                     </th>
                   ))}
