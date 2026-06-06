@@ -326,7 +326,7 @@ export default function ExpensesTab() {
   };
 
   const renderMonth = (m: number) => renderSheet({
-    title: "كشف الحساب الشهري",
+    title: "كشف المصروفات الشهري",
     subtitle: `عن شهر ${MONTHS[m]} من العام المالي ${year}م`,
     currentLabel: "الشهر الجاري", previousLabel: "الأشهر السابقة",
     currentValues: monthlyComputed[m],
