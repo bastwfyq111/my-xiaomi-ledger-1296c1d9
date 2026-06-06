@@ -95,7 +95,8 @@ export default function RevenueTab() {
     <div className="w-full space-y-6 text-right" dir="rtl">
       
       {/* لوحة التحكم والتحقق: أصبحت مرنة بالكامل ومقاومة للضيق على هواتف شاومي */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-end lg:flex-wrap gap-4">
+  <div className="bg-white rounded-2xl shadow-sm border border-black p-5 grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-end lg:flex-wrap gap-4">
+
         
         {/* اختيار الشهر */}
         <div className="flex flex-col gap-2 flex-1 min-w-[140px]">
