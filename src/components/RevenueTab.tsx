@@ -5,8 +5,8 @@ import schema from "@/data/revenueTemplate.json";
 import { exportRevenueStatement } from "@/lib/exportImport";
 import { revenuePdf } from "@/lib/exportPdf";
 
-// استيراد الأيقونات
-import { Calendar, FileSpreadsheet, FileText, LayoutGrid, DollarSign, Trash2 } from "lucide-react";
+// استيراد الأيقونات لإضفاء لمسة بصرية حديثة متناسقة مع الهوية الجديدة
+import { Calendar, FileSpreadsheet, FileText, LayoutGrid, DollarSign } from "lucide-react";
 
 const MONTH_NAMES = [
   "يناير","فبراير","مارس","أبريل","مايو","يونيو",
@@ -20,20 +20,25 @@ type Chapter = { no: number; title: string; longTitle?: string; sections: Sectio
 
 const SCHEMA = schema as { title: string; office: string; chapters: Chapter[] };
 
-// توليد مفتاح التخزين المركب
+// توليد مفتاح التخزين المركب: ch{c}-sec{s}-it{i}-typ{t}
+// (تم الاحتفاظ به كما هو لارتباطه بالتبويبات الأخرى)
 export function typeKey(c: number, s: number, i: number, t: number) {
   return `${c}-${s}-${i}-${t}`;
 }
 
 export default function RevenueTab() {
-  const { revenue, setRevenue } = useStore() as any;
+  // 1. استخراج حالة الإيرادات ودالة التحديث من مخزن زوستاند (Zustand Store)
+  // (تم إرجاع clearTab للحفاظ على الارتباطات الأصلية بالكامل)
+  const { revenue, setRevenue, clearTab } = useStore() as any;
   
+  // 2. إدارة حالة التاريخ المحاسبي الحالي
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
 
+  // دالة مساعدة لجلب المبالغ بأمان من المخزن وتفادي القيم غير المعرفة
   const get = (y: number, m: number, key: string) => revenue[`${y}-${m}-${key}`] || 0;
 
-  // العمليات الحسابية (لم يتم تغييرها)
+  // 3. عمليات الحسابات التجميعية (تم الحفاظ عليها بالكامل)
   const data = useMemo(() => {
     const sumPrev = (key: string) => {
       let s = 0;
@@ -125,15 +130,15 @@ export default function RevenueTab() {
         <div className="flex flex-wrap bg-slate-100 p-1.5 rounded-xl border border-slate-200 gap-1.5 w-full md:w-auto">
           <button 
             onClick={() => exportRevenueStatement(revenue, year)}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm font-bold text-xs rounded-lg transition-all flex-1"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs rounded-lg transition-all shadow-sm active:scale-[0.98] flex-1"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>تصدير Excel</span>
+            <span>تصدير Excel السنوي</span>
           </button>
           
           <button 
             onClick={() => revenuePdf(revenue, year, month)}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-700 hover:bg-teal-800 text-white shadow-sm font-bold text-xs rounded-lg transition-all flex-1"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-lg transition-all shadow-sm active:scale-[0.98] flex-1"
           >
             <FileText className="w-4 h-4" />
             <span>طباعة / PDF</span>
@@ -144,29 +149,28 @@ export default function RevenueTab() {
               if (!confirm("هل أنت متأكد من مسح جميع بيانات الإيرادات؟ لا يمكن التراجع.")) return;
               useStore.setState({ revenue: {} });
             }}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-200 shadow-sm font-bold text-xs rounded-lg transition-all flex-1"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-200 font-bold text-xs rounded-lg transition-all shadow-sm active:scale-[0.98] flex-1"
           >
-            <Trash2 className="w-4 h-4" />
-            <span>مسح البيانات</span>
+            🗑️ <span>مسح بيانات الإيرادات</span>
           </button>
         </div>
       </div>
 
-      {/* منطقة الجدول */}
-      <div className="bg-white rounded-xl shadow-md border border-slate-300 overflow-hidden">
+      {/* لوحة وعاء الجدول الكبيرة */}
+      <div className="bg-white rounded-xl shadow-md border-2 border-black overflow-hidden">
         
-        {/* الترويسة العلوية - تعديل العنوان */}
-        <div className="bg-gradient-to-r from-teal-700 to-teal-800 text-white p-6 text-center space-y-2 border-b-2 border-black">
+        {/* الترويسة العلوية للجدول المالي للمجلس */}
+        <div className="bg-teal-800 text-white p-6 text-center space-y-2 border-b-2 border-black">
           <h2 className="font-extrabold text-2xl font-cairo tracking-wide">كشف حساب الإيرادات الشهري</h2>
           <p className="text-sm opacity-90 font-medium">{SCHEMA.office}</p>
-          <div className="inline-flex items-center gap-1.5 bg-white/10 px-4 py-1.5 rounded-full text-xs font-semibold mt-2">
+          <div className="inline-flex items-center gap-1.5 bg-white/10 px-4 py-1.5 rounded-full text-xs font-semibold mt-2 border border-teal-600">
             <LayoutGrid className="w-4 h-4" />
             <span>عن شهر {MONTH_NAMES[month - 1]} من العام المالي {year}م</span>
           </div>
         </div>
 
-        {/* الجدول بحدود سوداء واحتواء للخلايا */}
-        <div className="w-full overflow-auto max-h-[70vh]">
+        {/* الجدول بحدود سوداء واحتواء للخلايا (whitespace-nowrap) */}
+        <div className="w-full overflow-auto max-h-[70vh] relative">
           <table className="w-full text-right border-collapse text-xs md:text-sm">
             <thead className="sticky top-0 z-20">
               <tr className="bg-slate-200 text-black font-bold border-b-2 border-black">
@@ -199,7 +203,7 @@ export default function RevenueTab() {
               {SCHEMA.chapters.map((ch) =>
                 ch.sections.length === 0 ? null : (
                   <Fragment key={`ch-${ch.no}`}>
-                    {/* الأبواب */}
+                    {/* مستوى الأبواب */}
                     <tr className="bg-slate-200 font-bold border-b border-black">
                       <td className="border border-black p-2 text-right font-cairo whitespace-nowrap">{ch.longTitle || ch.title}</td>
                       <td className="border border-black p-2 text-center">{ch.no}</td>
@@ -211,7 +215,7 @@ export default function RevenueTab() {
                     
                     {ch.sections.map((sec) => (
                       <Fragment key={`sec-${ch.no}-${sec.no}`}>
-                        {/* الفصول */}
+                        {/* مستوى الفصول */}
                         <tr className="bg-slate-100 font-semibold border-b border-black">
                           <td className="border border-black pr-4 p-2 text-right whitespace-nowrap">{sec.title}</td>
                           <td className="border border-black bg-slate-50"></td>
@@ -224,7 +228,7 @@ export default function RevenueTab() {
                         
                         {sec.items.map((it) => (
                           <Fragment key={`it-${ch.no}-${sec.no}-${it.no}`}>
-                            {/* البنود */}
+                            {/* مستوى البنود */}
                             <tr className="bg-white border-b border-black">
                               <td className="border border-black pr-8 p-2 text-right whitespace-nowrap">{it.title}</td>
                               <td colSpan={2} className="border border-black bg-slate-50"></td>
@@ -239,21 +243,21 @@ export default function RevenueTab() {
                               const k = typeKey(ch.no, sec.no, it.no, t.no);
                               const v = data.types[k];
                               return (
-                                /* الأنواع (الإدخال) */
+                                /* مستوى الأنواع القابلة للتعديل والمدخلات */
                                 <tr key={k} className="bg-white hover:bg-teal-50 transition-colors border-b border-black">
                                   <td className="border border-black pr-12 p-2 text-right whitespace-nowrap">{t.title}</td>
                                   <td colSpan={3} className="border border-black bg-slate-50"></td>
                                   <td className="border border-black p-2 text-center">{t.no}</td>
                                   <td className="border border-black bg-slate-50"></td>
                                   
-                                  {/* خانة الإدخال */}
+                                  {/* خانة إدخال المبلغ */}
                                   <td className="border border-black p-1 bg-teal-50/30">
                                     <div className="relative flex items-center w-full min-w-[100px]">
                                       <input
                                         type="number"
                                         value={v.cur || ""}
                                         onChange={(e) => setRevenue(year, month, k, Number(e.target.value) || 0)}
-                                        className="w-full pl-6 pr-2 py-1 bg-transparent text-black font-mono text-left font-bold focus:outline-none focus:bg-white focus:ring-1 focus:ring-black border border-transparent focus:border-black"
+                                        className="w-full pl-6 pr-2 py-1 bg-transparent text-black font-mono text-left font-bold focus:outline-none focus:bg-white focus:ring-1 focus:ring-black border border-transparent focus:border-black transition-all"
                                         placeholder="0"
                                       />
                                       <DollarSign className="w-3 h-3 text-slate-400 absolute left-2 pointer-events-none" />
@@ -273,9 +277,9 @@ export default function RevenueTab() {
                 ),
               )}
 
-              {/* مجاميع الأبواب */}
+              {/* مجاميع الأبواب النهائية الثابتة */}
               <tr className="bg-slate-200 font-bold border-t-2 border-black">
-                <td colSpan={5} className="p-3 text-center text-sm font-cairo border border-black">ملخص مجاميع الحسابات والأبواب</td>
+                <td colSpan={5} className="p-3 text-center text-sm font-cairo border border-black">ملخص وعصارة مجاميع الحسابات والأبواب</td>
                 <td colSpan={6} className="border border-black bg-slate-100"></td>
               </tr>
               {SCHEMA.chapters.map((ch) => {
@@ -291,7 +295,7 @@ export default function RevenueTab() {
                 );
               })}
               
-              {/* الإجمالي النهائي */}
+              {/* السطر الختامي: المجموع العام للموارد */}
               <tr className="bg-teal-100 font-black border-t-4 border-black">
                 <td colSpan={5} className="border border-black p-3 text-right text-sm font-cairo whitespace-nowrap">الإجمالي العام والنهائي لجميع موارد المجلس</td>
                 <td className="border border-black bg-teal-50"></td><td className="border border-black p-3 font-mono text-left text-base whitespace-nowrap">{cellNum(data.grandCur)}</td>
