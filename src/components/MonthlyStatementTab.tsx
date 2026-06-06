@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { fmt } from "@/lib/format";
 import schema from "@/data/monthlyStatement.json";
+import revenueSchema from "@/data/revenueTemplate.json";
 import { exportMonthlyStatement } from "@/lib/exportImport";
 import { monthlyStatementPdf } from "@/lib/exportPdf";
 import { AlertOctagon, FileSpreadsheet, FileText } from "lucide-react";
