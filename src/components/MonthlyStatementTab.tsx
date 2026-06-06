@@ -121,6 +121,54 @@ export default function MonthlyStatementTab() {
     );
   }, [data]);
 
+  // بناء خريطة رموز الإيراد (رمز -> تسمية كاملة) من قالب الإيرادات
+  const revenueLabelByKey = useMemo(() => {
+    const map: Record<string, string> = {};
+    (revenueSchema as any).chapters?.forEach((ch: any) =>
+      ch.sections?.forEach((sec: any) =>
+        sec.items?.forEach((it: any) =>
+          it.types?.forEach((t: any) => {
+            map[`${ch.no}-${sec.no}-${it.no}-${t.no}`] =
+              `${ch.title} ← ${sec.title || ""} ← ${it.title || ""} ← ${t.title}`;
+          })
+        )
+      )
+    );
+    return map;
+  }, []);
+
+  // تجميع إيرادات الحساب حسب رمز الإيراد للفترة المختارة
+  const revenueByCode = useMemo(() => {
+    const agg: Record<string, { prev: number; cur: number; count: number }> = {};
+    (accounts || []).forEach((acc: any) => {
+      const code = acc.revenueKey;
+      if (!code) return;
+      const income = Number(acc.income) || 0;
+      if (!income) return;
+      const d = new Date(acc.date);
+      if (isNaN(d.getTime()) || d.getFullYear() !== year) return;
+      const m = d.getMonth() + 1;
+      const isCurrent = m >= startMonth && m <= endMonth;
+      const isPrev = m < startMonth;
+      if (!isCurrent && !isPrev) return;
+      if (!agg[code]) agg[code] = { prev: 0, cur: 0, count: 0 };
+      if (isCurrent) agg[code].cur += income;
+      else agg[code].prev += income;
+      agg[code].count++;
+    });
+    return Object.entries(agg)
+      .map(([code, v]) => ({ code, label: revenueLabelByKey[code] || code, ...v, total: v.prev + v.cur }))
+      .sort((a, b) => a.code.localeCompare(b.code));
+  }, [accounts, year, startMonth, endMonth, revenueLabelByKey]);
+
+  const revenueTotals = useMemo(
+    () => revenueByCode.reduce(
+      (a, r) => ({ prev: a.prev + r.prev, cur: a.cur + r.cur, total: a.total + r.total, count: a.count + r.count }),
+      { prev: 0, cur: 0, total: 0, count: 0 }
+    ),
+    [revenueByCode]
+  );
+
   // دالة مسح البيانات مع التأكيد
   const handleClearAllData = () => {
     if (journal.length === 0) {
