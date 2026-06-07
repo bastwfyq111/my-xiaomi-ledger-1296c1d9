@@ -171,7 +171,9 @@ const recalculateRevenueMap = (accounts: Account[]): RevenueMap => {
   const newRevenue: RevenueMap = {};
   accounts.forEach((acc) => {
     if (acc.revenueKey && acc.income > 0) {
-      const d = new Date(acc.date);
+      // التجميع حسب تاريخ التوريد (notifyDate). إذا لم يوجد نستخدم التاريخ العام.
+      const dateStr = acc.notifyDate || acc.date;
+      const d = new Date(dateStr);
       const year = isNaN(d.getFullYear()) ? 2026 : d.getFullYear();
       const month = isNaN(d.getMonth()) ? 1 : d.getMonth() + 1;
       const compositeKey = `${year}-${month}-${acc.revenueKey}`;
