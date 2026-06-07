@@ -1,12 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useStore } from "@/lib/store";
-import { Edit, Save, Trash2, AlertOctagon, ChevronDown } from "lucide-react";
+import { Edit, Save, Trash2, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
 import ImportButton from "@/components/ImportButton";
 import TabActions from "@/components/TabActions";
 import type { Journal } from "@/lib/store";
 
-// قائمة الـ 59 حساباً كاملة والمستخرجة حرفياً من رؤوس أعمدة ملف "القيود2026.xlsx"
 const ALL_EXCEL_ACCOUNTS = [
   "الباب الاول (الأجور والمرتبات)",
   "الباب الثاني (النفقات التشغيلية)",
@@ -51,82 +50,156 @@ const ALL_EXCEL_ACCOUNTS = [
   "حساب الموارد"
 ];
 
+// سطر مدين أو دائن داخل القيد المركب
+interface EntryLine {
+  id: string;
+  account: string;
+  amount: number;
+  type: "debit" | "credit";
+  showList?: boolean;
+}
+
+// حقل بحث منسدل مشترك
+function AccountDropdown({
+  value,
+  onChange,
+  placeholder,
+  colorClass,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  colorClass: string;
+}) {
+  const [show, setShow] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setShow(false);
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    return q ? ALL_EXCEL_ACCOUNTS.filter((a) => a.toLowerCase().includes(q)) : ALL_EXCEL_ACCOUNTS;
+  }, [value]);
+
+  return (
+    <div className="relative flex-1 min-w-0" ref={ref}>
+      <input
+        placeholder={placeholder}
+        value={value}
+        onFocus={() => setShow(true)}
+        onChange={(e) => { onChange(e.target.value); setShow(true); }}
+        className={`w-full border border-black p-2 rounded-lg outline-none text-sm font-medium bg-slate-50 ${colorClass}`}
+      />
+      {show && (
+        <div className="absolute z-50 w-full mt-1 max-h-52 overflow-y-auto bg-white border border-black rounded-lg shadow-xl divide-y divide-slate-100">
+          {filtered.length > 0 ? filtered.map((acc) => (
+            <div
+              key={acc}
+              onClick={() => { onChange(acc); setShow(false); }}
+              className="p-2 text-sm text-slate-700 hover:bg-teal-50 hover:text-teal-900 cursor-pointer text-right transition-colors whitespace-normal"
+            >
+              {acc}
+            </div>
+          )) : (
+            <div className="p-2 text-sm text-slate-400 text-center">لا توجد حسابات مطابقة</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function JournalTab() {
   const { journal, addJournal, updateJournal, deleteJournal, clearJournal } = useStore();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<Journal>>({});
 
-  // حالات التحكم في إظهار القوائم المنسدلة المخصصة عند الضغط
-  const [showDebitList, setShowDebitList] = useState(false);
-  const [showCreditList, setShowCreditList] = useState(false);
+  // بيانات رأس القيد
+  const [formNo, setFormNo] = useState("");
+  const [settlement, setSettlement] = useState("");
+  const [date, setDate] = useState("");
+  const [description, setDescription] = useState("");
 
-  // مراجع لتأمين إغلاق القوائم عند الضغط خارجها
-  const debitRef = useRef<HTMLDivElement>(null);
-  const creditRef = useRef<HTMLDivElement>(null);
+  // أسطر القيد المركب
+  const [lines, setLines] = useState<EntryLine[]>([
+    { id: "d1", account: "", amount: 0, type: "debit" },
+    { id: "c1", account: "", amount: 0, type: "credit" },
+  ]);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (debitRef.current && !debitRef.current.contains(event.target as Node)) {
-        setShowDebitList(false);
-      }
-      if (creditRef.current && !creditRef.current.contains(event.target as Node)) {
-        setShowCreditList(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const genId = () => Math.random().toString(36).slice(2, 8);
 
-  // ترشيح الحسابات ديناميكياً للجانب المدين بناءً على ما يكتبه المستخدم
-  const filteredDebitAccounts = useMemo(() => {
-    const q = (form.debitAccount || "").trim().toLowerCase();
-    if (!q) return ALL_EXCEL_ACCOUNTS;
-    return ALL_EXCEL_ACCOUNTS.filter((acc) => acc.toLowerCase().includes(q));
-  }, [form.debitAccount]);
+  const addLine = (type: "debit" | "credit") => {
+    setLines((prev) => [...prev, { id: genId(), account: "", amount: 0, type }]);
+  };
 
-  // ترشيح الحسابات ديناميكياً للجانب الدائن بناءً على ما يكتبه المستخدم
-  const filteredCreditAccounts = useMemo(() => {
-    const q = (form.creditAccount || "").trim().toLowerCase();
-    if (!q) return ALL_EXCEL_ACCOUNTS;
-    return ALL_EXCEL_ACCOUNTS.filter((acc) => acc.toLowerCase().includes(q));
-  }, [form.creditAccount]);
+  const removeLine = (id: string) => {
+    setLines((prev) => prev.filter((l) => l.id !== id));
+  };
 
-  // دالة الحفظ والتحقق المحاسبي
-  const handleSave = () => {
-    if (!form.description) {
-      toast.error("يرجى تعبئة حقل 'البيان' أولاً");
-      return;
-    }
-    const payload: Omit<Journal, "id"> = {
-      date: form.date || "",
-      formNo: form.formNo || "",
-      settlement: form.settlement || "",
-      description: form.description || "",
-      account: form.debitAccount || form.account || "",
-      debitAccount: form.debitAccount || "",
-      creditAccount: form.creditAccount || "",
-      debit: Number(form.debit) || 0,
-      credit: Number(form.credit) || 0,
-    };
+  const updateLine = (id: string, field: keyof EntryLine, value: any) => {
+    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
+  };
 
-    if (editingId) {
-      updateJournal(editingId, payload);
-      toast.success("تم تحديث قيد اليومية بنجاح");
-    } else {
-      addJournal(payload);
-      toast.success("تم إضافة قيد اليومية بنجاح");
-    }
-    setForm({});
+  // إجماليات للتحقق من التوازن
+  const totalDebit = lines.filter((l) => l.type === "debit").reduce((s, l) => s + (Number(l.amount) || 0), 0);
+  const totalCredit = lines.filter((l) => l.type === "credit").reduce((s, l) => s + (Number(l.amount) || 0), 0);
+  const isBalanced = totalDebit > 0 && totalCredit > 0 && totalDebit === totalCredit;
+
+  const resetForm = () => {
+    setFormNo(""); setSettlement(""); setDate(""); setDescription("");
+    setLines([
+      { id: "d1", account: "", amount: 0, type: "debit" },
+      { id: "c1", account: "", amount: 0, type: "credit" },
+    ]);
     setEditingId(null);
+  };
+
+  const handleSave = () => {
+    if (!description) { toast.error("يرجى تعبئة حقل البيان"); return; }
+    if (!isBalanced) { toast.error("القيد غير متوازن — يجب أن يتساوى إجمالي المدين والدائن"); return; }
+
+    const debitLines = lines.filter((l) => l.type === "debit");
+    const creditLines = lines.filter((l) => l.type === "credit");
+
+    // حفظ كل تركيبة (مدين × دائن) كسطر في اليومية
+    debitLines.forEach((dl) => {
+      creditLines.forEach((cl) => {
+        const ratio = (Number(cl.amount) || 0) / totalCredit;
+        const payload: Omit<Journal, "id"> = {
+          date,
+          formNo,
+          settlement,
+          description,
+          account: dl.account,
+          debitAccount: dl.account,
+          creditAccount: cl.account,
+          debit: Number(dl.amount) || 0,
+          credit: Math.round((Number(dl.amount) || 0) * ratio),
+        };
+        if (editingId) {
+          updateJournal(editingId, payload);
+        } else {
+          addJournal(payload);
+        }
+      });
+    });
+
+    toast.success(editingId ? "تم تحديث القيد المركب بنجاح" : "تم حفظ القيد المركب بنجاح");
+    resetForm();
   };
 
   return (
     <div className="w-full space-y-6" dir="rtl">
-      {/* لوحة إدخال القيد الجديد */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+      {/* لوحة إدخال القيد المركب */}
+      <div className="bg-white p-5 rounded-xl border border-black shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-black">
           <h3 className="font-bold text-lg text-slate-800">
-            {editingId ? "✏️ تعديل القيد المحدد" : "➕ إضافة قيد يومية (قوائم منسدلة شاملة لكامل رؤوس ملف القيود)"}
+            {editingId ? "✏️ تعديل القيد المركب" : "➕ إضافة قيد يومية مركب"}
           </h3>
           <div className="flex gap-2 flex-wrap">
             <ImportButton kind="journal" />
@@ -149,154 +222,224 @@ export default function JournalTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          <input 
-            placeholder="رقم الاستمارة" 
-            value={form.formNo || ""} 
-            onChange={(e) => setForm({ ...form, formNo: e.target.value })} 
-            className="border border-slate-300 p-2.5 rounded-lg focus:border-teal-500 outline-none" 
+        {/* بيانات رأس القيد */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          <input
+            placeholder="رقم الاستمارة"
+            value={formNo}
+            onChange={(e) => setFormNo(e.target.value)}
+            className="border border-black p-2.5 rounded-lg focus:border-teal-500 outline-none text-sm text-center"
           />
-          <input 
-            placeholder="كشف التسوية" 
-            value={form.settlement || ""} 
-            onChange={(e) => setForm({ ...form, settlement: e.target.value })} 
-            className="border border-slate-300 p-2.5 rounded-lg focus:border-teal-500 outline-none" 
+          <input
+            placeholder="كشف التسوية"
+            value={settlement}
+            onChange={(e) => setSettlement(e.target.value)}
+            className="border border-black p-2.5 rounded-lg focus:border-teal-500 outline-none text-sm text-center"
           />
-          <input 
-            type="date" 
-            value={form.date || ""} 
-            onChange={(e) => setForm({ ...form, date: e.target.value })} 
-            className="border border-slate-300 p-2.5 rounded-lg focus:border-teal-500 outline-none md:col-span-2" 
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="border border-black p-2.5 rounded-lg focus:border-teal-500 outline-none text-sm text-center"
           />
-          <input 
-            placeholder="البيان" 
-            value={form.description || ""} 
-            onChange={(e) => setForm({ ...form, description: e.target.value })} 
-            className="border border-slate-300 p-2.5 rounded-lg focus:border-teal-500 outline-none col-span-1 md:col-span-4" 
+          <input
+            placeholder="البيان"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="border border-black p-2.5 rounded-lg focus:border-teal-500 outline-none text-sm text-center sm:col-span-4"
           />
+        </div>
 
-          {/* القائمة المنسدلة المخصصة للجانب المدين - تفتح بمجرد الضغط */}
-          <div className="md:col-span-2 relative" ref={debitRef}>
-            <label className="text-xs font-bold text-slate-600 block mb-1">الجانب المدين (الاستخدامات)</label>
-            <div className="relative">
-              <input
-                placeholder="اضغط هنا لعرض كافة الحسابات المدينة الحالية..."
-                value={form.debitAccount || ""}
-                onFocus={() => setShowDebitList(true)}
-                onChange={(e) => { setForm({ ...form, debitAccount: e.target.value }); setShowDebitList(true); }}
-                className="w-full border border-slate-300 p-2.5 rounded-lg focus:border-teal-500 bg-slate-50 font-medium outline-none pl-10"
-              />
-              <ChevronDown className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
-            </div>
-            {showDebitList && (
-              <div className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl divide-y divide-slate-100">
-                {filteredDebitAccounts.length > 0 ? (
-                  filteredDebitAccounts.map((acc) => (
-                    <div
-                      key={acc}
-                      onClick={() => { setForm({ ...form, debitAccount: acc }); setShowDebitList(false); }}
-                      className="p-2.5 text-sm text-slate-700 hover:bg-teal-50 hover:text-teal-900 cursor-pointer text-right transition-colors"
-                    >
-                      {acc}
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-2.5 text-sm text-slate-400 text-center">لا توجد حسابات مطابقة للبحث</div>
-                )}
-              </div>
-            )}
-          </div>
+        {/* جدول أسطر القيد المركب */}
+        <div className="rounded-xl overflow-hidden border border-black mb-4">
+          <table className="w-full text-sm border-collapse text-center">
+            <thead>
+              <tr className="bg-slate-800 text-white">
+                <th className="border border-black px-3 py-2 text-center w-20">النوع</th>
+                <th className="border border-black px-3 py-2 text-center">اسم الحساب</th>
+                <th className="border border-black px-3 py-2 text-center w-36">المبلغ</th>
+                <th className="border border-black px-3 py-2 text-center w-16">حذف</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* أسطر المدين */}
+              {lines.filter((l) => l.type === "debit").map((l) => (
+                <tr key={l.id} className="bg-emerald-50/40 hover:bg-emerald-50 transition-colors">
+                  <td className="border border-black px-2 py-2 text-center">
+                    <span className="inline-block bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">مدين</span>
+                  </td>
+                  <td className="border border-black px-2 py-2">
+                    <AccountDropdown
+                      value={l.account}
+                      onChange={(v) => updateLine(l.id, "account", v)}
+                      placeholder="اختر أو ابحث عن الحساب المدين..."
+                      colorClass="focus:border-emerald-500 text-emerald-800"
+                    />
+                  </td>
+                  <td className="border border-black px-2 py-2">
+                    <input
+                      type="number"
+                      value={l.amount || ""}
+                      onChange={(e) => updateLine(l.id, "amount", e.target.value)}
+                      className="w-full border border-black p-2 rounded-lg outline-none text-center font-mono font-bold text-emerald-700 bg-white"
+                      placeholder="0"
+                    />
+                  </td>
+                  <td className="border border-black px-2 py-2 text-center">
+                    <button onClick={() => removeLine(l.id)} className="p-1 text-rose-500 hover:bg-rose-100 rounded transition-colors">
+                      <Minus className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
 
-          {/* القائمة المنسدلة المخصصة للجانب الدائن - تفتح بمجرد الضغط */}
-          <div className="md:col-span-2 relative" ref={creditRef}>
-            <label className="text-xs font-bold text-slate-600 block mb-1">الجانب الدائن (الموارد)</label>
-            <div className="relative">
-              <input
-                placeholder="اضغط هنا لعرض كافة الحسابات الدائنة الحالية..."
-                value={form.creditAccount || ""}
-                onFocus={() => setShowCreditList(true)}
-                onChange={(e) => { setForm({ ...form, creditAccount: e.target.value }); setShowCreditList(true); }}
-                className="w-full border border-slate-300 p-2.5 rounded-lg focus:border-teal-500 bg-slate-50 font-medium outline-none pl-10"
-              />
-              <ChevronDown className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
-            </div>
-            {showCreditList && (
-              <div className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl divide-y divide-slate-100">
-                {filteredCreditAccounts.length > 0 ? (
-                  filteredCreditAccounts.map((acc) => (
-                    <div
-                      key={acc}
-                      onClick={() => { setForm({ ...form, creditAccount: acc }); setShowCreditList(false); }}
-                      className="p-2.5 text-sm text-slate-700 hover:bg-rose-50 hover:text-rose-900 cursor-pointer text-right transition-colors"
-                    >
-                      {acc}
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-2.5 text-sm text-slate-400 text-center">لا توجد حسابات مطابقة للبحث</div>
-                )}
-              </div>
-            )}
-          </div>
+              {/* زر إضافة سطر مدين */}
+              <tr className="bg-emerald-50/20">
+                <td colSpan={4} className="border border-black px-3 py-1.5 text-center">
+                  <button
+                    onClick={() => addLine("debit")}
+                    className="text-emerald-700 hover:bg-emerald-100 text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 mx-auto transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> إضافة سطر مدين
+                  </button>
+                </td>
+              </tr>
 
-          <input 
-            type="number" 
-            placeholder="المبلغ (مدين)" 
-            value={form.debit || ""} 
-            onChange={(e) => setForm({ ...form, debit: Number(e.target.value) })} 
-            className="border border-slate-300 p-2.5 rounded-lg focus:border-teal-500 outline-none text-emerald-700 font-bold md:col-span-2" 
-          />
-          <input 
-            type="number" 
-            placeholder="المبلغ (دائن)" 
-            value={form.credit || ""} 
-            onChange={(e) => setForm({ ...form, credit: Number(e.target.value) })} 
-            className="border border-slate-300 p-2.5 rounded-lg focus:border-teal-500 outline-none text-rose-700 font-bold md:col-span-2" 
-          />
+              {/* فاصل */}
+              <tr className="bg-slate-200">
+                <td colSpan={4} className="border border-black px-3 py-1 text-center text-xs font-bold text-slate-600">— الجانب الدائن (الموارد) —</td>
+              </tr>
 
-          <div className="md:col-span-4 flex gap-3 pt-2">
-            <button 
-              onClick={handleSave} 
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 font-bold transition-all shadow-sm flex-1"
+              {/* أسطر الدائن */}
+              {lines.filter((l) => l.type === "credit").map((l) => (
+                <tr key={l.id} className="bg-rose-50/40 hover:bg-rose-50 transition-colors">
+                  <td className="border border-black px-2 py-2 text-center">
+                    <span className="inline-block bg-rose-100 text-rose-800 text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">دائن</span>
+                  </td>
+                  <td className="border border-black px-2 py-2">
+                    <AccountDropdown
+                      value={l.account}
+                      onChange={(v) => updateLine(l.id, "account", v)}
+                      placeholder="اختر أو ابحث عن الحساب الدائن..."
+                      colorClass="focus:border-rose-500 text-rose-800"
+                    />
+                  </td>
+                  <td className="border border-black px-2 py-2">
+                    <input
+                      type="number"
+                      value={l.amount || ""}
+                      onChange={(e) => updateLine(l.id, "amount", e.target.value)}
+                      className="w-full border border-black p-2 rounded-lg outline-none text-center font-mono font-bold text-rose-700 bg-white"
+                      placeholder="0"
+                    />
+                  </td>
+                  <td className="border border-black px-2 py-2 text-center">
+                    <button onClick={() => removeLine(l.id)} className="p-1 text-rose-500 hover:bg-rose-100 rounded transition-colors">
+                      <Minus className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+
+              {/* زر إضافة سطر دائن */}
+              <tr className="bg-rose-50/20">
+                <td colSpan={4} className="border border-black px-3 py-1.5 text-center">
+                  <button
+                    onClick={() => addLine("credit")}
+                    className="text-rose-700 hover:bg-rose-100 text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1 mx-auto transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> إضافة سطر دائن
+                  </button>
+                </td>
+              </tr>
+
+              {/* صف الإجماليات */}
+              <tr className="bg-slate-900 text-white font-extrabold">
+                <td colSpan={2} className="border border-black px-3 py-2 text-center whitespace-normal">
+                  {isBalanced
+                    ? "✅ القيد متوازن"
+                    : totalDebit !== totalCredit && (totalDebit > 0 || totalCredit > 0)
+                    ? "⚠️ القيد غير متوازن"
+                    : "— أدخل المبالغ —"}
+                </td>
+                <td className="border border-black px-2 py-2 text-center font-mono">
+                  <span className="text-emerald-300">م: {totalDebit.toLocaleString()}</span>
+                  <span className="mx-2 text-slate-400">|</span>
+                  <span className="text-rose-300">د: {totalCredit.toLocaleString()}</span>
+                </td>
+                <td className="border border-black px-2 py-2 text-center">
+                  <span className={isBalanced ? "text-emerald-400 text-lg" : "text-rose-400 text-lg"}>
+                    {isBalanced ? "✓" : "✗"}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={handleSave}
+            className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 font-bold transition-all shadow-sm flex-1"
+          >
+            <Save className="w-5 h-5" /> {editingId ? "تحديث القيد المركب" : "حفظ القيد المركب"}
+          </button>
+          {editingId && (
+            <button
+              onClick={resetForm}
+              className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2.5 rounded-lg font-bold transition-all"
             >
-              <Save className="w-5 h-5" /> {editingId ? "تحديث القيد الحسابي" : "حفظ القيد بالمنظومة"}
+              إلغاء
             </button>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* جدول استعراض قيود اليومية العامة */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      {/* جدول استعراض قيود اليومية */}
+      <div className="bg-white border border-black rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-auto max-h-[60vh] relative">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm border-collapse text-center">
             <thead className="bg-slate-800 text-white sticky top-0 z-20 shadow-md">
-
               <tr>
-                <th className="p-3 text-right font-semibold">رقم الاستمارة</th>
-                <th className="p-3 text-right font-semibold">التسوية</th>
-                <th className="p-3 text-right font-semibold">التاريخ</th>
-                <th className="p-3 text-right font-semibold min-w-[180px]">البيان</th>
-                <th className="p-3 text-right font-semibold">الحساب المدين</th>
-                <th className="p-3 text-right font-semibold">الحساب الدائن</th>
-                <th className="p-3 text-right font-semibold">مدين</th>
-                <th className="p-3 text-right font-semibold">دائن</th>
-                <th className="p-3 text-center font-semibold">الإجراءات</th>
+                <th className="border border-black p-3 text-center font-semibold whitespace-normal">رقم الاستمارة</th>
+                <th className="border border-black p-3 text-center font-semibold whitespace-normal">التسوية</th>
+                <th className="border border-black p-3 text-center font-semibold whitespace-normal">التاريخ</th>
+                <th className="border border-black p-3 text-center font-semibold min-w-[180px] whitespace-normal">البيان</th>
+                <th className="border border-black p-3 text-center font-semibold whitespace-normal">الحساب المدين</th>
+                <th className="border border-black p-3 text-center font-semibold whitespace-normal">الحساب الدائن</th>
+                <th className="border border-black p-3 text-center font-semibold whitespace-normal">مدين</th>
+                <th className="border border-black p-3 text-center font-semibold whitespace-normal">دائن</th>
+                <th className="border border-black p-3 text-center font-semibold whitespace-normal">الإجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
-              {journal.map((j) => (
+            <tbody className="divide-y divide-black">
+              {journal.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="p-10 text-center text-slate-400 font-medium">
+                    لا توجد قيود يومية — ابدأ بإضافة قيد جديد أو استيراد ملف
+                  </td>
+                </tr>
+              ) : journal.map((j) => (
                 <tr key={j.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-3 font-mono text-slate-600">{j.formNo || "—"}</td>
-                  <td className="p-3 text-slate-600">{j.settlement || "—"}</td>
-                  <td className="p-3 whitespace-nowrap font-mono text-slate-600">{j.date || "—"}</td>
-                  <td className="p-3 text-slate-800 font-medium">{j.description || "—"}</td>
-                  <td className="p-3 text-emerald-700 font-bold">{j.debitAccount || "—"}</td>
-                  <td className="p-3 text-rose-700 font-bold">{j.creditAccount || "—"}</td>
-                  <td className="p-3 font-mono font-bold text-emerald-600 bg-emerald-50/20">{j.debit ? j.debit.toLocaleString() : "—"}</td>
-                  <td className="p-3 font-mono font-bold text-rose-600 bg-rose-50/20">{j.credit ? j.credit.toLocaleString() : "—"}</td>
-                  <td className="p-3 text-center">
+                  <td className="border border-black p-3 font-mono text-slate-600 text-center">{j.formNo || "—"}</td>
+                  <td className="border border-black p-3 text-slate-600 text-center whitespace-normal">{j.settlement || "—"}</td>
+                  <td className="border border-black p-3 font-mono text-slate-600 text-center whitespace-nowrap">{j.date || "—"}</td>
+                  <td className="border border-black p-3 text-slate-800 font-medium text-center whitespace-normal break-words">{j.description || "—"}</td>
+                  <td className="border border-black p-3 text-emerald-700 font-bold text-center whitespace-normal break-words">{j.debitAccount || "—"}</td>
+                  <td className="border border-black p-3 text-rose-700 font-bold text-center whitespace-normal break-words">{j.creditAccount || "—"}</td>
+                  <td className="border border-black p-3 font-mono font-bold text-emerald-600 bg-emerald-50/20 text-center">{j.debit ? j.debit.toLocaleString() : "—"}</td>
+                  <td className="border border-black p-3 font-mono font-bold text-rose-600 bg-rose-50/20 text-center">{j.credit ? j.credit.toLocaleString() : "—"}</td>
+                  <td className="border border-black p-3 text-center">
                     <div className="flex justify-center gap-1.5">
-                      <button onClick={() => { setEditingId(j.id); setForm(j); }} className="p-1 text-blue-600 bg-blue-50 rounded hover:bg-blue-600 hover:text-white transition-colors">
+                      <button
+                        onClick={() => { setEditingId(j.id); setFormNo(j.formNo || ""); setSettlement(j.settlement || ""); setDate(j.date || ""); setDescription(j.description || "");
+                          setLines([
+                            { id: genId(), account: j.debitAccount || "", amount: j.debit || 0, type: "debit" },
+                            { id: genId(), account: j.creditAccount || "", amount: j.credit || 0, type: "credit" },
+                          ]);
+                        }}
+                        className="p-1 text-blue-600 bg-blue-50 rounded hover:bg-blue-600 hover:text-white transition-colors"
+                      >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button onClick={() => deleteJournal(j.id)} className="p-1 text-rose-600 bg-rose-50 rounded hover:bg-rose-600 hover:text-white transition-colors">
