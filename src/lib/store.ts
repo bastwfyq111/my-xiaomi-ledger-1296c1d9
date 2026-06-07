@@ -61,12 +61,14 @@ export type Account = {
   revenueKey?: string; 
 };
 
+// 🌟 تم تصحيح هذا النوع ليناسب القيود المركبة
 export type Journal = {
-  id: string;
+  id: string;               // المعرف الفريد للسطر نفسه
+  transactionId?: string;   // 🌟 معرف فريد يربط كل الأسطر التابعة لنفس القيد المركب
   date: string;
   formNo: string;
   settlement?: string;
-  description: string;
+  description: string;      // البيان المدمج للسطر
   debit: number;
   credit: number;
   account: string;
@@ -171,7 +173,6 @@ const recalculateRevenueMap = (accounts: Account[]): RevenueMap => {
   const newRevenue: RevenueMap = {};
   accounts.forEach((acc) => {
     if (acc.revenueKey && acc.income > 0) {
-      // التجميع حسب تاريخ التوريد (notifyDate). إذا لم يوجد نستخدم التاريخ العام.
       const dateStr = acc.notifyDate || acc.date;
       const d = new Date(dateStr);
       const year = isNaN(d.getFullYear()) ? 2026 : d.getFullYear();
@@ -200,17 +201,14 @@ export const useStore = create<State>()(
       revenue: {},
       customTabs: [],
 
-      // ========== دالة المزامنة التلقائية المحسّنة ==========
       syncHafizaToAccount: (hafiza: Hafiza) => {
         const year = hafiza.date?.split('-')[0];
         if (year !== '2026') return;
 
-        // البحث عن حساب مرتبط
         let existingAccount = get().accounts.find(acc => acc.sourceHafizaId === hafiza.id);
         if (!existingAccount && hafiza.hafizaNo) {
           existingAccount = get().accounts.find(acc => acc.hafizaNo === hafiza.hafizaNo);
           if (existingAccount) {
-            // ربط الحساب الموجود بهذه الحافظة
             set(state => ({
               accounts: state.accounts.map(acc =>
                 acc.id === existingAccount!.id ? { ...acc, sourceHafizaId: hafiza.id } : acc
@@ -219,8 +217,6 @@ export const useStore = create<State>()(
           }
         }
 
-        // استخراج مبلغ التوريد بأمان (يدعم عدة أسماء للحقل)
-        // استخراج مبلغ التوريد بأمان (يدعم عدة أسماء للحقل)
         const getNotifyAmount = (h: any): number => {
           const val = h.notifyAmount ?? h.supplyAmount ?? h.tawreedAmount ?? 0;
           const num = Number(val);
@@ -264,7 +260,6 @@ export const useStore = create<State>()(
             existingAccount.income !== mappedData.income
           );
           if (hasDiff) {
-            // لا نُمسّ حقل المصروفات (expense) ولا الشيك أبداً عند المطابقة
             set(state => ({
               accounts: state.accounts.map(acc =>
                 acc.id === existingAccount!.id
@@ -277,13 +272,11 @@ export const useStore = create<State>()(
         }
       },
 
-      // عمليات المتدربين
       addTrainee: (t) => set((s) => ({ trainees: [...s.trainees, t] })),
       updateTrainee: (index, t) => set((s) => ({ trainees: s.trainees.map((tr, i) => (i === index ? t : tr)) })),
       deleteTrainee: (index) => set((s) => ({ trainees: s.trainees.filter((_, i) => i !== index) })),
       importTrainees: (trainees) => set((s) => ({ trainees: [...s.trainees, ...trainees] })),
 
-      // عمليات الحافظة (معدلة لاستدعاء المزامنة)
       addHafiza: (h) => {
         const item: Hafiza = {
           ...h, id: uid(), date: h.date || getToday(),
@@ -324,7 +317,6 @@ export const useStore = create<State>()(
         set({ hafiza: [], hafizas: [] });
       },
 
-      // عمليات الحسابات الجارية (بدون تغيير)
       addAccount: (a) => {
         const item: Account = {
           ...a,
@@ -352,17 +344,37 @@ export const useStore = create<State>()(
         }),
       clearAccounts: () => set({ accounts: [], revenue: {} }),
 
-      // عمليات اليومية العامة
+      // 🌟 تم تصحيح عمليات اليومية لتتوافق مع القيود المركبة
       addJournal: (j) => {
-        const item: Journal = { ...j, id: uid(), date: j.date || getToday(), debit: Number(j.debit) || 0, credit: Number(j.credit) || 0 };
+        const item: Journal = { 
+          ...j, 
+          id: uid(), 
+          // إذا لم يتم تمرير transactionId، قم بإنشاء واحد افتراضي
+          transactionId: j.transactionId || uid(),
+          date: j.date || getToday(), 
+          debit: Number(j.debit) || 0, 
+          credit: Number(j.credit) || 0 
+        };
         set((s) => ({ journal: [...s.journal, item] }));
         return item;
       },
-      updateJournal: (id, j) => set((s) => ({ journal: s.journal.map((x) => (x.id === id ? { ...x, ...j } : x)) })),
-      deleteJournal: (id) => set((s) => ({ journal: s.journal.filter((x) => x.id !== id) })),
+      updateJournal: (id, j) => set((s) => ({ 
+        journal: s.journal.map((x) => (x.id === id ? { ...x, ...j } : x)) 
+      })),
+      
+      // 🌟 حذف القيد صار يحذف كل القيود التابعة لنفس العملية بدلاً من سطر واحد
+      deleteJournal: (id) => set((s) => {
+        const target = s.journal.find(x => x.id === id);
+        if (target && target.transactionId) {
+          // حذف كل الأسطر التي تحمل نفس معرف العملية
+          return { journal: s.journal.filter((x) => x.transactionId !== target.transactionId) };
+        }
+        // في حال كان القيد قديماً وليس له transactionId، نحذفه بالطريقة العادية
+        return { journal: s.journal.filter((x) => x.id !== id) };
+      }),
+      
       clearJournal: () => set({ journal: [] }),
 
-      // عمليات الأقساط والرسوم
       addInstallment: (i, year) => {
         const newInst = recalcInstallment({ ...i, payments: {}, totalPaid: 0, remaining: Number(i.prevDue) || 0 } as Installment);
         set((s) => { const key = year === '2025' ? 'installments2025' : 'installments'; return { [key]: [...s[key], newInst] }; });
@@ -373,11 +385,9 @@ export const useStore = create<State>()(
       clearInstallments: (year) => { if (year === '2025') set({ installments2025: [] }); else set({ installments: [], installments2025: [] }); },
       recalcAllInstallments: () => set((s) => ({ installments: s.installments.map(recalcInstallment), installments2025: s.installments2025.map(recalcInstallment) })),
 
-      // الإعدادات العامة
       setOpeningBalance: (n) => set({ openingBalance: n }),
       setRevenue: (year, month, itemKey, amount) => set((s) => ({ revenue: { ...s.revenue, [`${year}-${month}-${itemKey}`]: amount } })),
 
-      // استيراد البيانات الشاملة
       importData: (d) =>
         set((s) => {
           const importedAccounts = d.accounts 
@@ -389,7 +399,8 @@ export const useStore = create<State>()(
 
           return {
             trainees: d.trainees ? [...s.trainees, ...d.trainees] : s.trainees,
-            journal: d.journal ? [...s.journal, ...d.journal.map((j: any) => ({ ...j, id: j.id || uid(), debit: Number(j.debit) || 0, credit: Number(j.credit) || 0 }))] : s.journal,
+            // 🌟 إضافة transactionId للقيود القديمة المستوردة لضمان عملها
+            journal: d.journal ? [...s.journal, ...d.journal.map((j: any) => ({ ...j, id: j.id || uid(), transactionId: j.transactionId || uid(), debit: Number(j.debit) || 0, credit: Number(j.credit) || 0 }))] : s.journal,
             hafiza: importedHafiza,
             hafizas: importedHafiza, 
             accounts: importedAccounts,
@@ -411,7 +422,6 @@ export const useStore = create<State>()(
         return { ...s, [tab]: [] };
       }),
 
-      // التبويبات المخصصة الديناميكية
       addCustomTab: (name) => { const tab: CustomTab = { id: uid(), name, columns: [], rows: [] }; set((s) => ({ customTabs: [...s.customTabs, tab] })); return tab; },
       renameCustomTab: (id, name) => set((s) => ({ customTabs: s.customTabs.map((t) => (t.id === id ? { ...t, name } : t)) })),
       deleteCustomTab: (id) => set((s) => ({ customTabs: s.customTabs.filter((t) => t.id !== id) })),
@@ -421,7 +431,6 @@ export const useStore = create<State>()(
       updateCustomRow: (id, index, row) => set((s) => ({ customTabs: s.customTabs.map((t) => t.id === id ? { ...t, rows: t.rows.map((r, i) => (i === index ? row : r)) } : t) })),
       deleteCustomRow: (id, index) => set((s) => ({ customTabs: s.customTabs.map((t) => t.id === id ? { ...t, rows: t.rows.filter((_, i) => i !== index) } : t) })),
 
-      // دوال الاستعلام المساعدة
       getHafizaById: (id) => get().hafiza.find((h) => h.id === id),
       getAccountById: (id) => get().accounts.find((a) => a.id === id),
       getTotalIncome: () => get().journal.reduce((sum, j) => sum + (j.credit || 0), 0),
