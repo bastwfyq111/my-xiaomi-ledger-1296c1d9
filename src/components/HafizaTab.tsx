@@ -155,7 +155,7 @@ export default function HafizaTab() {
             
             {/* حقل البحث الذكي عن الاسم */}
             <div className="relative col-span-2">
-              <label className="block text-xs font-bold text-slate-500 mb-1.5 mr-1">الاسم الكامل للمتدرب *</label>
+              <label className="block text-xs font-bold text-amber-800 mb-1.5 mr-1">الاسم الكامل للمتدرب *</label>
               <div className="relative flex items-center">
                 <span className="absolute right-3 z-10"><User className="w-4 h-4 text-slate-400" /></span>
                 <input
@@ -189,7 +189,7 @@ export default function HafizaTab() {
             
             {/* حقل البيان المتكامل */}
             <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1.5 mr-1">البيان والشرح</label>
+              <label className="block text-xs font-bold text-amber-800 mb-1.5 mr-1">البيان والشرح</label>
               <div className="relative flex items-center">
                 <span className="absolute right-3 z-10"><FileText className="w-4 h-4 text-slate-400" /></span>
                 <input
