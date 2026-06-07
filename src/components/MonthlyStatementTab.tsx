@@ -18,7 +18,6 @@ type Group = { title: string; accounts: string[] };
 const GROUPS = schema.groups as Group[];
 const ALL_ACCOUNTS = GROUPS.flatMap((g) => g.accounts);
 
-// تكييف الأسماء العربية لضمان مطابقة الحسابات بالرغم من اختلاف طريقة الكتابة
 const norm = (s: string) => {
   if (!s) return "";
   return s
@@ -32,7 +31,6 @@ const norm = (s: string) => {
     .trim();
 };
 
-// إزالة الكلمات العامة لمقارنة أكثر مرونة ومطابقة ملف الإكسل
 const STOP_WORDS = new Set(["حساب", "حسابات", "ح", "محلية", "محليه", "عامة", "عامه"]);
 const tokens = (s: string) =>
   norm(s).split(" ").filter((w) => w && !STOP_WORDS.has(w));
@@ -68,7 +66,7 @@ function lastDayOfMonth(y: number, m: number) {
 }
 
 export default function MonthlyStatementTab() {
-  const { journal, accounts, clearJournal } = useStore(); // استدعاء دالة مسح البيانات من المخزن
+  const { journal, accounts, clearJournal } = useStore();
   const [year, setYear] = useState(new Date().getFullYear());
   const [mode, setMode] = useState<"month" | "quarter">("month");
   const [month, setMonth] = useState(new Date().getMonth() + 1); 
@@ -77,7 +75,6 @@ export default function MonthlyStatementTab() {
   const startMonth = mode === "month" ? month : (quarter - 1) * 3 + 1;
   const endMonth = mode === "month" ? month : quarter * 3;
 
-  // معالجة البيانات وبناء أرصدة الحسابات (الأرصدة الافتتاحية وعمليات الفترة)
   const data = useMemo(() => {
     const map: Record<string, { prevDebit: number; prevCredit: number; curDebit: number; curCredit: number }> = {};
     ALL_ACCOUNTS.forEach((a) => (map[norm(a)] = { prevDebit: 0, prevCredit: 0, curDebit: 0, curCredit: 0 }));
@@ -108,7 +105,6 @@ export default function MonthlyStatementTab() {
     return map;
   }, [journal, year, startMonth, endMonth]);
 
-  // حساب الإجماليات العامة لكافة الأعمدة بالتوافق مع ذيل الجدول في الملف المرسل
   const totals = useMemo(() => {
     return Object.values(data).reduce(
       (a, r) => ({
@@ -121,7 +117,6 @@ export default function MonthlyStatementTab() {
     );
   }, [data]);
 
-  // بناء خريطة رموز الإيراد (رمز -> تسمية كاملة) من قالب الإيرادات
   const revenueLabelByKey = useMemo(() => {
     const map: Record<string, string> = {};
     (revenueSchema as any).chapters?.forEach((ch: any) =>
@@ -137,7 +132,6 @@ export default function MonthlyStatementTab() {
     return map;
   }, []);
 
-  // تجميع إيرادات الحساب حسب رمز الإيراد للفترة المختارة
   const revenueByCode = useMemo(() => {
     const agg: Record<string, { prev: number; cur: number; count: number }> = {};
     (accounts || []).forEach((acc: any) => {
@@ -169,7 +163,6 @@ export default function MonthlyStatementTab() {
     [revenueByCode]
   );
 
-  // دالة مسح البيانات مع التأكيد
   const handleClearAllData = () => {
     if (journal.length === 0) {
       toast.info("لا توجد بيانات حالية لمسحها");
@@ -201,7 +194,7 @@ export default function MonthlyStatementTab() {
 
   return (
     <div className="space-y-5" dir="rtl">
-      {/* لوحة التحكم العلوية والخلفية المطابقة */}
+      {/* لوحة التحكم العلوية */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-wrap items-end gap-3">
         <div className="w-full sm:w-auto sm:order-last sm:ml-auto flex gap-2">
           <ImportButton kind="monthly" />
@@ -266,7 +259,7 @@ export default function MonthlyStatementTab() {
         </div>
       </div>
 
-      {/* جدول البيانات المالي المطابق للمجلس الطبي ويومية عام 2026 */}
+      {/* جدول البيانات المالي */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="bg-gradient-to-r from-slate-800 to-slate-950 text-white p-5 text-center">
           <h2 className="font-bold text-xl tracking-wide">{schema.title || "المجلس اليمني للاختصاصات الطبية"}</h2>
@@ -277,54 +270,50 @@ export default function MonthlyStatementTab() {
         </div>
 
         <div className="overflow-auto max-h-[65vh] relative">
-          <table className="w-full text-sm border-collapse text-right">
-            <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300 sticky top-0 z-20 shadow-sm">
-
+          <table className="w-full text-sm border-collapse text-center">
+            <thead className="bg-slate-100 text-slate-800 font-bold border-b border-black sticky top-0 z-20 shadow-sm">
               <tr>
-                <th rowSpan={2} className="border-b border-l border-slate-300 px-3 py-3 text-right min-w-[280px] bg-slate-100 text-slate-900 font-extrabold">
+                <th rowSpan={2} className="border border-black px-3 py-3 text-center min-w-[280px] bg-slate-100 text-slate-900 font-extrabold break-words whitespace-normal">
                   بيان الحسابات (طبقاً للنظام المحاسبي الموحد)
                 </th>
-                <th colSpan={2} className="border px-2 py-2 text-center bg-slate-200/60 font-bold text-slate-800">
+                <th colSpan={2} className="border border-black px-2 py-2 text-center bg-slate-200/60 font-bold text-slate-800 whitespace-normal">
                   الرصيد الافتتاحي / السابق في {startMonth === 1 ? `1/1/${year}` : `${year}/${startMonth}/1`}م
                 </th>
-                <th colSpan={2} className="border px-2 py-2 text-center bg-teal-50 text-teal-900 font-bold">
+                <th colSpan={2} className="border border-black px-2 py-2 text-center bg-teal-50 text-teal-900 font-bold whitespace-normal">
                   حركة عمليات التبويب الحالية ({mode === "month" ? `شهر ${MONTH_NAMES[month - 1]}` : `الربع ${quarter}`})
                 </th>
-                <th colSpan={2} className="border px-2 py-2 text-center bg-slate-200/60 font-bold text-slate-800">الجملــــــــــــة التراكمية</th>
-                <th colSpan={2} className="border px-2 py-2 text-center bg-amber-50 text-amber-900 font-extrabold">
+                <th colSpan={2} className="border border-black px-2 py-2 text-center bg-slate-200/60 font-bold text-slate-800 whitespace-normal">الجملــــــــــــة التراكمية</th>
+                <th colSpan={2} className="border border-black px-2 py-2 text-center bg-amber-50 text-amber-900 font-extrabold whitespace-normal">
                   الرصيد الختامي في {year}/{endMonth}/{lastDayOfMonth(year, endMonth)}م
                 </th>
               </tr>
-              <tr className="bg-slate-50 text-xs text-slate-600 border-b border-slate-300">
-                <th className="border px-2 py-1.5 text-center font-semibold bg-slate-50">إيرادات / مدين</th>
-                <th className="border px-2 py-1.5 text-center font-semibold bg-slate-50">مصروفات / دائن</th>
-                <th className="border px-2 py-1.5 text-center font-semibold bg-teal-50/50 text-teal-950">إيرادات / مدين</th>
-                <th className="border px-2 py-1.5 text-center font-semibold bg-teal-50/50 text-teal-950">مصروفات / دائن</th>
-                <th className="border px-2 py-1.5 text-center font-semibold bg-slate-50">إيرادات / مدين</th>
-                <th className="border px-2 py-1.5 text-center font-semibold bg-slate-50">مصروفات / دائن</th>
-                <th className="border px-2 py-1.5 text-center font-bold bg-amber-50/50 text-amber-950">أرصدة مدينة</th>
-                <th className="border px-2 py-1.5 text-center font-bold bg-amber-50/50 text-amber-950">أرصدة دائنة</th>
+              <tr className="bg-slate-50 text-xs text-slate-600 border-b border-black">
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 whitespace-normal">إيرادات / مدين</th>
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 whitespace-normal">مصروفات / دائن</th>
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-teal-50/50 text-teal-950 whitespace-normal">إيرادات / مدين</th>
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-teal-50/50 text-teal-950 whitespace-normal">مصروفات / دائن</th>
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 whitespace-normal">إيرادات / مدين</th>
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 whitespace-normal">مصروفات / دائن</th>
+                <th className="border border-black px-2 py-1.5 text-center font-bold bg-amber-50/50 text-amber-950 whitespace-normal">أرصدة مدينة</th>
+                <th className="border border-black px-2 py-1.5 text-center font-bold bg-amber-50/50 text-amber-950 whitespace-normal">أرصدة دائنة</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-black">
               {GROUPS.map((g) => {
                 let gPD = 0, gPC = 0, gCD = 0, gCC = 0;
                 return (
                   <Fragment key={g.title}>
-                    {/* ترويسة المجموعة الفرعية */}
                     <tr className="bg-slate-100/80 font-bold">
-                      <td colSpan={9} className="border-y border-slate-300 px-3 py-2 text-slate-900 font-bold text-sm bg-slate-200/50">
+                      <td colSpan={9} className="border border-black px-3 py-2 text-center text-slate-900 font-bold text-sm bg-slate-200/50 whitespace-normal">
                         📁 {g.title}
                       </td>
                     </tr>
                     {g.accounts.map((a) => {
                       const r = data[norm(a)] || { prevDebit: 0, prevCredit: 0, curDebit: 0, curCredit: 0 };
-                      
-                      // العمليات المحاسبية للدوال الشبيهة بالإكسل في التقرير
-                      const totD = r.prevDebit + r.curDebit; // إجمالي المدين
-                      const totC = r.prevCredit + r.curCredit; // إجمالي الدائن
-                      const balD = Math.max(0, totD - totC);  // صافي الرصيد المدين
-                      const balC = Math.max(0, totC - totD);  // صافي الرصيد الدائن
+                      const totD = r.prevDebit + r.curDebit;
+                      const totC = r.prevCredit + r.curCredit;
+                      const balD = Math.max(0, totD - totC);
+                      const balC = Math.max(0, totC - totD);
                       
                       gPD += r.prevDebit; 
                       gPC += r.prevCredit; 
@@ -333,47 +322,45 @@ export default function MonthlyStatementTab() {
                       
                       return (
                         <tr key={a} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="border-l border-slate-200 px-3 py-2 whitespace-nowrap font-medium text-slate-700">{a}</td>
-                          <td className="border px-2 py-2 font-mono text-left text-slate-600">{r.prevDebit ? fmt(r.prevDebit) : "—"}</td>
-                          <td className="border px-2 py-2 font-mono text-left text-slate-600">{r.prevCredit ? fmt(r.prevCredit) : "—"}</td>
-                          <td className="border px-2 py-2 font-mono text-left text-teal-700 bg-teal-50/10">{r.curDebit ? fmt(r.curDebit) : "—"}</td>
-                          <td className="border px-2 py-2 font-mono text-left text-teal-700 bg-teal-50/10">{r.curCredit ? fmt(r.curCredit) : "—"}</td>
-                          <td className="border px-2 py-2 font-mono text-left text-slate-800 font-medium">{totD ? fmt(totD) : "—"}</td>
-                          <td className="border px-2 py-2 font-mono text-left text-slate-800 font-medium">{totC ? fmt(totC) : "—"}</td>
-                          <td className="border px-2 py-2 font-mono text-left text-emerald-700 font-bold bg-emerald-50/20">{balD ? fmt(balD) : "—"}</td>
-                          <td className="border px-2 py-2 font-mono text-left text-rose-700 font-bold bg-rose-50/20">{balC ? fmt(balC) : "—"}</td>
+                          <td className="border border-black px-3 py-2 whitespace-normal break-words font-medium text-slate-700 text-center">{a}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-600">{r.prevDebit ? fmt(r.prevDebit) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-600">{r.prevCredit ? fmt(r.prevCredit) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-teal-700 bg-teal-50/10">{r.curDebit ? fmt(r.curDebit) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-teal-700 bg-teal-50/10">{r.curCredit ? fmt(r.curCredit) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-800 font-medium">{totD ? fmt(totD) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-800 font-medium">{totC ? fmt(totC) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-emerald-700 font-bold bg-emerald-50/20">{balD ? fmt(balD) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-rose-700 font-bold bg-rose-50/20">{balC ? fmt(balC) : "—"}</td>
                         </tr>
                       );
                     })}
-                    {/* جملة الفرع لكل مجموعة تبويب استناداً لمعادلات الإكسل الحسابية SUM */}
-                    <tr className="bg-slate-50 font-bold text-slate-900 border-b border-slate-300">
-                      <td className="border-l border-slate-300 px-3 py-2 text-right text-slate-800 font-bold">جملة بند: {g.title}</td>
-                      <td className="border px-2 py-2 font-mono text-left text-slate-700 bg-slate-100/50">{fmt(gPD)}</td>
-                      <td className="border px-2 py-2 font-mono text-left text-slate-700 bg-slate-100/50">{fmt(gPC)}</td>
-                      <td className="border px-2 py-2 font-mono text-left text-teal-800 bg-teal-50/40">{fmt(gCD)}</td>
-                      <td className="border px-2 py-2 font-mono text-left text-teal-800 bg-teal-50/40">{fmt(gCC)}</td>
-                      <td className="border px-2 py-2 font-mono text-left text-slate-900">{fmt(gPD + gCD)}</td>
-                      <td className="border px-2 py-2 font-mono text-left text-slate-900">{fmt(gPC + gCC)}</td>
-                      <td className="border px-2 py-2 font-mono text-left text-emerald-800 bg-emerald-100/20">{fmt(Math.max(0, gPD + gCD - (gPC + gCC)))}</td>
-                      <td className="border px-2 py-2 font-mono text-left text-rose-800 bg-rose-100/20">{fmt(Math.max(0, gPC + gCC - (gPD + gCD)))}</td>
+                    <tr className="bg-slate-50 font-bold text-slate-900 border-b border-black">
+                      <td className="border border-black px-3 py-2 text-center text-slate-800 font-bold whitespace-normal">جملة بند: {g.title}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-700 bg-slate-100/50">{fmt(gPD)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-700 bg-slate-100/50">{fmt(gPC)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-teal-800 bg-teal-50/40">{fmt(gCD)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-teal-800 bg-teal-50/40">{fmt(gCC)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-900">{fmt(gPD + gCD)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-900">{fmt(gPC + gCC)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-emerald-800 bg-emerald-100/20">{fmt(Math.max(0, gPD + gCD - (gPC + gCC)))}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-rose-800 bg-rose-100/20">{fmt(Math.max(0, gPC + gCC - (gPD + gCD)))}</td>
                     </tr>
                   </Fragment>
                 );
               })}
               
-              {/* الإجمالي العام النهائي لكافة الحسابات الموازية لملف اليومية العام */}
-              <tr className="bg-slate-900 text-white font-extrabold text-sm border-t-2 border-slate-900">
-                <td className="border px-3 py-3 text-right bg-slate-950 font-black">الإجمالي العام النهائي للحسابات الكلية</td>
-                <td className="border px-2 py-3 font-mono text-left text-slate-200">{fmt(totals.prevDebit)}</td>
-                <td className="border px-2 py-3 font-mono text-left text-slate-200">{fmt(totals.prevCredit)}</td>
-                <td className="border px-2 py-3 font-mono text-left text-teal-300 bg-slate-800">{fmt(totals.curDebit)}</td>
-                <td className="border px-2 py-3 font-mono text-left text-teal-300 bg-slate-800">{fmt(totals.curCredit)}</td>
-                <td className="border px-2 py-3 font-mono text-left text-slate-100">{fmt(totals.prevDebit + totals.curDebit)}</td>
-                <td className="border px-2 py-3 font-mono text-left text-slate-100">{fmt(totals.prevCredit + totals.curCredit)}</td>
-                <td className="border px-2 py-3 font-mono text-left text-emerald-400 bg-teal-950/50">
+              <tr className="bg-slate-900 text-white font-extrabold text-sm border-t-2 border-black">
+                <td className="border border-black px-3 py-3 text-center bg-slate-950 font-black whitespace-normal">الإجمالي العام النهائي للحسابات الكلية</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-slate-200">{fmt(totals.prevDebit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-slate-200">{fmt(totals.prevCredit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-teal-300 bg-slate-800">{fmt(totals.curDebit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-teal-300 bg-slate-800">{fmt(totals.curCredit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-slate-100">{fmt(totals.prevDebit + totals.curDebit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-slate-100">{fmt(totals.prevCredit + totals.curCredit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-emerald-400 bg-teal-950/50">
                   {fmt(Math.max(0, totals.prevDebit + totals.curDebit - (totals.prevCredit + totals.curCredit)))}
                 </td>
-                <td className="border px-2 py-3 font-mono text-left text-rose-400 bg-teal-950/50">
+                <td className="border border-black px-2 py-3 font-mono text-center text-rose-400 bg-teal-950/50">
                   {fmt(Math.max(0, totals.prevCredit + totals.curCredit - (totals.prevDebit + totals.curDebit)))}
                 </td>
               </tr>
@@ -382,7 +369,7 @@ export default function MonthlyStatementTab() {
         </div>
       </div>
 
-      {/* جدول تجميع إيرادات الحساب حسب رمز الإيراد للفترة المختارة */}
+      {/* جدول تجميع إيرادات الحساب */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="bg-gradient-to-r from-teal-700 to-teal-900 text-white p-4 flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -394,19 +381,19 @@ export default function MonthlyStatementTab() {
           </div>
         </div>
         <div className="overflow-auto max-h-[50vh] relative">
-          <table className="w-full text-sm border-collapse text-right">
-            <thead className="bg-teal-50 text-teal-900 font-bold border-b border-teal-200 sticky top-0 z-20 shadow-sm">
+          <table className="w-full text-sm border-collapse text-center">
+            <thead className="bg-teal-50 text-teal-900 font-bold border-b border-black sticky top-0 z-20 shadow-sm">
               <tr>
-                <th className="border px-2 py-2 text-center w-12">م</th>
-                <th className="border px-2 py-2 text-center w-28">رمز الإيراد</th>
-                <th className="border px-3 py-2 text-right">بيان الإيراد (من قالب الإيرادات)</th>
-                <th className="border px-2 py-2 text-center w-24">عدد السجلات</th>
-                <th className="border px-2 py-2 text-center w-32">إيراد الفترة السابقة</th>
-                <th className="border px-2 py-2 text-center w-32">إيراد الفترة الحالية</th>
-                <th className="border px-2 py-2 text-center w-32">الإجمالي التراكمي</th>
+                <th className="border border-black px-2 py-2 text-center w-12 whitespace-normal">م</th>
+                <th className="border border-black px-2 py-2 text-center w-28 whitespace-normal">رمز الإيراد</th>
+                <th className="border border-black px-3 py-2 text-center whitespace-normal">بيان الإيراد (من قالب الإيرادات)</th>
+                <th className="border border-black px-2 py-2 text-center w-24 whitespace-normal">عدد السجلات</th>
+                <th className="border border-black px-2 py-2 text-center w-32 whitespace-normal">إيراد الفترة السابقة</th>
+                <th className="border border-black px-2 py-2 text-center w-32 whitespace-normal">إيراد الفترة الحالية</th>
+                <th className="border border-black px-2 py-2 text-center w-32 whitespace-normal">الإجمالي التراكمي</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-black">
               {revenueByCode.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-slate-500 font-medium">
@@ -416,13 +403,13 @@ export default function MonthlyStatementTab() {
               ) : (
                 revenueByCode.map((r, i) => (
                   <tr key={r.code} className="hover:bg-teal-50/40 transition-colors">
-                    <td className="border px-2 py-2 text-center font-mono text-slate-500">{i + 1}</td>
-                    <td className="border px-2 py-2 text-center font-mono font-extrabold text-teal-800 bg-teal-50/40">{r.code}</td>
-                    <td className="border px-3 py-2 text-right font-medium text-slate-800">{r.label}</td>
-                    <td className="border px-2 py-2 text-center font-mono text-slate-600">{r.count}</td>
-                    <td className="border px-2 py-2 text-left font-mono text-slate-700">{r.prev ? fmt(r.prev) : "—"}</td>
-                    <td className="border px-2 py-2 text-left font-mono text-teal-700 font-bold bg-teal-50/30">{r.cur ? fmt(r.cur) : "—"}</td>
-                    <td className="border px-2 py-2 text-left font-mono text-emerald-700 font-black bg-emerald-50/30">{fmt(r.total)}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono text-slate-500">{i + 1}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono font-extrabold text-teal-800 bg-teal-50/40">{r.code}</td>
+                    <td className="border border-black px-3 py-2 text-center font-medium text-slate-800 whitespace-normal break-words">{r.label}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono text-slate-600">{r.count}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono text-slate-700">{r.prev ? fmt(r.prev) : "—"}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono text-teal-700 font-bold bg-teal-50/30">{r.cur ? fmt(r.cur) : "—"}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono text-emerald-700 font-black bg-emerald-50/30">{fmt(r.total)}</td>
                   </tr>
                 ))
               )}
@@ -430,11 +417,11 @@ export default function MonthlyStatementTab() {
             {revenueByCode.length > 0 && (
               <tfoot>
                 <tr className="bg-slate-900 text-white font-extrabold">
-                  <td colSpan={3} className="border px-3 py-2 text-right">الإجمالي العام لرموز الإيراد</td>
-                  <td className="border px-2 py-2 text-center font-mono">{revenueTotals.count}</td>
-                  <td className="border px-2 py-2 text-left font-mono text-slate-200">{fmt(revenueTotals.prev)}</td>
-                  <td className="border px-2 py-2 text-left font-mono text-teal-300">{fmt(revenueTotals.cur)}</td>
-                  <td className="border px-2 py-2 text-left font-mono text-emerald-400">{fmt(revenueTotals.total)}</td>
+                  <td colSpan={3} className="border border-black px-3 py-2 text-center whitespace-normal">الإجمالي العام لرموز الإيراد</td>
+                  <td className="border border-black px-2 py-2 text-center font-mono">{revenueTotals.count}</td>
+                  <td className="border border-black px-2 py-2 text-center font-mono text-slate-200">{fmt(revenueTotals.prev)}</td>
+                  <td className="border border-black px-2 py-2 text-center font-mono text-teal-300">{fmt(revenueTotals.cur)}</td>
+                  <td className="border border-black px-2 py-2 text-center font-mono text-emerald-400">{fmt(revenueTotals.total)}</td>
                 </tr>
               </tfoot>
             )}
