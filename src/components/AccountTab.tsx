@@ -143,14 +143,12 @@ export default function AccountsTab() {
         hafizaNo: normalizeStr(hafizaRow.hafizaNo),
         notifyNo: normalizeStr(hafizaRow.notifyNo),
         notifyDate: hafizaRow.notifyDate || "",
-        checkNo: normalizeStr(hafizaRow.checkNo),
-        checkDate: hafizaRow.checkDate || "",
         description: normalizeStr(hafizaRow.description),
         specialty: normalizeStr(hafizaRow.specialty),
         name: normalizeStr(hafizaRow.name),
         hafizaAmount: normalizeNum(hafizaRow.hafizaAmount || hafizaRow.amount),
         income: incomeValue,
-        expense: 0,
+        // ملاحظة: عمود المصروفات (expense) لا يُمَسّ مطلقاً في عملية المطابقة
       };
 
       // 1) مطابقة بمعرف الحافظة (مفتاح فريد قوي)
@@ -164,6 +162,9 @@ export default function AccountsTab() {
       if (!existing) {
         const created = addAccount({
           ...mappedData,
+          checkNo: "",
+          checkDate: "",
+          expense: 0,
           revenueKey: undefined,
           sourceHafizaId: hafizaRow.id,
         });
@@ -186,9 +187,13 @@ export default function AccountsTab() {
         existing.sourceHafizaId !== hafizaRow.id;
 
       if (hasDiff) {
+        // الحفاظ التام على عمود المصروفات وأي بيانات شيك يدوية
         updateAccount(existing.id, {
           ...existing,
           ...mappedData,
+          expense: Number(existing.expense) || 0,
+          checkNo: existing.checkNo || "",
+          checkDate: existing.checkDate || "",
           revenueKey: existing.revenueKey,
           sourceHafizaId: hafizaRow.id,
         });
@@ -303,7 +308,7 @@ export default function AccountsTab() {
             name: row["الاسم"] || row["name"] || "",
             hafizaAmount: parseAmount(row["مبلغ الحافظة"] || row["hafizaAmount"]),
             income: parseAmount(row["الإيرادات"] || row["الايرادات"] || row["income"]),
-            expense: parseAmount(row["المصروفات"] || row["expense"]),
+            expense: parseAmount(row["المصروفات"] || row["المصروف"] || row["مصروفات"] || row["مصروف"] || row["expense"] || row["expenses"]),
             revenueKey: String(row["رمز الإيراد"] || row["revenueKey"] || ""),
           }));
 

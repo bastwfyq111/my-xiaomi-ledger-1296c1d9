@@ -137,15 +137,15 @@ export default function HafizaTab() {
     <div className="w-full space-y-6 p-0" dir="rtl">
       
       {/* ========== 1. نموذج إدخال الحوافظ المطور زرق سماوي ناعم ========== */}
-      <div className="w-full bg-white shadow-sm border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-[#10528e] to-[#0f467a] px-5 py-4 flex flex-wrap justify-between items-center gap-3">
+      <div className="w-full bg-white shadow-sm border border-black rounded-2xl overflow-hidden">
+        <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 px-5 py-4 flex flex-wrap justify-between items-center gap-3 border-b-2 border-black">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-white/10 rounded-lg text-white">
+            <div className="p-1.5 bg-slate-950/10 rounded-lg text-slate-950">
               <Plus className="w-4 h-4" />
             </div>
-            <h2 className="text-sm sm:text-base font-bold text-white">إضافة حافظة توريد جديدة للنظام</h2>
+            <h2 className="text-sm sm:text-base font-black text-slate-950">إضافة حافظة توريد جديدة للنظام</h2>
           </div>
-          <div className="bg-white/10 text-white border border-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition-all">
+          <div className="bg-slate-950 text-amber-200 border border-slate-950 rounded-xl text-xs font-bold hover:bg-slate-900 transition-all [&_button]:!text-amber-200">
             <ImportButton kind="hafiza" />
           </div>
         </div>
@@ -155,7 +155,7 @@ export default function HafizaTab() {
             
             {/* حقل البحث الذكي عن الاسم */}
             <div className="relative col-span-2">
-              <label className="block text-xs font-bold text-slate-500 mb-1.5 mr-1">الاسم الكامل للمتدرب *</label>
+              <label className="block text-xs font-bold text-amber-800 mb-1.5 mr-1">الاسم الكامل للمتدرب *</label>
               <div className="relative flex items-center">
                 <span className="absolute right-3 z-10"><User className="w-4 h-4 text-slate-400" /></span>
                 <input
@@ -189,7 +189,7 @@ export default function HafizaTab() {
             
             {/* حقل البيان المتكامل */}
             <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1.5 mr-1">البيان والشرح</label>
+              <label className="block text-xs font-bold text-amber-800 mb-1.5 mr-1">البيان والشرح</label>
               <div className="relative flex items-center">
                 <span className="absolute right-3 z-10"><FileText className="w-4 h-4 text-slate-400" /></span>
                 <input
@@ -213,11 +213,11 @@ export default function HafizaTab() {
           </div>
           
           {/* أزرار العمليات التفاعلية للنموذج */}
-          <div className="mt-5 flex gap-2 flex-wrap border-t border-slate-200/60 pt-4">
-            <button onClick={submit} className="flex items-center gap-2 px-5 py-2 bg-[#10528e] text-white rounded-xl font-bold hover:bg-[#0b3d6d] active:scale-95 transition-all text-xs shadow-sm">
+          <div className="mt-5 flex gap-2 flex-wrap border-t border-amber-200 pt-4">
+            <button onClick={submit} className="flex items-center gap-2 px-5 py-2 bg-amber-600 text-slate-950 rounded-xl font-black hover:bg-amber-500 active:scale-95 transition-all text-xs shadow-sm border border-amber-700">
               <Save className="w-4 h-4" /> حفظ وترحيل الحافظة
             </button>
-            <button onClick={() => { setForm(empty); setNameQuery(""); }} className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-500 bg-white rounded-xl font-bold hover:bg-slate-100 active:scale-95 transition-all text-xs shadow-sm">
+            <button onClick={() => { setForm(empty); setNameQuery(""); }} className="flex items-center gap-2 px-4 py-2 border border-amber-300 text-amber-800 bg-amber-50 rounded-xl font-bold hover:bg-amber-100 active:scale-95 transition-all text-xs shadow-sm">
               <Eraser className="w-4 h-4" /> تصفية الحقول
             </button>
           </div>
@@ -226,28 +226,33 @@ export default function HafizaTab() {
 
       {/* ========== 2. جدول مراقبة وتدقيق الحوافظ (بحدود سوداء واحتواء نصوص متميز) ========== */}
       <div className="w-full bg-white shadow-sm border border-black rounded-xl overflow-hidden">
-        <div className="bg-slate-800 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3">
+        <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3 border-b-2 border-black">
           <div>
-            <h2 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">📑 كشف قيود حوافظ التوريد المعينة ({hafiza.length})</h2>
+            <h2 className="text-xs sm:text-sm font-black text-slate-950 flex items-center gap-2">
+              📑 كشف قيود حوافظ التوريد المعينة
+              <span className="bg-slate-950/10 text-slate-950 px-2 py-0.5 rounded-full text-[11px] font-black">{hafiza.length}</span>
+            </h2>
           </div>
-          <div className="flex gap-2 flex-wrap items-center">
-            {/* زر تسوية المبالغ الذهبي التفاعلي والبارز */}
-            <button 
-              onClick={handleCopyAmountsToNotify} 
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-black rounded-xl text-xs shadow-sm transition-all"
+          {/* مجموعة الأزرار الموحدة بشكل أنيق ومتناسق */}
+          <div className="flex gap-1.5 items-center bg-slate-950/10 backdrop-blur rounded-xl p-1 border border-slate-950/20">
+            <button
+              onClick={handleCopyAmountsToNotify}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950 hover:bg-slate-800 active:scale-95 text-amber-300 font-black rounded-lg text-xs transition-all"
+              title="نسخ مبالغ الحافظة إلى عمود مبلغ التوريد"
             >
-              <CheckSquare className="w-3.5 h-3.5" /> نسخ المبالغ للتوريد ⚡
+              <CheckSquare className="w-3.5 h-3.5" /> نسخ المبالغ
             </button>
-            
             {Object.values(filters).some(Boolean) && (
-              <button onClick={clearFilters} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 active:scale-95 text-white rounded-xl text-xs font-bold transition-all">
-                مسح مرشحات البحث
+              <button onClick={clearFilters} className="px-3 py-1.5 bg-white hover:bg-slate-100 active:scale-95 text-slate-900 rounded-lg text-xs font-bold transition-all">
+                مسح المرشحات
               </button>
             )}
-            <TabActions
-              title="حوافظ التوريد" rows={hafiza} columns={COLS} fileName="حوافظ-التوريد"
-              numericKeys={["hafizaAmount","notifyAmount"]} onClear={clearHafiza}
-            />
+            <div className="[&_button]:!text-amber-200 [&_button]:!bg-slate-950/70 [&_button:hover]:!bg-slate-900">
+              <TabActions
+                title="حوافظ التوريد" rows={hafiza} columns={COLS} fileName="حوافظ-التوريد"
+                numericKeys={["hafizaAmount","notifyAmount"]} onClear={clearHafiza}
+              />
+            </div>
           </div>
         </div>
         
@@ -372,7 +377,7 @@ export default function HafizaTab() {
 function Field({ label, v, on, type = "text", icon, className = "" }: { label: string; v: string; on: (v: string) => void; type?: string; icon?: React.ReactNode; className?: string }) {
   return (
     <div className="w-full">
-      <label className="block text-xs font-bold text-slate-500 mb-1.5 mr-1">{label}</label>
+      <label className="block text-xs font-bold text-amber-800 mb-1.5 mr-1">{label}</label>
       <div className="relative flex items-center">
         {icon && <span className="absolute right-3 z-10">{icon}</span>}
         <input 
