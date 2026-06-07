@@ -308,7 +308,7 @@ export default function AccountsTab() {
             name: row["الاسم"] || row["name"] || "",
             hafizaAmount: parseAmount(row["مبلغ الحافظة"] || row["hafizaAmount"]),
             income: parseAmount(row["الإيرادات"] || row["الايرادات"] || row["income"]),
-            expense: parseAmount(row["المصروفات"] || row["expense"]),
+            expense: parseAmount(row["المصروفات"] || row["المصروف"] || row["مصروفات"] || row["مصروف"] || row["expense"] || row["expenses"]),
             revenueKey: String(row["رمز الإيراد"] || row["revenueKey"] || ""),
           }));
 
