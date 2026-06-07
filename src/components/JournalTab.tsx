@@ -252,13 +252,13 @@ export default function JournalTab() {
 
         {/* جدول أسطر القيد المركب */}
         <div className="rounded-xl overflow-hidden border border-black mb-4">
-          <table className="w-full text-sm border-collapse text-center">
+          <table className="w-full text-sm border-collapse text-center table-auto">
             <thead>
               <tr className="bg-slate-800 text-white">
-                <th className="border border-black px-3 py-2 text-center w-20">النوع</th>
+                <th className="border border-black px-3 py-2 text-center ">النوع</th>
                 <th className="border border-black px-3 py-2 text-center">اسم الحساب</th>
-                <th className="border border-black px-3 py-2 text-center w-36">المبلغ</th>
-                <th className="border border-black px-3 py-2 text-center w-16">حذف</th>
+                <th className="border border-black px-3 py-2 text-center ">المبلغ</th>
+                <th className="border border-black px-3 py-2 text-center ">حذف</th>
               </tr>
             </thead>
             <tbody>
@@ -266,7 +266,7 @@ export default function JournalTab() {
               {lines.filter((l) => l.type === "debit").map((l) => (
                 <tr key={l.id} className="bg-emerald-50/40 hover:bg-emerald-50 transition-colors">
                   <td className="border border-black px-2 py-2 text-center">
-                    <span className="inline-block bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">مدين</span>
+                    <span className="inline-block bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full whitespace-normal">مدين</span>
                   </td>
                   <td className="border border-black px-2 py-2">
                     <AccountDropdown
@@ -314,7 +314,7 @@ export default function JournalTab() {
               {lines.filter((l) => l.type === "credit").map((l) => (
                 <tr key={l.id} className="bg-rose-50/40 hover:bg-rose-50 transition-colors">
                   <td className="border border-black px-2 py-2 text-center">
-                    <span className="inline-block bg-rose-100 text-rose-800 text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap">دائن</span>
+                    <span className="inline-block bg-rose-100 text-rose-800 text-xs font-bold px-2 py-0.5 rounded-full whitespace-normal">دائن</span>
                   </td>
                   <td className="border border-black px-2 py-2">
                     <AccountDropdown
@@ -398,13 +398,13 @@ export default function JournalTab() {
       {/* جدول استعراض قيود اليومية */}
       <div className="bg-white border border-black rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-auto max-h-[60vh] relative">
-          <table className="w-full text-sm border-collapse text-center">
+          <table className="w-full text-sm border-collapse text-center table-auto">
             <thead className="bg-slate-800 text-white sticky top-0 z-20 shadow-md">
               <tr>
                 <th className="border border-black p-3 text-center font-semibold whitespace-normal">رقم الاستمارة</th>
                 <th className="border border-black p-3 text-center font-semibold whitespace-normal">التسوية</th>
                 <th className="border border-black p-3 text-center font-semibold whitespace-normal">التاريخ</th>
-                <th className="border border-black p-3 text-center font-semibold min-w-[180px] whitespace-normal">البيان</th>
+                <th className="border border-black p-3 text-center font-semibold whitespace-normal">البيان</th>
                 <th className="border border-black p-3 text-center font-semibold whitespace-normal">الحساب المدين</th>
                 <th className="border border-black p-3 text-center font-semibold whitespace-normal">الحساب الدائن</th>
                 <th className="border border-black p-3 text-center font-semibold whitespace-normal">مدين</th>
@@ -423,7 +423,7 @@ export default function JournalTab() {
                 <tr key={j.id} className="hover:bg-slate-50 transition-colors">
                   <td className="border border-black p-3 font-mono text-slate-600 text-center">{j.formNo || "—"}</td>
                   <td className="border border-black p-3 text-slate-600 text-center whitespace-normal">{j.settlement || "—"}</td>
-                  <td className="border border-black p-3 font-mono text-slate-600 text-center whitespace-nowrap">{j.date || "—"}</td>
+                  <td className="border border-black p-3 font-mono text-slate-600 text-center whitespace-normal">{j.date || "—"}</td>
                   <td className="border border-black p-3 text-slate-800 font-medium text-center whitespace-normal break-words">{j.description || "—"}</td>
                   <td className="border border-black p-3 text-emerald-700 font-bold text-center whitespace-normal break-words">{j.debitAccount || "—"}</td>
                   <td className="border border-black p-3 text-rose-700 font-bold text-center whitespace-normal break-words">{j.creditAccount || "—"}</td>
