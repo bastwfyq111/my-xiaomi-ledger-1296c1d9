@@ -76,9 +76,14 @@
   h1, h2, h3, h4 { font-family: 'Cairo', 'Tajawal', sans-serif; font-weight: 800; letter-spacing: -0.01em; }
   table { font-feature-settings: "tnum" 1, "lnum" 1; }
   th { font-weight: 700; }
-  /* منع التفاف النص داخل كل الجداول واحتواء الأعمدة تلقائياً */
-  table { width: auto; }
-  table th, table td { white-space: nowrap; }
+  /* احتواء الخلايا ضمن النص وحدود سوداء موحدة لجميع الجداول */
+  table { width: 100%; border-collapse: collapse; }
+  table th, table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    border: 1px solid #000 !important;
+  }
   .font-mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
   button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   /* Prevent iOS / MIUI auto-zoom on focus by enforcing 16px minimum */
