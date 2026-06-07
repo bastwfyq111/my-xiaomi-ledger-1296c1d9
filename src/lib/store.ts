@@ -61,14 +61,13 @@ export type Account = {
   revenueKey?: string; 
 };
 
-// 🌟 تم تصحيح هذا النوع ليناسب القيود المركبة
 export type Journal = {
-  id: string;               // المعرف الفريد للسطر نفسه
-  transactionId?: string;   // 🌟 معرف فريد يربط كل الأسطر التابعة لنفس القيد المركب
+  id: string;
+  transactionId?: string;
   date: string;
   formNo: string;
   settlement?: string;
-  description: string;      // البيان المدمج للسطر
+  description: string;
   debit: number;
   credit: number;
   account: string;
@@ -201,6 +200,7 @@ export const useStore = create<State>()(
       revenue: {},
       customTabs: [],
 
+      // 🌟 تم تحديث دالة المزامنة لتقوم بتحديث الحسابات والإيرادات في خطوة واحدة (Atomic Update)
       syncHafizaToAccount: (hafiza: Hafiza) => {
         const year = hafiza.date?.split('-')[0];
         if (year !== '2026') return;
@@ -245,8 +245,11 @@ export const useStore = create<State>()(
             expense: 0,
             revenueKey: undefined,
           };
-          set(state => ({ accounts: [...state.accounts, newAccount] }));
-          set(state => ({ revenue: recalculateRevenueMap(state.accounts) }));
+          // التحديث المدمج لضمان التزامن
+          set(state => {
+            const updatedAccounts = [...state.accounts, newAccount];
+            return { accounts: updatedAccounts, revenue: recalculateRevenueMap(updatedAccounts) };
+          });
         } else {
           const hasDiff = (
             existingAccount.date !== mappedData.date ||
@@ -260,14 +263,15 @@ export const useStore = create<State>()(
             existingAccount.income !== mappedData.income
           );
           if (hasDiff) {
-            set(state => ({
-              accounts: state.accounts.map(acc =>
+            // التحديث المدمج لضمان التزامن
+            set(state => {
+              const updatedAccounts = state.accounts.map(acc =>
                 acc.id === existingAccount!.id
                   ? { ...acc, ...mappedData, revenueKey: acc.revenueKey, expense: acc.expense, checkNo: acc.checkNo, checkDate: acc.checkDate }
                   : acc
-              ),
-            }));
-            set(state => ({ revenue: recalculateRevenueMap(state.accounts) }));
+              );
+              return { accounts: updatedAccounts, revenue: recalculateRevenueMap(updatedAccounts) };
+            });
           }
         }
       },
@@ -297,24 +301,34 @@ export const useStore = create<State>()(
         }
         return { hafiza: updated, hafizas: updated };
       }),
+      // 🌟 تطبيق التحديث المدمج على دوال الحذف والمسح للتأكد من حساب الإيرادات بشكل صحيح دائماً
       deleteHafiza: (id) => {
-        const linkedAccount = get().accounts.find(acc => acc.sourceHafizaId === id);
-        if (linkedAccount) {
-          set(state => ({ accounts: state.accounts.filter(acc => acc.id !== linkedAccount.id) }));
-          set(state => ({ revenue: recalculateRevenueMap(state.accounts) }));
-        }
-        set((s) => {
-          const updated = s.hafiza.filter((x) => x.id !== id);
-          return { hafiza: updated, hafizas: updated };
+        set((state) => {
+          const updatedHafiza = state.hafiza.filter((x) => x.id !== id);
+          const linkedAccount = state.accounts.find(acc => acc.sourceHafizaId === id);
+          if (linkedAccount) {
+            const updatedAccounts = state.accounts.filter(acc => acc.id !== linkedAccount.id);
+            return { 
+              hafiza: updatedHafiza, 
+              hafizas: updatedHafiza, 
+              accounts: updatedAccounts, 
+              revenue: recalculateRevenueMap(updatedAccounts) 
+            };
+          }
+          return { hafiza: updatedHafiza, hafizas: updatedHafiza };
         });
       },
       clearHafiza: () => {
-        const hafizaIds = get().hafiza.map(h => h.id);
-        set(state => ({
-          accounts: state.accounts.filter(acc => !acc.sourceHafizaId || !hafizaIds.includes(acc.sourceHafizaId)),
-        }));
-        set(state => ({ revenue: recalculateRevenueMap(state.accounts) }));
-        set({ hafiza: [], hafizas: [] });
+        set((state) => {
+          const hafizaIds = state.hafiza.map(h => h.id);
+          const updatedAccounts = state.accounts.filter(acc => !acc.sourceHafizaId || !hafizaIds.includes(acc.sourceHafizaId));
+          return {
+            hafiza: [],
+            hafizas: [],
+            accounts: updatedAccounts,
+            revenue: recalculateRevenueMap(updatedAccounts)
+          };
+        });
       },
 
       addAccount: (a) => {
@@ -344,12 +358,10 @@ export const useStore = create<State>()(
         }),
       clearAccounts: () => set({ accounts: [], revenue: {} }),
 
-      // 🌟 تم تصحيح عمليات اليومية لتتوافق مع القيود المركبة
       addJournal: (j) => {
         const item: Journal = { 
           ...j, 
           id: uid(), 
-          // إذا لم يتم تمرير transactionId، قم بإنشاء واحد افتراضي
           transactionId: j.transactionId || uid(),
           date: j.date || getToday(), 
           debit: Number(j.debit) || 0, 
@@ -361,18 +373,13 @@ export const useStore = create<State>()(
       updateJournal: (id, j) => set((s) => ({ 
         journal: s.journal.map((x) => (x.id === id ? { ...x, ...j } : x)) 
       })),
-      
-      // 🌟 حذف القيد صار يحذف كل القيود التابعة لنفس العملية بدلاً من سطر واحد
       deleteJournal: (id) => set((s) => {
         const target = s.journal.find(x => x.id === id);
         if (target && target.transactionId) {
-          // حذف كل الأسطر التي تحمل نفس معرف العملية
           return { journal: s.journal.filter((x) => x.transactionId !== target.transactionId) };
         }
-        // في حال كان القيد قديماً وليس له transactionId، نحذفه بالطريقة العادية
         return { journal: s.journal.filter((x) => x.id !== id) };
       }),
-      
       clearJournal: () => set({ journal: [] }),
 
       addInstallment: (i, year) => {
@@ -399,7 +406,6 @@ export const useStore = create<State>()(
 
           return {
             trainees: d.trainees ? [...s.trainees, ...d.trainees] : s.trainees,
-            // 🌟 إضافة transactionId للقيود القديمة المستوردة لضمان عملها
             journal: d.journal ? [...s.journal, ...d.journal.map((j: any) => ({ ...j, id: j.id || uid(), transactionId: j.transactionId || uid(), debit: Number(j.debit) || 0, credit: Number(j.credit) || 0 }))] : s.journal,
             hafiza: importedHafiza,
             hafizas: importedHafiza, 
