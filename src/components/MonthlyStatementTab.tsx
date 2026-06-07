@@ -65,8 +65,42 @@ function lastDayOfMonth(y: number, m: number) {
   return new Date(y, m, 0).getDate();
 }
 
+// مكوّن مساعد يُصغّر خط الخلية تلقائياً حتى يتسع النص
+function useFitText(ref: React.RefObject<HTMLTableElement | null>) {
+  useEffect(() => {
+    const table = ref.current;
+    if (!table) return;
+
+    function fitCells() {
+      const cells = table!.querySelectorAll<HTMLElement>("td, th");
+      cells.forEach((cell) => {
+        // أعد الضبط أولاً
+        cell.style.fontSize = "";
+        let size = parseFloat(getComputedStyle(cell).fontSize) || 14;
+        const minSize = 7;
+        // قلّص حتى لا يفيض المحتوى أفقياً
+        while (size > minSize && cell.scrollWidth > cell.clientWidth + 1) {
+          size -= 0.5;
+          cell.style.fontSize = size + "px";
+        }
+      });
+    }
+
+    fitCells();
+    const ro = new ResizeObserver(fitCells);
+    ro.observe(table);
+    return () => ro.disconnect();
+  }, [ref]);
+}
+
+
 export default function MonthlyStatementTab() {
   const { journal, accounts, clearJournal } = useStore();
+  const tableRef1 = useRef<HTMLTableElement>(null);
+  const tableRef2 = useRef<HTMLTableElement>(null);
+  useFitText(tableRef1);
+  useFitText(tableRef2);
+
   const [year, setYear] = useState(new Date().getFullYear());
   const [mode, setMode] = useState<"month" | "quarter">("month");
   const [month, setMonth] = useState(new Date().getMonth() + 1); 
@@ -270,7 +304,7 @@ export default function MonthlyStatementTab() {
         </div>
 
         <div className="overflow-auto max-h-[65vh] relative">
-          <table className="w-full text-sm border-collapse text-center table-auto">
+          <table ref={tableRef1} className="w-full text-sm border-collapse text-center">
             <thead className="bg-slate-100 text-slate-800 font-bold border-b border-black sticky top-0 z-20 shadow-sm">
               <tr>
                 <th rowSpan={2} className="border border-black px-3 py-3 text-center  bg-slate-100 text-slate-900 font-extrabold break-words whitespace-normal">
@@ -288,14 +322,14 @@ export default function MonthlyStatementTab() {
                 </th>
               </tr>
               <tr className="bg-slate-50 text-xs text-slate-600 border-b border-black">
-                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 whitespace-normal">إيرادات / مدين</th>
-                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 whitespace-normal">مصروفات / دائن</th>
-                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-teal-50/50 text-teal-950 whitespace-normal">إيرادات / مدين</th>
-                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-teal-50/50 text-teal-950 whitespace-normal">مصروفات / دائن</th>
-                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 whitespace-normal">إيرادات / مدين</th>
-                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 whitespace-normal">مصروفات / دائن</th>
-                <th className="border border-black px-2 py-1.5 text-center font-bold bg-amber-50/50 text-amber-950 whitespace-normal">أرصدة مدينة</th>
-                <th className="border border-black px-2 py-1.5 text-center font-bold bg-amber-50/50 text-amber-950 whitespace-normal">أرصدة دائنة</th>
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 min-w-[120px] whitespace-nowrap overflow-hidden">إيرادات / مدين</th>
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 min-w-[120px] whitespace-nowrap overflow-hidden">مصروفات / دائن</th>
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-teal-50/50 text-teal-950 min-w-[120px] whitespace-nowrap overflow-hidden">إيرادات / مدين</th>
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-teal-50/50 text-teal-950 min-w-[120px] whitespace-nowrap overflow-hidden">مصروفات / دائن</th>
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 min-w-[120px] whitespace-nowrap overflow-hidden">إيرادات / مدين</th>
+                <th className="border border-black px-2 py-1.5 text-center font-semibold bg-slate-50 min-w-[120px] whitespace-nowrap overflow-hidden">مصروفات / دائن</th>
+                <th className="border border-black px-2 py-1.5 text-center font-bold bg-amber-50/50 text-amber-950 min-w-[120px] whitespace-nowrap overflow-hidden">أرصدة مدينة</th>
+                <th className="border border-black px-2 py-1.5 text-center font-bold bg-amber-50/50 text-amber-950 min-w-[120px] whitespace-nowrap overflow-hidden">أرصدة دائنة</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black">
@@ -322,45 +356,45 @@ export default function MonthlyStatementTab() {
                       
                       return (
                         <tr key={a} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="border border-black px-3 py-2 whitespace-normal break-words font-medium text-slate-700 text-center">{a}</td>
-                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-600">{r.prevDebit ? fmt(r.prevDebit) : "—"}</td>
-                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-600">{r.prevCredit ? fmt(r.prevCredit) : "—"}</td>
-                          <td className="border border-black px-2 py-2 font-mono text-center text-teal-700 bg-teal-50/10">{r.curDebit ? fmt(r.curDebit) : "—"}</td>
-                          <td className="border border-black px-2 py-2 font-mono text-center text-teal-700 bg-teal-50/10">{r.curCredit ? fmt(r.curCredit) : "—"}</td>
-                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-800 font-medium">{totD ? fmt(totD) : "—"}</td>
-                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-800 font-medium">{totC ? fmt(totC) : "—"}</td>
-                          <td className="border border-black px-2 py-2 font-mono text-center text-emerald-700 font-bold bg-emerald-50/20">{balD ? fmt(balD) : "—"}</td>
-                          <td className="border border-black px-2 py-2 font-mono text-center text-rose-700 font-bold bg-rose-50/20">{balC ? fmt(balC) : "—"}</td>
+                          <td className="border border-black px-3 py-2 font-medium text-slate-700 text-center min-w-[120px] whitespace-nowrap overflow-hidden">{a}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-600 min-w-[120px] whitespace-nowrap overflow-hidden">{r.prevDebit ? fmt(r.prevDebit) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-600 min-w-[120px] whitespace-nowrap overflow-hidden">{r.prevCredit ? fmt(r.prevCredit) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-teal-700 bg-teal-50/10 min-w-[120px] whitespace-nowrap overflow-hidden">{r.curDebit ? fmt(r.curDebit) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-teal-700 bg-teal-50/10 min-w-[120px] whitespace-nowrap overflow-hidden">{r.curCredit ? fmt(r.curCredit) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-800 font-medium min-w-[120px] whitespace-nowrap overflow-hidden">{totD ? fmt(totD) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-slate-800 font-medium min-w-[120px] whitespace-nowrap overflow-hidden">{totC ? fmt(totC) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-emerald-700 font-bold bg-emerald-50/20 min-w-[120px] whitespace-nowrap overflow-hidden">{balD ? fmt(balD) : "—"}</td>
+                          <td className="border border-black px-2 py-2 font-mono text-center text-rose-700 font-bold bg-rose-50/20 min-w-[120px] whitespace-nowrap overflow-hidden">{balC ? fmt(balC) : "—"}</td>
                         </tr>
                       );
                     })}
                     <tr className="bg-slate-50 font-bold text-slate-900 border-b border-black">
-                      <td className="border border-black px-3 py-2 text-center text-slate-800 font-bold whitespace-normal">جملة بند: {g.title}</td>
-                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-700 bg-slate-100/50">{fmt(gPD)}</td>
-                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-700 bg-slate-100/50">{fmt(gPC)}</td>
-                      <td className="border border-black px-2 py-2 font-mono text-center text-teal-800 bg-teal-50/40">{fmt(gCD)}</td>
-                      <td className="border border-black px-2 py-2 font-mono text-center text-teal-800 bg-teal-50/40">{fmt(gCC)}</td>
-                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-900">{fmt(gPD + gCD)}</td>
-                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-900">{fmt(gPC + gCC)}</td>
-                      <td className="border border-black px-2 py-2 font-mono text-center text-emerald-800 bg-emerald-100/20">{fmt(Math.max(0, gPD + gCD - (gPC + gCC)))}</td>
-                      <td className="border border-black px-2 py-2 font-mono text-center text-rose-800 bg-rose-100/20">{fmt(Math.max(0, gPC + gCC - (gPD + gCD)))}</td>
+                      <td className="border border-black px-3 py-2 text-center text-slate-800 font-bold min-w-[120px] whitespace-nowrap overflow-hidden">جملة بند: {g.title}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-700 bg-slate-100/50 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(gPD)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-700 bg-slate-100/50 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(gPC)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-teal-800 bg-teal-50/40 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(gCD)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-teal-800 bg-teal-50/40 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(gCC)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-900 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(gPD + gCD)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-slate-900 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(gPC + gCC)}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-emerald-800 bg-emerald-100/20 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(Math.max(0, gPD + gCD - (gPC + gCC)))}</td>
+                      <td className="border border-black px-2 py-2 font-mono text-center text-rose-800 bg-rose-100/20 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(Math.max(0, gPC + gCC - (gPD + gCD)))}</td>
                     </tr>
                   </Fragment>
                 );
               })}
               
               <tr className="bg-slate-900 text-white font-extrabold text-sm border-t-2 border-black">
-                <td className="border border-black px-3 py-3 text-center bg-slate-950 font-black whitespace-normal">الإجمالي العام النهائي للحسابات الكلية</td>
-                <td className="border border-black px-2 py-3 font-mono text-center text-slate-200">{fmt(totals.prevDebit)}</td>
-                <td className="border border-black px-2 py-3 font-mono text-center text-slate-200">{fmt(totals.prevCredit)}</td>
-                <td className="border border-black px-2 py-3 font-mono text-center text-teal-300 bg-slate-800">{fmt(totals.curDebit)}</td>
-                <td className="border border-black px-2 py-3 font-mono text-center text-teal-300 bg-slate-800">{fmt(totals.curCredit)}</td>
-                <td className="border border-black px-2 py-3 font-mono text-center text-slate-100">{fmt(totals.prevDebit + totals.curDebit)}</td>
-                <td className="border border-black px-2 py-3 font-mono text-center text-slate-100">{fmt(totals.prevCredit + totals.curCredit)}</td>
-                <td className="border border-black px-2 py-3 font-mono text-center text-emerald-400 bg-teal-950/50">
+                <td className="border border-black px-3 py-3 text-center bg-slate-950 font-black min-w-[120px] whitespace-nowrap overflow-hidden">الإجمالي العام النهائي للحسابات الكلية</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-slate-200 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(totals.prevDebit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-slate-200 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(totals.prevCredit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-teal-300 bg-slate-800 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(totals.curDebit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-teal-300 bg-slate-800 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(totals.curCredit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-slate-100 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(totals.prevDebit + totals.curDebit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-slate-100 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(totals.prevCredit + totals.curCredit)}</td>
+                <td className="border border-black px-2 py-3 font-mono text-center text-emerald-400 bg-teal-950/50 min-w-[120px] whitespace-nowrap overflow-hidden">
                   {fmt(Math.max(0, totals.prevDebit + totals.curDebit - (totals.prevCredit + totals.curCredit)))}
                 </td>
-                <td className="border border-black px-2 py-3 font-mono text-center text-rose-400 bg-teal-950/50">
+                <td className="border border-black px-2 py-3 font-mono text-center text-rose-400 bg-teal-950/50 min-w-[120px] whitespace-nowrap overflow-hidden">
                   {fmt(Math.max(0, totals.prevCredit + totals.curCredit - (totals.prevDebit + totals.curDebit)))}
                 </td>
               </tr>
@@ -381,16 +415,16 @@ export default function MonthlyStatementTab() {
           </div>
         </div>
         <div className="overflow-auto max-h-[50vh] relative">
-          <table className="w-full text-sm border-collapse text-center table-auto">
+          <table ref={tableRef2} className="w-full text-sm border-collapse text-center">
             <thead className="bg-teal-50 text-teal-900 font-bold border-b border-black sticky top-0 z-20 shadow-sm">
               <tr>
-                <th className="border border-black px-2 py-2 text-center whitespace-normal">م</th>
-                <th className="border border-black px-2 py-2 text-center whitespace-normal">رمز الإيراد</th>
-                <th className="border border-black px-3 py-2 text-center whitespace-normal">بيان الإيراد (من قالب الإيرادات)</th>
-                <th className="border border-black px-2 py-2 text-center whitespace-normal">عدد السجلات</th>
-                <th className="border border-black px-2 py-2 text-center whitespace-normal">إيراد الفترة السابقة</th>
-                <th className="border border-black px-2 py-2 text-center whitespace-normal">إيراد الفترة الحالية</th>
-                <th className="border border-black px-2 py-2 text-center whitespace-normal">الإجمالي التراكمي</th>
+                <th className="border border-black px-2 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">م</th>
+                <th className="border border-black px-2 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">رمز الإيراد</th>
+                <th className="border border-black px-3 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">بيان الإيراد (من قالب الإيرادات)</th>
+                <th className="border border-black px-2 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">عدد السجلات</th>
+                <th className="border border-black px-2 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">إيراد الفترة السابقة</th>
+                <th className="border border-black px-2 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">إيراد الفترة الحالية</th>
+                <th className="border border-black px-2 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">الإجمالي التراكمي</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black">
@@ -403,13 +437,13 @@ export default function MonthlyStatementTab() {
               ) : (
                 revenueByCode.map((r, i) => (
                   <tr key={r.code} className="hover:bg-teal-50/40 transition-colors">
-                    <td className="border border-black px-2 py-2 text-center font-mono text-slate-500">{i + 1}</td>
-                    <td className="border border-black px-2 py-2 text-center font-mono font-extrabold text-teal-800 bg-teal-50/40">{r.code}</td>
-                    <td className="border border-black px-3 py-2 text-center font-medium text-slate-800 whitespace-normal break-words">{r.label}</td>
-                    <td className="border border-black px-2 py-2 text-center font-mono text-slate-600">{r.count}</td>
-                    <td className="border border-black px-2 py-2 text-center font-mono text-slate-700">{r.prev ? fmt(r.prev) : "—"}</td>
-                    <td className="border border-black px-2 py-2 text-center font-mono text-teal-700 font-bold bg-teal-50/30">{r.cur ? fmt(r.cur) : "—"}</td>
-                    <td className="border border-black px-2 py-2 text-center font-mono text-emerald-700 font-black bg-emerald-50/30">{fmt(r.total)}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono text-slate-500 min-w-[120px] whitespace-nowrap overflow-hidden">{i + 1}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono font-extrabold text-teal-800 bg-teal-50/40 min-w-[120px] whitespace-nowrap overflow-hidden">{r.code}</td>
+                    <td className="border border-black px-3 py-2 text-center font-medium text-slate-800 min-w-[120px] whitespace-nowrap overflow-hidden">{r.label}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono text-slate-600 min-w-[120px] whitespace-nowrap overflow-hidden">{r.count}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono text-slate-700 min-w-[120px] whitespace-nowrap overflow-hidden">{r.prev ? fmt(r.prev) : "—"}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono text-teal-700 font-bold bg-teal-50/30 min-w-[120px] whitespace-nowrap overflow-hidden">{r.cur ? fmt(r.cur) : "—"}</td>
+                    <td className="border border-black px-2 py-2 text-center font-mono text-emerald-700 font-black bg-emerald-50/30 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(r.total)}</td>
                   </tr>
                 ))
               )}
@@ -418,10 +452,10 @@ export default function MonthlyStatementTab() {
               <tfoot>
                 <tr className="bg-slate-900 text-white font-extrabold">
                   <td colSpan={3} className="border border-black px-3 py-2 text-center whitespace-normal">الإجمالي العام لرموز الإيراد</td>
-                  <td className="border border-black px-2 py-2 text-center font-mono">{revenueTotals.count}</td>
-                  <td className="border border-black px-2 py-2 text-center font-mono text-slate-200">{fmt(revenueTotals.prev)}</td>
-                  <td className="border border-black px-2 py-2 text-center font-mono text-teal-300">{fmt(revenueTotals.cur)}</td>
-                  <td className="border border-black px-2 py-2 text-center font-mono text-emerald-400">{fmt(revenueTotals.total)}</td>
+                  <td className="border border-black px-2 py-2 text-center font-mono min-w-[120px] whitespace-nowrap overflow-hidden">{revenueTotals.count}</td>
+                  <td className="border border-black px-2 py-2 text-center font-mono text-slate-200 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(revenueTotals.prev)}</td>
+                  <td className="border border-black px-2 py-2 text-center font-mono text-teal-300 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(revenueTotals.cur)}</td>
+                  <td className="border border-black px-2 py-2 text-center font-mono text-emerald-400 min-w-[120px] whitespace-nowrap overflow-hidden">{fmt(revenueTotals.total)}</td>
                 </tr>
               </tfoot>
             )}
