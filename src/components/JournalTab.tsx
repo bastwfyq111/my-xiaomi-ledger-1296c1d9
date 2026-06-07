@@ -50,11 +50,13 @@ const ALL_EXCEL_ACCOUNTS = [
   "حساب الموارد",
 ];
 
+// 1. إضافة حقل الوصف للسطر
 interface EntryLine {
   id: string;
   account: string;
   amount: number;
   type: "debit" | "credit";
+  description?: string; 
 }
 
 // ── قائمة منسدلة مع بحث ومودال على الموبايل ──────────────────────────────
@@ -86,7 +88,6 @@ function AccountDropdown({
     );
   }, [query]);
 
-  // إغلاق عند الضغط خارج المكوّن
   useEffect(() => {
     if (!open) return;
     function handler(e: MouseEvent) {
@@ -97,7 +98,6 @@ function AccountDropdown({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // فتح وتركيز حقل البحث
   const handleOpen = () => {
     setOpen(true);
     setQuery("");
@@ -112,7 +112,6 @@ function AccountDropdown({
 
   return (
     <div ref={wrapRef} className="relative w-full">
-      {/* زر الاختيار */}
       <button
         type="button"
         onClick={handleOpen}
@@ -130,14 +129,12 @@ function AccountDropdown({
         <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${open ? "rotate-180" : ""} text-slate-400`} />
       </button>
 
-      {/* لوحة القائمة — تظهر فوق كل شيء */}
       {open && (
         <div
           ref={listRef}
           className="absolute right-0 left-0 mt-1 z-[999] rounded-2xl border-2 border-slate-200 bg-white shadow-2xl overflow-hidden"
           style={{ maxHeight: "55vh" }}
         >
-          {/* شريط البحث */}
           <div className={`flex items-center gap-2 px-3 py-2.5 border-b-2
             ${isDebit ? "bg-emerald-600" : "bg-rose-600"}`}>
             <Search className="w-4 h-4 text-white shrink-0" />
@@ -154,12 +151,10 @@ function AccountDropdown({
             </button>
           </div>
 
-          {/* عدد النتائج */}
           <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100 text-xs text-slate-400 text-right">
             {filtered.length} حساب متاح
           </div>
 
-          {/* قائمة الحسابات */}
           <div className="overflow-y-auto" style={{ maxHeight: "calc(55vh - 80px)" }}>
             {filtered.length === 0 ? (
               <p className="p-4 text-center text-slate-400 text-sm">لا توجد نتائج مطابقة</p>
@@ -229,17 +224,18 @@ export default function JournalTab() {
   const [formNo, setFormNo]         = useState("");
   const [settlement, setSettlement] = useState("");
   const [date, setDate]             = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(""); // البيان العام
 
+  // 2. تحديث القيم الافتراضية لتشمل حقل الوصف
   const [lines, setLines] = useState<EntryLine[]>([
-    { id: "d1", account: "", amount: 0, type: "debit" },
-    { id: "c1", account: "", amount: 0, type: "credit" },
+    { id: "d1", account: "", amount: 0, type: "debit", description: "" },
+    { id: "c1", account: "", amount: 0, type: "credit", description: "" },
   ]);
 
   const genId = () => Math.random().toString(36).slice(2, 8);
 
   const addLine    = (type: "debit" | "credit") =>
-    setLines((p) => [...p, { id: genId(), account: "", amount: 0, type }]);
+    setLines((p) => [...p, { id: genId(), account: "", amount: 0, type, description: "" }]);
   const removeLine = (id: string) =>
     setLines((p) => p.filter((l) => l.id !== id));
   const updateLine = (id: string, field: keyof EntryLine, value: any) =>
@@ -252,35 +248,49 @@ export default function JournalTab() {
   const resetForm = () => {
     setFormNo(""); setSettlement(""); setDate(""); setDescription("");
     setLines([
-      { id: "d1", account: "", amount: 0, type: "debit" },
-      { id: "c1", account: "", amount: 0, type: "credit" },
+      { id: "d1", account: "", amount: 0, type: "debit", description: "" },
+      { id: "c1", account: "", amount: 0, type: "credit", description: "" },
     ]);
     setEditingId(null);
   };
 
   const handleSave = () => {
-    if (!description) { toast.error("يرجى تعبئة حقل البيان"); return; }
+    if (!description && lines.every(l => !l.description)) { 
+      toast.error("يرجى تعبئة حقل البيان العام أو بيان الأسطر"); 
+      return; 
+    }
     if (!isBalanced)  { toast.error("القيد غير متوازن — يجب أن يتساوى إجمالي المدين والدائن"); return; }
 
     const debitLines  = lines.filter((l) => l.type === "debit");
     const creditLines = lines.filter((l) => l.type === "credit");
 
+    if (editingId) {
+      deleteJournal(editingId);
+    }
+
     debitLines.forEach((dl) => {
       creditLines.forEach((cl) => {
         const ratio = (Number(cl.amount) || 0) / totalCredit;
+        
+        // 3. دمج البيان العام مع بيان السطرين للحصول على تفصيل دقيق في الجدول
+        const combinedDescription = [description, dl.description, cl.description]
+          .filter((desc) => desc && desc.trim() !== "") // إزالة الحقول الفارغة
+          .join(" - "); // الفصل بينهم بشرطة
+
         const payload: Omit<Journal, "id"> = {
-          date, formNo, settlement, description,
+          date, formNo, settlement, 
+          description: combinedDescription, // استخدام البيان المدمج
           account:       dl.account,
           debitAccount:  dl.account,
           creditAccount: cl.account,
           debit:  Number(dl.amount) || 0,
           credit: Math.round((Number(dl.amount) || 0) * ratio),
         };
-        editingId ? updateJournal(editingId, payload) : addJournal(payload);
+        addJournal(payload);
       });
     });
 
-    toast.success(editingId ? "تم تحديث القيد المركب" : "تم حفظ القيد المركب");
+    toast.success(editingId ? "تم تحديث القيد المركب بنجاح" : "تم حفظ القيد المركب بنجاح");
     resetForm();
   };
 
@@ -290,7 +300,7 @@ export default function JournalTab() {
     return (
       <div
         key={l.id}
-        className={`rounded-xl border-2 p-3 flex flex-col gap-2
+        className={`rounded-xl border-2 p-3 flex flex-col gap-3
           ${isDebit ? "border-emerald-300 bg-emerald-50/60" : "border-rose-300 bg-rose-50/60"}`}
       >
         {/* الصف العلوي: تسمية + زر حذف */}
@@ -315,18 +325,33 @@ export default function JournalTab() {
           lineIndex={idx}
         />
 
-        {/* حقل المبلغ */}
-        <input
-          type="number"
-          inputMode="decimal"
-          value={l.amount || ""}
-          onChange={(e) => updateLine(l.id, "amount", e.target.value)}
-          placeholder="0.00"
-          className={`w-full border-2 rounded-xl px-4 py-3 text-center font-mono font-bold text-lg outline-none
-            ${isDebit
-              ? "border-emerald-300 focus:border-emerald-500 text-emerald-700 bg-white"
-              : "border-rose-300 focus:border-rose-500 text-rose-700 bg-white"}`}
-        />
+        {/* حقول الإدخال: البيان والمبلغ جنبًا إلى جنب */}
+        <div className="flex gap-2">
+          {/* 4. حقل إدخال بيان السطر (الجديد) */}
+          <input
+            type="text"
+            value={l.description || ""}
+            onChange={(e) => updateLine(l.id, "description", e.target.value)}
+            placeholder="بيان السطر (اختياري)"
+            className={`flex-1 border-2 rounded-xl px-3 py-2.5 text-sm outline-none bg-white
+              ${isDebit
+                ? "border-emerald-300 focus:border-emerald-500 text-emerald-900"
+                : "border-rose-300 focus:border-rose-500 text-rose-900"}`}
+          />
+          
+          {/* حقل المبلغ */}
+          <input
+            type="number"
+            inputMode="decimal"
+            value={l.amount || ""}
+            onChange={(e) => updateLine(l.id, "amount", e.target.value)}
+            placeholder="المبلغ 0.00"
+            className={`w-1/3 border-2 rounded-xl px-3 py-2.5 text-center font-mono font-bold text-base outline-none bg-white
+              ${isDebit
+                ? "border-emerald-300 focus:border-emerald-500 text-emerald-700"
+                : "border-rose-300 focus:border-rose-500 text-rose-700"}`}
+          />
+        </div>
       </div>
     );
   };
@@ -386,7 +411,7 @@ export default function JournalTab() {
               className="col-span-2 border-2 border-slate-200 focus:border-teal-500 rounded-xl px-3 py-2.5 text-sm text-center outline-none bg-slate-50"
             />
             <input
-              placeholder="البيان / وصف القيد"
+              placeholder="البيان العام للقيد (اختياري في حال تعبئة بيانات الأسطر)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="col-span-2 border-2 border-slate-200 focus:border-teal-500 rounded-xl px-3 py-2.5 text-sm text-center outline-none bg-slate-50"
@@ -494,7 +519,7 @@ export default function JournalTab() {
                   <td className="border border-black p-3 font-mono text-slate-600 text-center whitespace-nowrap overflow-hidden">{j.formNo || "—"}</td>
                   <td className="border border-black p-3 text-slate-600 text-center whitespace-nowrap overflow-hidden">{j.settlement || "—"}</td>
                   <td className="border border-black p-3 font-mono text-slate-600 text-center whitespace-nowrap overflow-hidden">{j.date || "—"}</td>
-                  <td className="border border-black p-3 text-slate-800 font-medium text-center whitespace-nowrap overflow-hidden">{j.description || "—"}</td>
+                  <td className="border border-black p-3 text-slate-800 font-medium text-center whitespace-nowrap overflow-hidden" title={j.description}>{j.description || "—"}</td>
                   <td className="border border-black p-3 text-emerald-700 font-bold text-center whitespace-nowrap overflow-hidden">{j.debitAccount || "—"}</td>
                   <td className="border border-black p-3 text-rose-700 font-bold text-center whitespace-nowrap overflow-hidden">{j.creditAccount || "—"}</td>
                   <td className="border border-black p-3 font-mono font-bold text-emerald-600 bg-emerald-50/20 text-center whitespace-nowrap overflow-hidden">{j.debit ? j.debit.toLocaleString() : "—"}</td>
@@ -507,10 +532,11 @@ export default function JournalTab() {
                           setFormNo(j.formNo || "");
                           setSettlement(j.settlement || "");
                           setDate(j.date || "");
-                          setDescription(j.description || "");
+                          // 5. استرجاع الوصف وتعبئته عند الضغط على تعديل
+                          setDescription(j.description || ""); 
                           setLines([
-                            { id: genId(), account: j.debitAccount || "", amount: j.debit || 0, type: "debit" },
-                            { id: genId(), account: j.creditAccount || "", amount: j.credit || 0, type: "credit" },
+                            { id: genId(), account: j.debitAccount || "", amount: j.debit || 0, type: "debit", description: "" },
+                            { id: genId(), account: j.creditAccount || "", amount: j.credit || 0, type: "credit", description: "" },
                           ]);
                           window.scrollTo({ top: 0, behavior: "smooth" });
                         }}
