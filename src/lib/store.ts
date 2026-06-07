@@ -232,14 +232,11 @@ export const useStore = create<State>()(
           hafizaNo: hafiza.hafizaNo || '',
           notifyNo: hafiza.notifyNo || '',
           notifyDate: hafiza.notifyDate || '',
-          checkNo: '',
-          checkDate: '',
           description: hafiza.description,
           specialty: hafiza.specialty,
           name: hafiza.name,
           hafizaAmount: Number(hafiza.hafizaAmount) || 0,
           income: getNotifyAmount(hafiza),
-          expense: 0,
           sourceHafizaId: hafiza.id,
         };
 
@@ -247,6 +244,9 @@ export const useStore = create<State>()(
           const newAccount: Account = {
             id: uid(),
             ...mappedData,
+            checkNo: '',
+            checkDate: '',
+            expense: 0,
             revenueKey: undefined,
           };
           set(state => ({ accounts: [...state.accounts, newAccount] }));
@@ -264,10 +264,11 @@ export const useStore = create<State>()(
             existingAccount.income !== mappedData.income
           );
           if (hasDiff) {
+            // لا نُمسّ حقل المصروفات (expense) ولا الشيك أبداً عند المطابقة
             set(state => ({
               accounts: state.accounts.map(acc =>
                 acc.id === existingAccount!.id
-                  ? { ...acc, ...mappedData, revenueKey: acc.revenueKey }
+                  ? { ...acc, ...mappedData, revenueKey: acc.revenueKey, expense: acc.expense, checkNo: acc.checkNo, checkDate: acc.checkDate }
                   : acc
               ),
             }));
