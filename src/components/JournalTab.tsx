@@ -115,8 +115,42 @@ function AccountDropdown({
   );
 }
 
+// مكوّن مساعد يُصغّر خط الخلية تلقائياً حتى يتسع النص
+function useFitText(ref: React.RefObject<HTMLTableElement | null>) {
+  useEffect(() => {
+    const table = ref.current;
+    if (!table) return;
+
+    function fitCells() {
+      const cells = table!.querySelectorAll<HTMLElement>("td, th");
+      cells.forEach((cell) => {
+        // أعد الضبط أولاً
+        cell.style.fontSize = "";
+        let size = parseFloat(getComputedStyle(cell).fontSize) || 14;
+        const minSize = 7;
+        // قلّص حتى لا يفيض المحتوى أفقياً
+        while (size > minSize && cell.scrollWidth > cell.clientWidth + 1) {
+          size -= 0.5;
+          cell.style.fontSize = size + "px";
+        }
+      });
+    }
+
+    fitCells();
+    const ro = new ResizeObserver(fitCells);
+    ro.observe(table);
+    return () => ro.disconnect();
+  }, [ref]);
+}
+
+
 export default function JournalTab() {
   const { journal, addJournal, updateJournal, deleteJournal, clearJournal } = useStore();
+  const tableRef1 = useRef<HTMLTableElement>(null);
+  const tableRef2 = useRef<HTMLTableElement>(null);
+  useFitText(tableRef1);
+  useFitText(tableRef2);
+
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // بيانات رأس القيد
@@ -252,23 +286,23 @@ export default function JournalTab() {
 
         {/* جدول أسطر القيد المركب */}
         <div className="rounded-xl overflow-hidden border border-black mb-4">
-          <table className="w-full text-sm border-collapse text-center ">
+          <table ref={tableRef1} className="w-full text-sm border-collapse text-center">
             <thead>
               <tr className="bg-slate-800 text-white">
-                <th className="border border-black px-3 py-2 text-center whitespace-normal min-w-[120px]">النوع</th>
-                <th className="border border-black px-3 py-2 text-center whitespace-normal min-w-[120px]">اسم الحساب</th>
-                <th className="border border-black px-3 py-2 text-center whitespace-normal min-w-[120px]">المبلغ</th>
-                <th className="border border-black px-3 py-2 text-center whitespace-normal min-w-[120px]">حذف</th>
+                <th className="border border-black px-3 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">النوع</th>
+                <th className="border border-black px-3 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">اسم الحساب</th>
+                <th className="border border-black px-3 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">المبلغ</th>
+                <th className="border border-black px-3 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">حذف</th>
               </tr>
             </thead>
             <tbody>
               {/* أسطر المدين */}
               {lines.filter((l) => l.type === "debit").map((l) => (
                 <tr key={l.id} className="bg-emerald-50/40 hover:bg-emerald-50 transition-colors">
-                  <td className="border border-black px-2 py-2 text-center whitespace-normal min-w-[120px]">
+                  <td className="border border-black px-2 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">
                     <span className="inline-block bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full whitespace-normal">مدين</span>
                   </td>
-                  <td className="border border-black px-2 py-2 whitespace-normal min-w-[120px]">
+                  <td className="border border-black px-2 py-2 min-w-[120px] whitespace-nowrap overflow-hidden">
                     <AccountDropdown
                       value={l.account}
                       onChange={(v) => updateLine(l.id, "account", v)}
@@ -276,7 +310,7 @@ export default function JournalTab() {
                       colorClass="focus:border-emerald-500 text-emerald-800"
                     />
                   </td>
-                  <td className="border border-black px-2 py-2 whitespace-normal min-w-[120px]">
+                  <td className="border border-black px-2 py-2 min-w-[120px] whitespace-nowrap overflow-hidden">
                     <input
                       type="number"
                       value={l.amount || ""}
@@ -285,7 +319,7 @@ export default function JournalTab() {
                       placeholder="0"
                     />
                   </td>
-                  <td className="border border-black px-2 py-2 text-center whitespace-normal min-w-[120px]">
+                  <td className="border border-black px-2 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">
                     <button onClick={() => removeLine(l.id)} className="p-1 text-rose-500 hover:bg-rose-100 rounded transition-colors">
                       <Minus className="w-4 h-4" />
                     </button>
@@ -313,10 +347,10 @@ export default function JournalTab() {
               {/* أسطر الدائن */}
               {lines.filter((l) => l.type === "credit").map((l) => (
                 <tr key={l.id} className="bg-rose-50/40 hover:bg-rose-50 transition-colors">
-                  <td className="border border-black px-2 py-2 text-center whitespace-normal min-w-[120px]">
+                  <td className="border border-black px-2 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">
                     <span className="inline-block bg-rose-100 text-rose-800 text-xs font-bold px-2 py-0.5 rounded-full whitespace-normal">دائن</span>
                   </td>
-                  <td className="border border-black px-2 py-2 whitespace-normal min-w-[120px]">
+                  <td className="border border-black px-2 py-2 min-w-[120px] whitespace-nowrap overflow-hidden">
                     <AccountDropdown
                       value={l.account}
                       onChange={(v) => updateLine(l.id, "account", v)}
@@ -324,7 +358,7 @@ export default function JournalTab() {
                       colorClass="focus:border-rose-500 text-rose-800"
                     />
                   </td>
-                  <td className="border border-black px-2 py-2 whitespace-normal min-w-[120px]">
+                  <td className="border border-black px-2 py-2 min-w-[120px] whitespace-nowrap overflow-hidden">
                     <input
                       type="number"
                       value={l.amount || ""}
@@ -333,7 +367,7 @@ export default function JournalTab() {
                       placeholder="0"
                     />
                   </td>
-                  <td className="border border-black px-2 py-2 text-center whitespace-normal min-w-[120px]">
+                  <td className="border border-black px-2 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">
                     <button onClick={() => removeLine(l.id)} className="p-1 text-rose-500 hover:bg-rose-100 rounded transition-colors">
                       <Minus className="w-4 h-4" />
                     </button>
@@ -362,12 +396,12 @@ export default function JournalTab() {
                     ? "⚠️ القيد غير متوازن"
                     : "— أدخل المبالغ —"}
                 </td>
-                <td className="border border-black px-2 py-2 text-center font-mono whitespace-normal min-w-[120px]">
+                <td className="border border-black px-2 py-2 text-center font-mono min-w-[120px] whitespace-nowrap overflow-hidden">
                   <span className="text-emerald-300">م: {totalDebit.toLocaleString()}</span>
                   <span className="mx-2 text-slate-400">|</span>
                   <span className="text-rose-300">د: {totalCredit.toLocaleString()}</span>
                 </td>
-                <td className="border border-black px-2 py-2 text-center whitespace-normal min-w-[120px]">
+                <td className="border border-black px-2 py-2 text-center min-w-[120px] whitespace-nowrap overflow-hidden">
                   <span className={isBalanced ? "text-emerald-400 text-lg" : "text-rose-400 text-lg"}>
                     {isBalanced ? "✓" : "✗"}
                   </span>
@@ -398,18 +432,18 @@ export default function JournalTab() {
       {/* جدول استعراض قيود اليومية */}
       <div className="bg-white border border-black rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-auto max-h-[60vh] relative">
-          <table className="w-full text-sm border-collapse text-center ">
+          <table ref={tableRef2} className="w-full text-sm border-collapse text-center">
             <thead className="bg-slate-800 text-white sticky top-0 z-20 shadow-md">
               <tr>
-                <th className="border border-black p-3 text-center font-semibold whitespace-normal min-w-[120px]">رقم الاستمارة</th>
-                <th className="border border-black p-3 text-center font-semibold whitespace-normal min-w-[120px]">التسوية</th>
-                <th className="border border-black p-3 text-center font-semibold whitespace-normal min-w-[120px]">التاريخ</th>
-                <th className="border border-black p-3 text-center font-semibold whitespace-normal min-w-[120px]">البيان</th>
-                <th className="border border-black p-3 text-center font-semibold whitespace-normal min-w-[120px]">الحساب المدين</th>
-                <th className="border border-black p-3 text-center font-semibold whitespace-normal min-w-[120px]">الحساب الدائن</th>
-                <th className="border border-black p-3 text-center font-semibold whitespace-normal min-w-[120px]">مدين</th>
-                <th className="border border-black p-3 text-center font-semibold whitespace-normal min-w-[120px]">دائن</th>
-                <th className="border border-black p-3 text-center font-semibold whitespace-normal min-w-[120px]">الإجراءات</th>
+                <th className="border border-black p-3 text-center font-semibold min-w-[120px] whitespace-nowrap overflow-hidden">رقم الاستمارة</th>
+                <th className="border border-black p-3 text-center font-semibold min-w-[120px] whitespace-nowrap overflow-hidden">التسوية</th>
+                <th className="border border-black p-3 text-center font-semibold min-w-[120px] whitespace-nowrap overflow-hidden">التاريخ</th>
+                <th className="border border-black p-3 text-center font-semibold min-w-[120px] whitespace-nowrap overflow-hidden">البيان</th>
+                <th className="border border-black p-3 text-center font-semibold min-w-[120px] whitespace-nowrap overflow-hidden">الحساب المدين</th>
+                <th className="border border-black p-3 text-center font-semibold min-w-[120px] whitespace-nowrap overflow-hidden">الحساب الدائن</th>
+                <th className="border border-black p-3 text-center font-semibold min-w-[120px] whitespace-nowrap overflow-hidden">مدين</th>
+                <th className="border border-black p-3 text-center font-semibold min-w-[120px] whitespace-nowrap overflow-hidden">دائن</th>
+                <th className="border border-black p-3 text-center font-semibold min-w-[120px] whitespace-nowrap overflow-hidden">الإجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black">
@@ -421,15 +455,15 @@ export default function JournalTab() {
                 </tr>
               ) : journal.map((j) => (
                 <tr key={j.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="border border-black p-3 font-mono text-slate-600 text-center whitespace-normal min-w-[120px]">{j.formNo || "—"}</td>
-                  <td className="border border-black p-3 text-slate-600 text-center whitespace-normal min-w-[120px]">{j.settlement || "—"}</td>
-                  <td className="border border-black p-3 font-mono text-slate-600 text-center whitespace-normal min-w-[120px]">{j.date || "—"}</td>
-                  <td className="border border-black p-3 text-slate-800 font-medium text-center whitespace-normal min-w-[120px]">{j.description || "—"}</td>
-                  <td className="border border-black p-3 text-emerald-700 font-bold text-center whitespace-normal min-w-[120px]">{j.debitAccount || "—"}</td>
-                  <td className="border border-black p-3 text-rose-700 font-bold text-center whitespace-normal min-w-[120px]">{j.creditAccount || "—"}</td>
-                  <td className="border border-black p-3 font-mono font-bold text-emerald-600 bg-emerald-50/20 text-center whitespace-normal min-w-[120px]">{j.debit ? j.debit.toLocaleString() : "—"}</td>
-                  <td className="border border-black p-3 font-mono font-bold text-rose-600 bg-rose-50/20 text-center whitespace-normal min-w-[120px]">{j.credit ? j.credit.toLocaleString() : "—"}</td>
-                  <td className="border border-black p-3 text-center whitespace-normal min-w-[120px]">
+                  <td className="border border-black p-3 font-mono text-slate-600 text-center min-w-[120px] whitespace-nowrap overflow-hidden">{j.formNo || "—"}</td>
+                  <td className="border border-black p-3 text-slate-600 text-center min-w-[120px] whitespace-nowrap overflow-hidden">{j.settlement || "—"}</td>
+                  <td className="border border-black p-3 font-mono text-slate-600 text-center min-w-[120px] whitespace-nowrap overflow-hidden">{j.date || "—"}</td>
+                  <td className="border border-black p-3 text-slate-800 font-medium text-center min-w-[120px] whitespace-nowrap overflow-hidden">{j.description || "—"}</td>
+                  <td className="border border-black p-3 text-emerald-700 font-bold text-center min-w-[120px] whitespace-nowrap overflow-hidden">{j.debitAccount || "—"}</td>
+                  <td className="border border-black p-3 text-rose-700 font-bold text-center min-w-[120px] whitespace-nowrap overflow-hidden">{j.creditAccount || "—"}</td>
+                  <td className="border border-black p-3 font-mono font-bold text-emerald-600 bg-emerald-50/20 text-center min-w-[120px] whitespace-nowrap overflow-hidden">{j.debit ? j.debit.toLocaleString() : "—"}</td>
+                  <td className="border border-black p-3 font-mono font-bold text-rose-600 bg-rose-50/20 text-center min-w-[120px] whitespace-nowrap overflow-hidden">{j.credit ? j.credit.toLocaleString() : "—"}</td>
+                  <td className="border border-black p-3 text-center min-w-[120px] whitespace-nowrap overflow-hidden">
                     <div className="flex justify-center gap-1.5">
                       <button
                         onClick={() => { setEditingId(j.id); setFormNo(j.formNo || ""); setSettlement(j.settlement || ""); setDate(j.date || ""); setDescription(j.description || "");
