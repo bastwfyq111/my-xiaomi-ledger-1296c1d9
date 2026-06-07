@@ -377,7 +377,7 @@ export default function HafizaTab() {
 function Field({ label, v, on, type = "text", icon, className = "" }: { label: string; v: string; on: (v: string) => void; type?: string; icon?: React.ReactNode; className?: string }) {
   return (
     <div className="w-full">
-      <label className="block text-xs font-bold text-slate-500 mb-1.5 mr-1">{label}</label>
+      <label className="block text-xs font-bold text-amber-800 mb-1.5 mr-1">{label}</label>
       <div className="relative flex items-center">
         {icon && <span className="absolute right-3 z-10">{icon}</span>}
         <input 
