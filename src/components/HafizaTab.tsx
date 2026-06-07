@@ -137,15 +137,15 @@ export default function HafizaTab() {
     <div className="w-full space-y-6 p-0" dir="rtl">
       
       {/* ========== 1. نموذج إدخال الحوافظ المطور زرق سماوي ناعم ========== */}
-      <div className="w-full bg-white shadow-sm border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="bg-gradient-to-r from-[#10528e] to-[#0f467a] px-5 py-4 flex flex-wrap justify-between items-center gap-3">
+      <div className="w-full bg-white shadow-sm border border-black rounded-2xl overflow-hidden">
+        <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 px-5 py-4 flex flex-wrap justify-between items-center gap-3 border-b-2 border-black">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-white/10 rounded-lg text-white">
+            <div className="p-1.5 bg-slate-950/10 rounded-lg text-slate-950">
               <Plus className="w-4 h-4" />
             </div>
-            <h2 className="text-sm sm:text-base font-bold text-white">إضافة حافظة توريد جديدة للنظام</h2>
+            <h2 className="text-sm sm:text-base font-black text-slate-950">إضافة حافظة توريد جديدة للنظام</h2>
           </div>
-          <div className="bg-white/10 text-white border border-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition-all">
+          <div className="bg-slate-950 text-amber-200 border border-slate-950 rounded-xl text-xs font-bold hover:bg-slate-900 transition-all [&_button]:!text-amber-200">
             <ImportButton kind="hafiza" />
           </div>
         </div>
