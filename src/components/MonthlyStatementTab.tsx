@@ -242,7 +242,7 @@ export default function MonthlyStatementTab() {
         <div>
           <label className="text-xs font-bold text-slate-600 block mb-1">السنة المالية</label>
           <input type="number" value={year} onChange={(e) => setYear(Number(e.target.value) || year)}
-            className="block w-28 px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm font-mono text-center" />
+            className="block px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm font-mono text-center" />
         </div>
 
         <div className="flex-1" />
@@ -270,10 +270,10 @@ export default function MonthlyStatementTab() {
         </div>
 
         <div className="overflow-auto max-h-[65vh] relative">
-          <table className="w-full text-sm border-collapse text-center">
+          <table className="w-full text-sm border-collapse text-center table-auto">
             <thead className="bg-slate-100 text-slate-800 font-bold border-b border-black sticky top-0 z-20 shadow-sm">
               <tr>
-                <th rowSpan={2} className="border border-black px-3 py-3 text-center min-w-[280px] bg-slate-100 text-slate-900 font-extrabold break-words whitespace-normal">
+                <th rowSpan={2} className="border border-black px-3 py-3 text-center  bg-slate-100 text-slate-900 font-extrabold break-words whitespace-normal">
                   بيان الحسابات (طبقاً للنظام المحاسبي الموحد)
                 </th>
                 <th colSpan={2} className="border border-black px-2 py-2 text-center bg-slate-200/60 font-bold text-slate-800 whitespace-normal">
@@ -381,16 +381,16 @@ export default function MonthlyStatementTab() {
           </div>
         </div>
         <div className="overflow-auto max-h-[50vh] relative">
-          <table className="w-full text-sm border-collapse text-center">
+          <table className="w-full text-sm border-collapse text-center table-auto">
             <thead className="bg-teal-50 text-teal-900 font-bold border-b border-black sticky top-0 z-20 shadow-sm">
               <tr>
-                <th className="border border-black px-2 py-2 text-center w-12 whitespace-normal">م</th>
-                <th className="border border-black px-2 py-2 text-center w-28 whitespace-normal">رمز الإيراد</th>
+                <th className="border border-black px-2 py-2 text-center whitespace-normal">م</th>
+                <th className="border border-black px-2 py-2 text-center whitespace-normal">رمز الإيراد</th>
                 <th className="border border-black px-3 py-2 text-center whitespace-normal">بيان الإيراد (من قالب الإيرادات)</th>
-                <th className="border border-black px-2 py-2 text-center w-24 whitespace-normal">عدد السجلات</th>
-                <th className="border border-black px-2 py-2 text-center w-32 whitespace-normal">إيراد الفترة السابقة</th>
-                <th className="border border-black px-2 py-2 text-center w-32 whitespace-normal">إيراد الفترة الحالية</th>
-                <th className="border border-black px-2 py-2 text-center w-32 whitespace-normal">الإجمالي التراكمي</th>
+                <th className="border border-black px-2 py-2 text-center whitespace-normal">عدد السجلات</th>
+                <th className="border border-black px-2 py-2 text-center whitespace-normal">إيراد الفترة السابقة</th>
+                <th className="border border-black px-2 py-2 text-center whitespace-normal">إيراد الفترة الحالية</th>
+                <th className="border border-black px-2 py-2 text-center whitespace-normal">الإجمالي التراكمي</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black">
