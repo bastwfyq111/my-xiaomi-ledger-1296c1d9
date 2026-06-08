@@ -195,17 +195,14 @@ export default function InstallmentsTab() {
           const payments: any = {};
           let totalPaid = 0;
           
-          // البحث المرن والمطابقة للأعمدة مع إزالة المسافات الزائدة
           monthsList.forEach(m => {
             const cleanTarget = m.trim();
-            // البحث عن المفتاح المطابق داخل سطر الإكسيل بشكل مرن
             const foundKey = Object.keys(row).find(k => k.trim() === cleanTarget || k === m);
             const amount = foundKey ? cleanNumber(row[foundKey]) : 0;
             payments[m] = amount;
             totalPaid += amount;
           });
 
-          // العثور على المفاتيح الأساسية للبيانات باللغة العربية
           const nameKey = Object.keys(row).find(k => k.includes("اسم المتدرب")) || "name";
           const batchKey = Object.keys(row).find(k => k.includes("رقم الدفعة")) || "batch";
           const specialtyKey = Object.keys(row).find(k => k.includes("المساق")) || "specialty";
@@ -399,19 +396,18 @@ export default function InstallmentsTab() {
         <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2025} columns={3} />
           <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
-            <table className="w-full text-xs sm:text-sm">
+            <table className="w-full text-xs sm:text-sm table-auto">
               <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
-
                 <tr>
-                  <th className="p-2 text-center">#</th>
-                  <th className="p-2 text-right min-w-[150px]">اسم المتدرب</th>
-                  <th className="p-2 text-center">الدفعة</th>
-                  <th className="p-2 text-right">المساق</th>
-                  <th className="p-2 text-center">الرسوم</th>
+                  <th className="p-2 text-center w-auto">#</th>
+                  <th className="p-2 text-center min-w-[120px] max-w-[200px] whitespace-normal break-words">اسم المتدرب</th>
+                  <th className="p-2 text-center w-auto">الدفعة</th>
+                  <th className="p-2 text-center min-w-[100px] max-w-[180px] whitespace-normal break-words">المساق</th>
+                  <th className="p-2 text-center w-auto">الرسوم</th>
                   {MONTHS_2025.map(m => <th key={m} className="p-1 text-center text-[11px] bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m}</th>)}
-                  <th className="p-2 text-center text-emerald-700">المسدد</th>
-                  <th className="p-2 text-center text-rose-700">المتبقي</th>
-                  <th className="p-2 text-center">طباعة</th>
+                  <th className="p-2 text-center text-emerald-700 w-auto">المسدد</th>
+                  <th className="p-2 text-center text-rose-700 w-auto">المتبقي</th>
+                  <th className="p-2 text-center w-auto">طباعة</th>
                 </tr>
               </thead>
               <tbody>
@@ -422,9 +418,9 @@ export default function InstallmentsTab() {
                     {controls2025.rows.map((r, i) => (
                       <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
                         <td className="p-2 text-center text-slate-500">{i + 1}</td>
-                        <td className="p-2 font-semibold text-slate-900">{r.name}</td>
+                        <td className="p-2 text-center font-semibold text-slate-900 whitespace-normal break-words max-w-[200px]">{r.name}</td>
                         <td className="p-2 text-center text-slate-600">{r.batch || "—"}</td>
-                        <td className="p-2 text-slate-600">{r.specialty || "—"}</td>
+                        <td className="p-2 text-center text-slate-600 whitespace-normal break-words max-w-[180px]">{r.specialty || "—"}</td>
                         <td className="p-2 text-center font-mono font-semibold text-slate-700">{fmt(r.fees)}</td>
                         {MONTHS_2025.map(m => {
                           const paid = Number(r.payments?.[m]) || 0;
@@ -434,7 +430,7 @@ export default function InstallmentsTab() {
                         <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30">{fmt(r.remaining)}</td>
                         <td className="p-2 text-center">
                           <button onClick={() => printStatement(r, 2025)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors">
-                            <Printer className="w-3.5 h-3.5" />
+                            <Printer className="w-3.5 h-3.5 mx-auto" />
                           </button>
                         </td>
                       </tr>
@@ -491,20 +487,19 @@ export default function InstallmentsTab() {
         <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2026} columns={3} />
           <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
-            <table className="w-full text-xs sm:text-sm">
+            <table className="w-full text-xs sm:text-sm table-auto">
               <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
-
                 <tr>
-                  <th className="p-2 text-center">#</th>
-                  <th className="p-2 text-right min-w-[150px]">اسم المتدرب</th>
-                  <th className="p-2 text-center">دفعة</th>
-                  <th className="p-2 text-right">المساق</th>
-                  <th className="p-2 text-center bg-amber-50 text-amber-900">مدور 2025</th>
+                  <th className="p-2 text-center w-auto">#</th>
+                  <th className="p-2 text-center min-w-[120px] max-w-[200px] whitespace-normal break-words">اسم المتدرب</th>
+                  <th className="p-2 text-center w-auto">دفعة</th>
+                  <th className="p-2 text-center min-w-[100px] max-w-[180px] whitespace-normal break-words">المساق</th>
+                  <th className="p-2 text-center bg-amber-50 text-amber-900 w-auto">مدور 2025</th>
                   {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m.trim()}</th>)}
-                  <th className="p-2 text-center text-emerald-700">مسدد 2026</th>
-                  <th className="p-2 text-center text-rose-700">الرصيد المتبقي</th>
-                  <th className="p-2 text-center">حالة</th>
-                  <th className="p-2 text-center">طباعة</th>
+                  <th className="p-2 text-center text-emerald-700 w-auto">مسدد 2026</th>
+                  <th className="p-2 text-center text-rose-700 w-auto">الرصيد المتبقي</th>
+                  <th className="p-2 text-center w-auto">حالة</th>
+                  <th className="p-2 text-center w-auto">طباعة</th>
                 </tr>
               </thead>
               <tbody>
@@ -517,9 +512,9 @@ export default function InstallmentsTab() {
                       return (
                         <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
                           <td className="p-2 text-center text-slate-500">{i + 1}</td>
-                          <td className="p-2 font-semibold text-slate-900">{r.name}</td>
+                          <td className="p-2 text-center font-semibold text-slate-900 whitespace-normal break-words max-w-[200px]">{r.name}</td>
                           <td className="p-2 text-center text-slate-600">{r.batch || "—"}</td>
-                          <td className="p-2 text-slate-600">{r.specialty || "—"}</td>
+                          <td className="p-2 text-center text-slate-600 whitespace-normal break-words max-w-[180px]">{r.specialty || "—"}</td>
                           <td className="p-2 text-center font-mono text-amber-700 font-bold bg-amber-50/20">{fmt(r.prevDue)}</td>
                           {MONTHS_2026.map(m => {
                             const paid = Number(r.payments?.[m]) || 0;
@@ -528,7 +523,7 @@ export default function InstallmentsTab() {
                               <td key={m} className="p-1 text-center relative bg-slate-50/50 border-l border-slate-200 hover:bg-slate-100 cursor-pointer group transition-colors"
                                 onMouseEnter={() => setHoveredCell(cellId)} onMouseLeave={() => setHoveredCell(null)}>
                                 {paid > 0 ? (
-                                  <div className="relative">
+                                  <div className="relative flex justify-center">
                                     <span className="font-mono text-emerald-700 font-bold">{fmt(paid)}</span>
                                     {hoveredCell === cellId && (
                                       <div className="absolute -top-7 right-0 flex gap-0.5 bg-white shadow-xl border rounded px-1 py-1 z-30">
@@ -548,7 +543,7 @@ export default function InstallmentsTab() {
                           <td className="p-2 text-center"><span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color}`}>{status.text}</span></td>
                           <td className="p-2 text-center">
                             <button onClick={() => printStatement(r, 2026)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors">
-                              <Printer className="w-3.5 h-3.5" />
+                              <Printer className="w-3.5 h-3.5 mx-auto" />
                             </button>
                           </td>
                         </tr>
@@ -574,6 +569,7 @@ export default function InstallmentsTab() {
       </div>
 
       {/* ========== النوافذ المنبثقة ========== */}
+      {/* باقي الأكواد الخاصة بالنوافذ المنبثقة بقيت كما هي لعدم حاجتها لتعديل */}
       <Modal title="➕ إضافة قسط جديد - 2026" isOpen={newPaymentModal} onClose={() => setNewPaymentModal(false)}>
         <form onSubmit={addNewPayment} className="space-y-3">
           <div className="relative">
