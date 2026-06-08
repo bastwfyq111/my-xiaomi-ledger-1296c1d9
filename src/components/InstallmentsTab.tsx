@@ -34,7 +34,7 @@ const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) =
       {stats.map((stat, idx) => (
         <div key={idx} className={`${stat.bgClass} p-2 sm:p-3 rounded-lg text-center border ${stat.borderClass} shadow-sm`}>
           <div className="text-xs sm:text-sm font-medium text-slate-600">{stat.label}</div>
-          <div className="text-sm sm:text-lg font-mono font-bold mt-1 text-slate-900 break-words">{stat.value}</div>
+          <div className="text-sm sm:text-lg font-mono font-bold mt-1 text-slate-900 truncate">{stat.value}</div>
         </div>
       ))}
     </div>
@@ -178,7 +178,6 @@ export default function InstallmentsTab() {
     if (editPaymentModal) setEditPaymentModal(null);
   };
 
-  // 📥 دالة استيراد وتوفيق الملفات المحدثة بالكامل
   const importFile = (e: React.ChangeEvent<HTMLInputElement>, year: 2025 | 2026) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -396,18 +395,18 @@ export default function InstallmentsTab() {
         <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2025} columns={3} />
           <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
-            <table className="w-full text-xs sm:text-sm table-auto">
+            <table className="w-full text-xs sm:text-sm">
               <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
                 <tr>
-                  <th className="p-2 text-center w-auto">#</th>
-                  <th className="p-2 text-center min-w-[120px] max-w-[200px] whitespace-normal break-words">اسم المتدرب</th>
-                  <th className="p-2 text-center w-auto">الدفعة</th>
-                  <th className="p-2 text-center min-w-[100px] max-w-[180px] whitespace-normal break-words">المساق</th>
-                  <th className="p-2 text-center w-auto">الرسوم</th>
+                  <th className="p-2 text-center whitespace-nowrap">#</th>
+                  <th className="p-2 text-center whitespace-nowrap">اسم المتدرب</th>
+                  <th className="p-2 text-center whitespace-nowrap">الدفعة</th>
+                  <th className="p-2 text-center whitespace-nowrap">المساق</th>
+                  <th className="p-2 text-center whitespace-nowrap">الرسوم</th>
                   {MONTHS_2025.map(m => <th key={m} className="p-1 text-center text-[11px] bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m}</th>)}
-                  <th className="p-2 text-center text-emerald-700 w-auto">المسدد</th>
-                  <th className="p-2 text-center text-rose-700 w-auto">المتبقي</th>
-                  <th className="p-2 text-center w-auto">طباعة</th>
+                  <th className="p-2 text-center text-emerald-700 whitespace-nowrap">المسدد</th>
+                  <th className="p-2 text-center text-rose-700 whitespace-nowrap">المتبقي</th>
+                  <th className="p-2 text-center whitespace-nowrap">طباعة</th>
                 </tr>
               </thead>
               <tbody>
@@ -417,18 +416,18 @@ export default function InstallmentsTab() {
                   <>
                     {controls2025.rows.map((r, i) => (
                       <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
-                        <td className="p-2 text-center text-slate-500">{i + 1}</td>
-                        <td className="p-2 text-center font-semibold text-slate-900 whitespace-normal break-words max-w-[200px]">{r.name}</td>
-                        <td className="p-2 text-center text-slate-600">{r.batch || "—"}</td>
-                        <td className="p-2 text-center text-slate-600 whitespace-normal break-words max-w-[180px]">{r.specialty || "—"}</td>
-                        <td className="p-2 text-center font-mono font-semibold text-slate-700">{fmt(r.fees)}</td>
+                        <td className="p-2 text-center text-slate-500 whitespace-nowrap">{i + 1}</td>
+                        <td className="p-2 text-center font-semibold text-slate-900 whitespace-nowrap">{r.name}</td>
+                        <td className="p-2 text-center text-slate-600 whitespace-nowrap">{r.batch || "—"}</td>
+                        <td className="p-2 text-center text-slate-600 whitespace-nowrap">{r.specialty || "—"}</td>
+                        <td className="p-2 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">{fmt(r.fees)}</td>
                         {MONTHS_2025.map(m => {
                           const paid = Number(r.payments?.[m]) || 0;
-                          return <td key={m} className="p-1 text-center bg-slate-50/50 border-l border-slate-200">{paid > 0 ? <span className="text-emerald-700 font-bold font-mono">{fmt(paid)}</span> : <span className="text-slate-300">—</span>}</td>;
+                          return <td key={m} className="p-1 text-center bg-slate-50/50 border-l border-slate-200 whitespace-nowrap">{paid > 0 ? <span className="text-emerald-700 font-bold font-mono">{fmt(paid)}</span> : <span className="text-slate-300">—</span>}</td>;
                         })}
-                        <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30">{fmt(r.totalPaid)}</td>
-                        <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30">{fmt(r.remaining)}</td>
-                        <td className="p-2 text-center">
+                        <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">{fmt(r.totalPaid)}</td>
+                        <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">{fmt(r.remaining)}</td>
+                        <td className="p-2 text-center whitespace-nowrap">
                           <button onClick={() => printStatement(r, 2025)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors">
                             <Printer className="w-3.5 h-3.5 mx-auto" />
                           </button>
@@ -436,15 +435,15 @@ export default function InstallmentsTab() {
                       </tr>
                     ))}
                     <tr className="border-t-2 border-teal-300 bg-teal-50 font-bold text-teal-900">
-                      <td className="p-2 text-center" colSpan={4}>الإجمالي العام</td>
-                      <td className="p-2 text-center font-mono">{fmt(totals2025.fees)}</td>
+                      <td className="p-2 text-center whitespace-nowrap" colSpan={4}>الإجمالي العام</td>
+                      <td className="p-2 text-center font-mono whitespace-nowrap">{fmt(totals2025.fees)}</td>
                       {MONTHS_2025.map(m => {
                         const total = controls2025.rows.reduce((sum, r) => sum + (Number(r.payments?.[m]) || 0), 0);
-                        return <td key={m} className="p-1 text-center bg-teal-50 border-l border-teal-200 font-mono text-emerald-800">{total > 0 ? fmt(total) : "—"}</td>;
+                        return <td key={m} className="p-1 text-center bg-teal-50 border-l border-teal-200 font-mono text-emerald-800 whitespace-nowrap">{total > 0 ? fmt(total) : "—"}</td>;
                       })}
-                      <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50">{fmt(totals2025.paid)}</td>
-                      <td className="p-2 text-center font-mono text-rose-700 bg-rose-100/50">{fmt(totals2025.remaining)}</td>
-                      <td></td>
+                      <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50 whitespace-nowrap">{fmt(totals2025.paid)}</td>
+                      <td className="p-2 text-center font-mono text-rose-700 bg-rose-100/50 whitespace-nowrap">{fmt(totals2025.remaining)}</td>
+                      <td className="whitespace-nowrap"></td>
                     </tr>
                   </>
                 )}
@@ -487,19 +486,19 @@ export default function InstallmentsTab() {
         <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2026} columns={3} />
           <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
-            <table className="w-full text-xs sm:text-sm table-auto">
+            <table className="w-full text-xs sm:text-sm">
               <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
                 <tr>
-                  <th className="p-2 text-center w-auto">#</th>
-                  <th className="p-2 text-center min-w-[120px] max-w-[200px] whitespace-normal break-words">اسم المتدرب</th>
-                  <th className="p-2 text-center w-auto">دفعة</th>
-                  <th className="p-2 text-center min-w-[100px] max-w-[180px] whitespace-normal break-words">المساق</th>
-                  <th className="p-2 text-center bg-amber-50 text-amber-900 w-auto">مدور 2025</th>
+                  <th className="p-2 text-center whitespace-nowrap">#</th>
+                  <th className="p-2 text-center whitespace-nowrap">اسم المتدرب</th>
+                  <th className="p-2 text-center whitespace-nowrap">دفعة</th>
+                  <th className="p-2 text-center whitespace-nowrap">المساق</th>
+                  <th className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap">مدور 2025</th>
                   {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m.trim()}</th>)}
-                  <th className="p-2 text-center text-emerald-700 w-auto">مسدد 2026</th>
-                  <th className="p-2 text-center text-rose-700 w-auto">الرصيد المتبقي</th>
-                  <th className="p-2 text-center w-auto">حالة</th>
-                  <th className="p-2 text-center w-auto">طباعة</th>
+                  <th className="p-2 text-center text-emerald-700 whitespace-nowrap">مسدد 2026</th>
+                  <th className="p-2 text-center text-rose-700 whitespace-nowrap">الرصيد المتبقي</th>
+                  <th className="p-2 text-center whitespace-nowrap">حالة</th>
+                  <th className="p-2 text-center whitespace-nowrap">طباعة</th>
                 </tr>
               </thead>
               <tbody>
@@ -511,16 +510,16 @@ export default function InstallmentsTab() {
                       const status = getStatusText(r.remaining);
                       return (
                         <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
-                          <td className="p-2 text-center text-slate-500">{i + 1}</td>
-                          <td className="p-2 text-center font-semibold text-slate-900 whitespace-normal break-words max-w-[200px]">{r.name}</td>
-                          <td className="p-2 text-center text-slate-600">{r.batch || "—"}</td>
-                          <td className="p-2 text-center text-slate-600 whitespace-normal break-words max-w-[180px]">{r.specialty || "—"}</td>
-                          <td className="p-2 text-center font-mono text-amber-700 font-bold bg-amber-50/20">{fmt(r.prevDue)}</td>
+                          <td className="p-2 text-center text-slate-500 whitespace-nowrap">{i + 1}</td>
+                          <td className="p-2 text-center font-semibold text-slate-900 whitespace-nowrap">{r.name}</td>
+                          <td className="p-2 text-center text-slate-600 whitespace-nowrap">{r.batch || "—"}</td>
+                          <td className="p-2 text-center text-slate-600 whitespace-nowrap">{r.specialty || "—"}</td>
+                          <td className="p-2 text-center font-mono text-amber-700 font-bold bg-amber-50/20 whitespace-nowrap">{fmt(r.prevDue)}</td>
                           {MONTHS_2026.map(m => {
                             const paid = Number(r.payments?.[m]) || 0;
                             const cellId = `${r.name}-${m}`;
                             return (
-                              <td key={m} className="p-1 text-center relative bg-slate-50/50 border-l border-slate-200 hover:bg-slate-100 cursor-pointer group transition-colors"
+                              <td key={m} className="p-1 text-center relative bg-slate-50/50 border-l border-slate-200 hover:bg-slate-100 cursor-pointer group transition-colors whitespace-nowrap"
                                 onMouseEnter={() => setHoveredCell(cellId)} onMouseLeave={() => setHoveredCell(null)}>
                                 {paid > 0 ? (
                                   <div className="relative flex justify-center">
@@ -538,10 +537,10 @@ export default function InstallmentsTab() {
                               </td>
                             );
                           })}
-                          <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30">{fmt(r.totalPaid)}</td>
-                          <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30">{fmt(r.remaining)}</td>
-                          <td className="p-2 text-center"><span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color}`}>{status.text}</span></td>
-                          <td className="p-2 text-center">
+                          <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">{fmt(r.totalPaid)}</td>
+                          <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">{fmt(r.remaining)}</td>
+                          <td className="p-2 text-center whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color}`}>{status.text}</span></td>
+                          <td className="p-2 text-center whitespace-nowrap">
                             <button onClick={() => printStatement(r, 2026)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors">
                               <Printer className="w-3.5 h-3.5 mx-auto" />
                             </button>
@@ -550,15 +549,15 @@ export default function InstallmentsTab() {
                       );
                     })}
                     <tr className="border-t-2 border-purple-300 bg-purple-50 font-bold text-purple-900">
-                      <td className="p-2 text-center" colSpan={4}>الإجمالي العام</td>
-                      <td className="p-2 text-center font-mono text-amber-700 bg-amber-100/30">{fmt(totals2026.prevDue)}</td>
+                      <td className="p-2 text-center whitespace-nowrap" colSpan={4}>الإجمالي العام</td>
+                      <td className="p-2 text-center font-mono text-amber-700 bg-amber-100/30 whitespace-nowrap">{fmt(totals2026.prevDue)}</td>
                       {MONTHS_2026.map(m => {
                         const total = controls2026.rows.reduce((sum, r) => sum + (Number(r.payments?.[m]) || 0), 0);
-                        return <td key={m} className="p-1 text-center bg-purple-50 border-l border-purple-200 font-mono text-emerald-800">{total > 0 ? fmt(total) : "—"}</td>;
+                        return <td key={m} className="p-1 text-center bg-purple-50 border-l border-purple-200 font-mono text-emerald-800 whitespace-nowrap">{total > 0 ? fmt(total) : "—"}</td>;
                       })}
-                      <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50">{fmt(totals2026.paid)}</td>
-                      <td className="p-2 text-center font-mono text-rose-700 bg-rose-100/50">{fmt(totals2026.remaining)}</td>
-                      <td></td><td></td>
+                      <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50 whitespace-nowrap">{fmt(totals2026.paid)}</td>
+                      <td className="p-2 text-center font-mono text-rose-700 bg-rose-100/50 whitespace-nowrap">{fmt(totals2026.remaining)}</td>
+                      <td className="whitespace-nowrap"></td><td className="whitespace-nowrap"></td>
                     </tr>
                   </>
                 )}
@@ -569,7 +568,6 @@ export default function InstallmentsTab() {
       </div>
 
       {/* ========== النوافذ المنبثقة ========== */}
-      {/* باقي الأكواد الخاصة بالنوافذ المنبثقة بقيت كما هي لعدم حاجتها لتعديل */}
       <Modal title="➕ إضافة قسط جديد - 2026" isOpen={newPaymentModal} onClose={() => setNewPaymentModal(false)}>
         <form onSubmit={addNewPayment} className="space-y-3">
           <div className="relative">
