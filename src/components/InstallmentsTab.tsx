@@ -283,7 +283,7 @@ export default function InstallmentsTab() {
           .wrap { max-width: 760px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; }
           .top { background: linear-gradient(90deg, #0f766e, #14b8a6); color: #fff; padding: 14px 20px; font-size: 20px; font-weight: 800; }
           .body { padding: 18px 20px 22px; }
-          .title { text-align: right; }
+          .title { text-align: center; }
           .title h2 { margin: 0; color: #0f172a; font-size: 18px; font-weight: 800; }
           .title p { margin: 4px 0 0; color: #64748b; font-size: 13px; font-weight: 500; }
           .divider { height: 1px; background: #e2e8f0; margin: 14px 0 16px; }
@@ -295,7 +295,7 @@ export default function InstallmentsTab() {
           thead th { background: #e0f2fe; color: #0c4a6e; font-weight: 800; padding: 10px; font-size: 14px; border-bottom: 1px solid #cbd5e1; text-align: center; }
           tbody td { padding: 9px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
           tbody tr:last-child td { border-bottom: none; }
-          td.lbl { text-align: right; color: #1e293b; }
+          td.lbl { text-align: center; color: #1e293b; }
           td.num { text-align: center; font-family: 'Cairo', monospace; font-weight: 700; width: 38%; }
           td.due { color: #dc2626; }
           td.pay { color: #2563eb; }
@@ -472,7 +472,7 @@ export default function InstallmentsTab() {
                 { key: "name", label: "اسم المتدرب" },
                 { key: "batch", label: "الدفعة" },
                 { key: "specialty", label: "المساق" },
-                { key: "prevDue", label: "مدور 2025" },
+                { key: "prevDue", label: "المتبقي من 2025" },
                 { key: "fees", label: "الرسوم" },
                 { key: "totalPaid", label: "المسدد" },
                 { key: "remaining", label: "المتبقي" },
@@ -493,7 +493,7 @@ export default function InstallmentsTab() {
                   <th className="p-2 text-center whitespace-nowrap">اسم المتدرب</th>
                   <th className="p-2 text-center whitespace-nowrap">دفعة</th>
                   <th className="p-2 text-center whitespace-nowrap">المساق</th>
-                  <th className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap">مدور 2025</th>
+                  <th className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap">المتبقي من 2025</th>
                   {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m.trim()}</th>)}
                   <th className="p-2 text-center text-emerald-700 whitespace-nowrap">مسدد 2026</th>
                   <th className="p-2 text-center text-rose-700 whitespace-nowrap">الرصيد المتبقي</th>
