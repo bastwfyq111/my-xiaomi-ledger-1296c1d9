@@ -42,7 +42,7 @@ export default function ImportButton({ kind }: { kind: ImportKind }) {
   };
 
   return (
-    <label className="px-3 py-1.5 border-2 border-primary text-primary rounded-lg text-sm font-semibold cursor-pointer hover:bg-primary/5 inline-flex items-center gap-1">
+    <label className="px-3 py-1.5 border-2 border-primary text-White rounded-lg text-sm font-semibold cursor-pointer hover:bg-primary/5 inline-flex items-center gap-1">
       استيراد Excel
       <input ref={ref} type="file" accept=".xlsx,.xls" onChange={onFile} className="hidden" />
     </label>
