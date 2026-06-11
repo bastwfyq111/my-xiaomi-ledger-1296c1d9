@@ -74,74 +74,24 @@
     -webkit-tap-highlight-color: transparent;
   }
   h1, h2, h3, h4 { font-family: 'Cairo', 'Tajawal', sans-serif; font-weight: 800; letter-spacing: -0.01em; }
-  table { font-feature-settings: "tnum" 1, "lnum" 1; }
-  th { font-weight: 700; }
   
-  /* ======================================== */
-  /* تنسيق الجداول - محاذاة مركزية واحتواء النصوص */
-  /* ======================================== */
+  /* تنسيق الجداول: مواءمة العرض، منع الالتفاف، ومحاذاة سنتر */
   table { 
     width: 100%; 
     border-collapse: collapse; 
+    font-feature-settings: "tnum" 1, "lnum" 1; 
   }
-  
-  table th, 
-  table td {
-    white-space: nowrap;        /* يسمح بتفاف النص */
-     /* يكسر الكلمات الطويلة */
-     /* يكسر النص عند الحاجة */
-    border: 1px solid #000 !important;
-    vertical-align: middle;     /* محاذاة عمودية في المنتصف */
-    text-align: center;         /* محاذاة أفقية في المنتصف (افتراضي) */
-    padding: 0.5rem;           /* Padding ثابت ومريح */
+  th { 
+    font-weight: 700; 
   }
-  
-  /* تخصيص العمود الأول (الأرقام التسلسلية) */
-  table td:first-child,
-  table th:first-child {
-    text-align: center;
-    width: 50px;
+  table th, table td {
+    text-align: center;         /* محاذاة أفقية إلى الوسط */
+    vertical-align: middle;       /* محاذاة عمودية إلى الوسط */
+    white-space: nowrap;          /* منع التفاف النص نهائياً */
+    padding: 10px 14px;           /* حشوة متناسقة ومناسبة للارتفاع والعرض */
+    border: 1px solid #000 !important; /* حدود سوداء موحدة */
   }
-  
-  /* للأعمدة التي تحتوي على أسماء طويلة */
-  table td:nth-child(2),
-  table th:nth-child(2) {
-    min-width: 140px;
-    max-width: 220px;
-  }
-  
-  /* منع تكسر الصفوف في رأس الجدول */
-  table thead th {
-    white-space: nowrap;       /* عدم التفاف النص في رأس الجدول */
-    text-align: center;
-    vertical-align: middle;
-  }
-  
-  /* جعل صف الإجماليات بارزًا */
-  table tfoot td {
-    font-weight: 800;
-    text-align: center;
-    background-color: var(--muted);
-    border-top: 2px solid #000 !important;
-  }
-  
-  /* تنسيق حقول الإدخال داخل الجداول */
-  table input {
-    text-align: center;
-    font-size: inherit;
-    padding: 0.25rem;
-    margin: -0.25rem;
-    width: calc(100% + 0.5rem);
-    border-radius: 4px;
-  }
-  
-  /* تنسيق خاص للأعمدة المالية */
-  td:has(> .font-mono),
-  td.font-mono {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-weight: 600;
-  }
-  
+
   .font-mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
   button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   
@@ -149,7 +99,6 @@
   input, select, textarea {
     font-size: 16px;
   }
-  
   /* Smooth touch scrolling for horizontally-scrolling tables */
   .overflow-x-auto { -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
 }
@@ -167,27 +116,15 @@
   .safe-pad-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   .safe-pad-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
   
-  /* تحسين حجم الجدول على الموبايل */
+  /* تقليص حجم الخط والحشوة في الجوال ليتناسب العرض مع الشاشات الصغيرة */
   table { 
-    font-size: 11px; 
+    font-size: 12px; 
   }
-  
-  table th,
-  table td {
-    padding: 0.35rem;
+  table th, table td {
+    padding: 6px 8px; /* حشوة أصغر للموبايل */
   }
-  
-  /* على الموبايل، يمكن أن يتفاف النص في الرأس إذا احتاج */
-  table thead th {
-    white-space: nowrap;
-    min-width: 70px;
-  }
-  
-  /* تصغير حجم حقول الإدخال في الجدول للموبايل */
-  table input {
-    font-size: 12px;
-    padding: 0.2rem;
-  }
+  /* Ensure inputs inside table filter rows don't trigger zoom but stay compact visually */
+  table input { font-size: 14px; padding: 4px 6px; }
 }
 
 @media print {
