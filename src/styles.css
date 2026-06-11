@@ -76,20 +76,80 @@
   h1, h2, h3, h4 { font-family: 'Cairo', 'Tajawal', sans-serif; font-weight: 800; letter-spacing: -0.01em; }
   table { font-feature-settings: "tnum" 1, "lnum" 1; }
   th { font-weight: 700; }
-  /* احتواء الخلايا ضمن النص وحدود سوداء موحدة لجميع الجداول */
-  table { width: 100%; border-collapse: collapse; }
-  table th, table td {
-    white-space: normal;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-    border: 1px solid #000 !important;
+  
+  /* ======================================== */
+  /* تنسيق الجداول - محاذاة مركزية واحتواء النصوص */
+  /* ======================================== */
+  table { 
+    width: 100%; 
+    border-collapse: collapse; 
   }
+  
+  table th, 
+  table td {
+    white-space: normal;        /* يسمح بتفاف النص */
+    overflow-wrap: anywhere;    /* يكسر الكلمات الطويلة */
+    word-break: break-word;     /* يكسر النص عند الحاجة */
+    border: 1px solid #000 !important;
+    vertical-align: middle;     /* محاذاة عمودية في المنتصف */
+    text-align: center;         /* محاذاة أفقية في المنتصف (افتراضي) */
+    padding: 0.5rem;           /* Padding ثابت ومريح */
+  }
+  
+  /* تخصيص العمود الأول (الأرقام التسلسلية) */
+  table td:first-child,
+  table th:first-child {
+    text-align: center;
+    width: 50px;
+  }
+  
+  /* للأعمدة التي تحتوي على أسماء طويلة */
+  table td:nth-child(2),
+  table th:nth-child(2) {
+    min-width: 140px;
+    max-width: 220px;
+  }
+  
+  /* منع تكسر الصفوف في رأس الجدول */
+  table thead th {
+    white-space: nowrap;       /* عدم التفاف النص في رأس الجدول */
+    text-align: center;
+    vertical-align: middle;
+  }
+  
+  /* جعل صف الإجماليات بارزًا */
+  table tfoot td {
+    font-weight: 800;
+    text-align: center;
+    background-color: var(--muted);
+    border-top: 2px solid #000 !important;
+  }
+  
+  /* تنسيق حقول الإدخال داخل الجداول */
+  table input {
+    text-align: center;
+    font-size: inherit;
+    padding: 0.25rem;
+    margin: -0.25rem;
+    width: calc(100% + 0.5rem);
+    border-radius: 4px;
+  }
+  
+  /* تنسيق خاص للأعمدة المالية */
+  td:has(> .font-mono),
+  td.font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 600;
+  }
+  
   .font-mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
   button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  
   /* Prevent iOS / MIUI auto-zoom on focus by enforcing 16px minimum */
   input, select, textarea {
     font-size: 16px;
   }
+  
   /* Smooth touch scrolling for horizontally-scrolling tables */
   .overflow-x-auto { -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
 }
@@ -106,10 +166,28 @@
   .safe-pad-x { padding-left: max(0.75rem, env(safe-area-inset-left)); padding-right: max(0.75rem, env(safe-area-inset-right)); }
   .safe-pad-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   .safe-pad-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
-  /* Smaller table cell font on mobile is OK (tnum already applied) */
-  table { font-size: 12px; }
-  /* Ensure inputs inside table filter rows don't trigger zoom but stay compact visually */
-  table input { font-size: 14px; padding: 4px 6px; }
+  
+  /* تحسين حجم الجدول على الموبايل */
+  table { 
+    font-size: 11px; 
+  }
+  
+  table th,
+  table td {
+    padding: 0.35rem;
+  }
+  
+  /* على الموبايل، يمكن أن يتفاف النص في الرأس إذا احتاج */
+  table thead th {
+    white-space: normal;
+    min-width: 70px;
+  }
+  
+  /* تصغير حجم حقول الإدخال في الجدول للموبايل */
+  table input {
+    font-size: 12px;
+    padding: 0.2rem;
+  }
 }
 
 @media print {
