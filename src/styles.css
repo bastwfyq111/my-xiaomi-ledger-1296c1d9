@@ -87,9 +87,9 @@
   
   table th, 
   table td {
-    white-space: normal;        /* يسمح بتفاف النص */
-    overflow-wrap: anywhere;    /* يكسر الكلمات الطويلة */
-    word-break: break-word;     /* يكسر النص عند الحاجة */
+    white-space: nowrap;        /* يسمح بتفاف النص */
+     /* يكسر الكلمات الطويلة */
+     /* يكسر النص عند الحاجة */
     border: 1px solid #000 !important;
     vertical-align: middle;     /* محاذاة عمودية في المنتصف */
     text-align: center;         /* محاذاة أفقية في المنتصف (افتراضي) */
@@ -179,7 +179,7 @@
   
   /* على الموبايل، يمكن أن يتفاف النص في الرأس إذا احتاج */
   table thead th {
-    white-space: normal;
+    white-space: nowrap;
     min-width: 70px;
   }
   
