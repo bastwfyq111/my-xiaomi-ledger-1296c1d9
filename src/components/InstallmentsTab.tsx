@@ -7,7 +7,7 @@ import { useTableControls } from "@/hooks/useTableControls";
 import { X, Printer, AlertCircle } from "lucide-react";
 import TabActions from "./TabActions";
 
-// مصفوفات الأشهر مطابقة تماماً للمسميات داخل ملفات الإكسيل المرفقة
+// مصفوفات الأشهر
 const MONTHS_2025 = [
   "يونيو 2024", "يوليو 2024", "أغسطس 2024", 
   "مارس 2025", "ابريل 2025", "مايو 2025", 
@@ -20,13 +20,13 @@ const MONTHS_2026 = [
   "يوليو", "اغسطس", "سبتمبر", "اكتوبر ", "نوفمبر", "ديسمبر"
 ];
 
-// دالة لتنظيف وتحويل القيم النصية الفارغة إلى أرقام
+// دالة لتنظيف وتحويل القيم النصية
 const cleanNumber = (val: any): number => {
   if (!val || isNaN(Number(String(val).replace(/[^0-9.-]/g, "")))) return 0;
   return Number(String(val).replace(/[^0-9.-]/g, "")) || 0;
 };
 
-// مكون لعرض الإحصائيات
+// مكون الإحصائيات
 const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) => {
   const colClass = columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3";
   return (
@@ -72,7 +72,6 @@ export default function InstallmentsTab() {
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
-  // ربط أدوات التحكم بالبحث والفلترة
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining"]);
   const controls2025 = useTableControls(installments2025 || [], ["name", "batch", "specialty", "fees", "totalPaid", "remaining"]);
 
@@ -231,10 +230,10 @@ export default function InstallmentsTab() {
             useStore.setState({ installments: formattedData });
         }
         
-        toast.success(`تم استيراد بيانات العام ${year} بنجاح من ملف التميز!`);
+        toast.success(`تم استيراد بيانات العام ${year} بنجاح!`);
         setImportError(null);
       } catch (error) {
-        setImportError("حدث خطأ في قراءة ملف الإكسيل، يرجى مراجعة ترويسة الجدول.");
+        setImportError("حدث خطأ في قراءة الملف.");
         toast.error("فشل استيراد الملف");
       }
     };
@@ -243,6 +242,7 @@ export default function InstallmentsTab() {
 
   const getStatusText = (rem: number) => rem <= 0 ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" } : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
 
+  // الدالة المعدلة والمحسنة للطباعة
   const generateAccountStatement = (row: any, year: number) => {
     const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
     const fees = cleanNumber(row.fees);
@@ -255,19 +255,29 @@ export default function InstallmentsTab() {
       .map((m) => {
         const amount = Number(row.payments?.[m]) || 0;
         if (amount <= 0) return "";
-        return `<tr><td class="lbl">سداد شهر ${m} (له)</td><td class="num pay">${fmt(amount)}</td></tr>`;
+        return `
+          <tr class="row-paid">
+            <td class="lbl">سداد شهر ${m}</td>
+            <td class="num pay">${fmt(amount)}</td>
+          </tr>`;
       })
       .join("");
 
     const infoCard = (label: string, value: string) =>
-      `<div class="info"><div class="info-lbl">${label}</div><div class="info-val">${value || "—"}</div></div>`;
+      `<div class="info-box">
+        <div class="info-lbl">${label}</div>
+        <div class="info-val">${value || "—"}</div>
+      </div>`;
 
     const prevRow = year === 2026
-      ? `<tr><td class="lbl">متبقي من العام 2025 (عليه)</td><td class="num due">${fmt(prevDue)}</td></tr>`
+      ? `<tr class="row-due-old">
+          <td class="lbl">متبقي من العام 2025 (مدور)</td>
+          <td class="num due">${fmt(prevDue)}</td>
+        </tr>`
       : "";
 
-    const remainingLabel = remaining > 0 ? "الرصيد المتبقي عليه" : remaining < 0 ? "الرصيد له" : "تم السداد بالكامل";
-    const remainingClass = remaining > 0 ? "due" : "pay";
+    const remainingLabel = remaining > 0 ? "الرصيد المتبقي (عليه)" : remaining < 0 ? "الرصيد الإضافي (له)" : "الحالة: تم السداد بالكامل";
+    const remainingClass = remaining > 0 ? "text-red-600" : "text-emerald-600";
 
     return `
       <html dir="rtl" lang="ar">
@@ -275,63 +285,66 @@ export default function InstallmentsTab() {
         <meta charset="utf-8" />
         <title>كشف حساب - ${row.name}</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;800&family=Tajawal:wght@400;500;700&display=swap">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
         <style>
-          @page { size: A4 portrait; margin: 10mm; }
-          * { box-sizing: border-box; }
-          body { font-family: 'Cairo','Tajawal',Tahoma,Arial,sans-serif; direction: rtl; color: #0f172a; background: #fff; margin: 0; padding: 16px; }
-          .wrap { max-width: 760px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; }
-          .top { background: linear-gradient(90deg, #0f766e, #14b8a6); color: #fff; padding: 14px 20px; font-size: 20px; font-weight: 800; }
-          .body { padding: 18px 20px 22px; }
-          .title { text-align: center; }
-          .title h2 { margin: 0; color: #0f172a; font-size: 18px; font-weight: 800; }
-          .title p { margin: 4px 0 0; color: #64748b; font-size: 13px; font-weight: 500; }
-          .divider { height: 1px; background: #e2e8f0; margin: 14px 0 16px; }
-          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
-          .info { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; }
-          .info-lbl { font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 2px; }
-          .info-val { font-size: 14px; color: #0f172a; font-weight: 700; }
-          table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; }
-          thead th { background: #e0f2fe; color: #0c4a6e; font-weight: 800; padding: 10px; font-size: 14px; border-bottom: 1px solid #cbd5e1; text-align: center; }
-          tbody td { padding: 9px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
-          tbody tr:last-child td { border-bottom: none; }
-          td.lbl { text-align: center; color: #1e293b; }
-          td.num { text-align: center; font-family: 'Cairo', monospace; font-weight: 700; width: 38%; }
-          td.due { color: #dc2626; }
-          td.pay { color: #2563eb; }
-          tr.sub td { background: #e0f2fe; font-weight: 800; color: #0c4a6e; }
-          tr.sub-pay td { background: #dbeafe; font-weight: 800; color: #1d4ed8; }
-          tr.final td { background: #fee2e2; font-weight: 800; }
-          tr.final td.lbl { color: #991b1b; }
-          @media print { body { padding: 0; } .wrap { border: none; } }
+          @page { size: A4; margin: 0; }
+          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 0; background-color: #f8fafc; display: flex; justify-content: center; }
+          .container { width: 210mm; min-height: 297mm; background: white; padding: 20mm; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%); color: white; padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 30px; }
+          .header h1 { margin: 0; font-size: 32px; font-weight: 800; }
+          .header p { margin: 10px 0 0; font-size: 18px; opacity: 0.9; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+          .info-box { background: #f1f5f9; padding: 15px; border-radius: 10px; border-right: 5px solid #0f766e; }
+          .info-lbl { font-size: 14px; color: #64748b; font-weight: 600; }
+          .info-val { font-size: 20px; color: #0f172a; font-weight: 800; margin-top: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 18px; }
+          th { background-color: #e2e8f0; color: #1e293b; padding: 15px; font-size: 20px; border: 2px solid #cbd5e1; }
+          td { padding: 15px; border: 1px solid #cbd5e1; text-align: center; }
+          .lbl { text-align: right; font-weight: 600; color: #334155; }
+          .num { font-family: monospace; font-weight: 800; font-size: 22px; }
+          .row-paid { background-color: #f0fdf4; }
+          .row-paid td { color: #16a34a; }
+          .row-due-old { background-color: #fff7ed; }
+          .row-due-old td.due { color: #ea580c; }
+          .row-total-due { background-color: #f8fafc; font-weight: 800; font-size: 22px; }
+          .row-total-paid { background-color: #ecfdf5; font-weight: 800; font-size: 22px; color: #059669 !important; }
+          .row-final { background-color: #fef2f2; font-weight: 800; font-size: 24px; }
+          .footer { margin-top: 50px; text-align: center; border-top: 2px dashed #e2e8f0; padding-top: 20px; color: #94a3b8; font-size: 14px; }
+          @media print { body { background: white; } .container { box-shadow: none; padding: 10mm; width: 100%; } }
         </style>
       </head>
       <body>
-        <div class="wrap">
-          <div class="top">كشف حساب</div>
-          <div class="body">
-            <div class="title">
-              <h2>المجلس اليمني للاختصاصات الطبية - صعدة</h2>
-              <p>كشف حساب أقساط - العام ${year}م</p>
-            </div>
-            <div class="divider"></div>
-            <div class="grid">
-              ${infoCard("الاسم", row.name)}
-              ${infoCard("الدفعة", row.batch)}
-              ${infoCard("المساق", row.specialty)}
-              ${infoCard("رقم الهاتف", row.phone)}
-            </div>
-            <table>
-              <thead><tr><th style="width:62%">البيان</th><th>المبلغ</th></tr></thead>
-              <tbody>
-                <tr><td class="lbl">رسوم الدراسة</td><td class="num">${fmt(fees)}</td></tr>
-                ${prevRow}
-                <tr class="sub"><td class="lbl">إجمالي المستحق عليه</td><td class="num">${fmt(dueTotal)}</td></tr>
-                ${paidRows}
-                <tr class="sub-pay"><td class="lbl">إجمالي المسدد (له)</td><td class="num pay">${fmt(totalPaid)}</td></tr>
-                <tr class="final"><td class="lbl">${remainingLabel}</td><td class="num ${remainingClass}">${fmt(Math.abs(remaining))}</td></tr>
-              </tbody>
-            </table>
+        <div class="container">
+          <div class="header">
+            <h1>المجلس اليمني للاختصاصات الطبية</h1>
+            <p>كشف حساب رسمي - العام ${year}م</p>
+          </div>
+          <div class="info-grid">
+            ${infoCard("اسم المتدرب", row.name)}
+            ${infoCard("الدفعة", row.batch)}
+            ${infoCard("المساق", row.specialty)}
+            ${infoCard("رقم الهاتف", row.phone)}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 60%">البيان</th>
+                <th style="width: 40%">المبلغ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${fmt(fees)}</td></tr>
+              ${prevRow}
+              <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${fmt(dueTotal)}</td></tr>
+              ${paidRows}
+              <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${fmt(totalPaid)}</td></tr>
+              <tr class="row-final"><td class="lbl">${remainingLabel}</td><td class="num ${remainingClass}">${fmt(Math.abs(remaining))}</td></tr>
+            </tbody>
+          </table>
+          <div class="footer">
+            <p>تم استخراج هذا الكشف آلياً بتاريخ: ${new Date().toLocaleDateString('ar-YE')}</p>
+            <p>شكرًا لتعاملكم معنا</p>
           </div>
         </div>
       </body>
@@ -345,7 +358,7 @@ export default function InstallmentsTab() {
     if (w) { 
       w.document.write(html); 
       w.document.close(); 
-      setTimeout(() => w.print(), 250); 
+      setTimeout(() => w.print(), 500); 
     }
   };
 
