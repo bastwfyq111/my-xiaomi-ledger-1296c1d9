@@ -243,6 +243,7 @@ export default function InstallmentsTab() {
   const getStatusText = (rem: number) => rem <= 0 ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" } : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
 
   // الدالة المعدلة والمحسنة للطباعة
+  // الدالة المعدلة والمحسنة للطباعة - نسخة عالية التباين للطباعة الواضحة
   const generateAccountStatement = (row: any, year: number) => {
     const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
     const fees = cleanNumber(row.fees);
@@ -256,9 +257,9 @@ export default function InstallmentsTab() {
         const amount = Number(row.payments?.[m]) || 0;
         if (amount <= 0) return "";
         return `
-          <tr class="row-paid">
+          <tr>
             <td class="lbl">سداد شهر ${m}</td>
-            <td class="num pay">${fmt(amount)}</td>
+            <td class="num">${fmt(amount)}</td>
           </tr>`;
       })
       .join("");
@@ -272,12 +273,11 @@ export default function InstallmentsTab() {
     const prevRow = year === 2026
       ? `<tr class="row-due-old">
           <td class="lbl">متبقي من العام 2025 (مدور)</td>
-          <td class="num due">${fmt(prevDue)}</td>
+          <td class="num">${fmt(prevDue)}</td>
         </tr>`
       : "";
 
     const remainingLabel = remaining > 0 ? "الرصيد المتبقي (عليه)" : remaining < 0 ? "الرصيد الإضافي (له)" : "الحالة: تم السداد بالكامل";
-    const remainingClass = remaining > 0 ? "text-red-600" : "text-emerald-600";
 
     return `
       <html dir="rtl" lang="ar">
@@ -289,29 +289,43 @@ export default function InstallmentsTab() {
         <style>
           @page { size: A4; margin: 0; }
           * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 0; background-color: #f8fafc; display: flex; justify-content: center; }
-          .container { width: 210mm; min-height: 297mm; background: white; padding: 20mm; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-          .header { background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%); color: white; padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 30px; }
-          .header h1 { margin: 0; font-size: 32px; font-weight: 800; }
-          .header p { margin: 10px 0 0; font-size: 18px; opacity: 0.9; }
-          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
-          .info-box { background: #f1f5f9; padding: 15px; border-radius: 10px; border-right: 5px solid #0f766e; }
-          .info-lbl { font-size: 14px; color: #64748b; font-weight: 600; }
-          .info-val { font-size: 20px; color: #0f172a; font-weight: 800; margin-top: 5px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 18px; }
-          th { background-color: #e2e8f0; color: #1e293b; padding: 15px; font-size: 20px; border: 2px solid #cbd5e1; }
-          td { padding: 15px; border: 1px solid #cbd5e1; text-align: center; }
-          .lbl { text-align: right; font-weight: 600; color: #334155; }
-          .num { font-family: monospace; font-weight: 800; font-size: 22px; }
-          .row-paid { background-color: #f0fdf4; }
-          .row-paid td { color: #16a34a; }
-          .row-due-old { background-color: #fff7ed; }
-          .row-due-old td.due { color: #ea580c; }
-          .row-total-due { background-color: #f8fafc; font-weight: 800; font-size: 22px; }
-          .row-total-paid { background-color: #ecfdf5; font-weight: 800; font-size: 22px; color: #059669 !important; }
-          .row-final { background-color: #fef2f2; font-weight: 800; font-size: 24px; }
-          .footer { margin-top: 50px; text-align: center; border-top: 2px dashed #e2e8f0; padding-top: 20px; color: #94a3b8; font-size: 14px; }
-          @media print { body { background: white; } .container { box-shadow: none; padding: 10mm; width: 100%; } }
+          body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; }
+          .container { width: 210mm; min-height: 297mm; background: white; padding: 15mm; }
+          
+          /* الهيدر - جعلته داكن ليكون واضحاً جداً */
+          .header { background: #1e293b; color: white; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px solid #000; }
+          .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
+          .header p { margin: 10px 0 0; font-size: 18px; opacity: 1; }
+
+          /* شبكة المعلومات */
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+          .info-box { border: 1.5px solid #000; padding: 12px; border-radius: 8px; text-align: center; }
+          .info-lbl { font-size: 14px; color: #334155; font-weight: 600; }
+          .info-val { font-size: 18px; color: #000; font-weight: 800; margin-top: 5px; }
+
+          /* الجدول - تعديلات المحاذاة والحدود السوداء */
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th { background-color: #f1f5f9 !important; color: #000; padding: 12px; font-size: 18px; border: 2px solid #000; text-align: center; }
+          td { padding: 12px; border: 1.5px solid #000; text-align: center; font-size: 18px; }
+          
+          /* محاذاة النصوص للوسط في جميع الخلايا */
+          .lbl { text-align: center; font-weight: 600; color: #000; }
+          .num { text-align: center; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
+
+          /* تمييز الصفوف بظلال رمادية خفيفة للطباعة */
+          .row-paid { background-color: #f8fafc !important; }
+          .row-due-old { background-color: #f1f5f9 !important; }
+          .row-total-due { background-color: #e2e8f0 !important; font-weight: 800; }
+          .row-total-paid { background-color: #f0fdf4 !important; font-weight: 800; color: #16a34a !important; }
+          .row-final { background-color: #fef2f2 !important; font-weight: 800; font-size: 22px; border: 3px solid #000; }
+
+          .footer { margin-top: 40px; text-align: center; border-top: 2px solid #000; padding-top: 15px; color: #000; font-size: 14px; }
+
+          @media print { 
+            body { background: white; } 
+            .container { box-shadow: none; padding: 10mm; width: 100%; }
+            th { background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; }
+          }
         </style>
       </head>
       <body>
@@ -320,12 +334,14 @@ export default function InstallmentsTab() {
             <h1>المجلس اليمني للاختصاصات الطبية</h1>
             <p>كشف حساب رسمي - العام ${year}م</p>
           </div>
+          
           <div class="info-grid">
             ${infoCard("اسم المتدرب", row.name)}
             ${infoCard("الدفعة", row.batch)}
             ${infoCard("المساق", row.specialty)}
             ${infoCard("رقم الهاتف", row.phone)}
           </div>
+
           <table>
             <thead>
               <tr>
@@ -339,9 +355,10 @@ export default function InstallmentsTab() {
               <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${fmt(dueTotal)}</td></tr>
               ${paidRows}
               <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${fmt(totalPaid)}</td></tr>
-              <tr class="row-final"><td class="lbl">${remainingLabel}</td><td class="num ${remainingClass}">${fmt(Math.abs(remaining))}</td></tr>
+              <tr class="row-final"><td class="lbl">${remainingLabel}</td><td class="num">${fmt(Math.abs(remaining))}</td></tr>
             </tbody>
           </table>
+
           <div class="footer">
             <p>تم استخراج هذا الكشف آلياً بتاريخ: ${new Date().toLocaleDateString('ar-YE')}</p>
             <p>شكرًا لتعاملكم معنا</p>
