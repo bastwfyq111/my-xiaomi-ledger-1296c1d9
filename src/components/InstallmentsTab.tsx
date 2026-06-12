@@ -304,7 +304,7 @@ export default function InstallmentsTab() {
           .info-val { font-size: 18px; color: #000; font-weight: 800; margin-top: 5px; }
 
           /* الجدول - تعديلات المحاذاة والحدود السوداء */
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          table { width: 100%; border-black: collapse; margin-top: 15px; }
           th { background-color: #f1f5f9 !important; color: #000; padding: 12px; font-size: 18px; border: 2px solid #000; text-align: center; }
           td { padding: 12px; border: 1.5px solid #000; text-align: center; font-size: 18px; }
           
@@ -332,7 +332,7 @@ export default function InstallmentsTab() {
         <div class="container">
           <div class="header">
             <h1>المجلس اليمني للاختصاصات الطبية</h1>
-            <p>كشف حساب رسمي - العام ${year}م</p>
+            <p>كشف حساب الاقساط - العام ${year}م</p>
           </div>
           
           <div class="info-grid">
@@ -359,10 +359,7 @@ export default function InstallmentsTab() {
             </tbody>
           </table>
 
-          <div class="footer">
-            <p>تم استخراج هذا الكشف آلياً بتاريخ: ${new Date().toLocaleDateString('ar-YE')}</p>
-            <p>شكرًا لتعاملكم معنا</p>
-          </div>
+    
         </div>
       </body>
       </html>
