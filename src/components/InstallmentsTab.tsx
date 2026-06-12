@@ -244,127 +244,127 @@ export default function InstallmentsTab() {
 
   // الدالة المعدلة والمحسنة للطباعة
   // الدالة المعدلة والمحسنة للطباعة - نسخة عالية التباين للطباعة الواضحة
-  const generateAccountStatement = (row: any, year: number) => {
-    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-    const fees = cleanNumber(row.fees);
-    const prevDue = cleanNumber(row.prevDue);
-    const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
-    const dueTotal = year === 2026 ? (prevDue || fees) : fees;
-    const remaining = dueTotal - totalPaid;
+  // الدالة المعدلة والمحسنة للطباعة - نسخة ملونة وعالية التباين
+const generateAccountStatement = (row: any, year: number) => {
+  const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+  const fees = cleanNumber(row.fees);
+  const prevDue = cleanNumber(row.prevDue);
+  const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
+  const dueTotal = year === 2026 ? (prevDue || fees) : fees;
+  const remaining = dueTotal - totalPaid;
 
-    const paidRows = monthsList
-      .map((m) => {
-        const amount = Number(row.payments?.[m]) || 0;
-        if (amount <= 0) return "";
-        return `
-          <tr>
-            <td class="lbl">سداد شهر ${m}</td>
-            <td class="num">${fmt(amount)}</td>
-          </tr>`;
-      })
-      .join("");
+  const paidRows = monthsList
+    .map((m) => {
+      const amount = Number(row.payments?.[m]) || 0;
+      if (amount <= 0) return "";
+      return `
+        <tr>
+          <td class="lbl">سداد شهر ${m}</td>
+          <td class="num">${fmt(amount)}</td>
+        </tr>`;
+    })
+    .join("");
 
-    const infoCard = (label: string, value: string) =>
-      `<div class="info-box">
-        <div class="info-lbl">${label}</div>
-        <div class="info-val">${value || "—"}</div>
-      </div>`;
+  const infoCard = (label: string, value: string) =>
+    `<div class="info-box">
+      <div class="info-lbl">${label}</div>
+      <div class="info-val">${value || "—"}</div>
+    </div>`;
 
-    const prevRow = year === 2026
-      ? `<tr class="row-due-old">
-          <td class="lbl">متبقي من العام 2025 (مدور)</td>
-          <td class="num">${fmt(prevDue)}</td>
-        </tr>`
-      : "";
+  const prevRow = year === 2026
+    ? `<tr class="row-due-old">
+        <td class="lbl">متبقي من العام 2025 (مدور)</td>
+        <td class="num">${fmt(prevDue)}</td>
+      </tr>`
+    : "";
 
-    const remainingLabel = remaining > 0 ? "الرصيد المتبقي (عليه)" : remaining < 0 ? "الرصيد الإضافي (له)" : "الحالة: تم السداد بالكامل";
+  const remainingLabel = remaining > 0 ? "الرصيد المتبقي (عليه)" : remaining < 0 ? "الرصيد الإضافي (له)" : "الحالة: تم السداد بالكامل";
 
-    return `
-      <html dir="rtl" lang="ar">
-      <head>
-        <meta charset="utf-8" />
-        <title>كشف حساب - ${row.name}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
-        <style>
-          @page { size: A4; margin: 0; }
-          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; }
-          .container { width: 210mm; min-height: 297mm; background: white; padding: 15mm; }
-          
-          /* الهيدر - جعلته داكن ليكون واضحاً جداً */
-          .header { background: #1e293b; color: white; padding: 25px; border-radius: 10px; text-align: center; margin-bottom: 25px; border: 2px solid #000; }
-          .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
-          .header p { margin: 10px 0 0; font-size: 18px; opacity: 1; }
+  return `
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="utf-8" />
+      <title>كشف حساب - ${row.name}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
+      <style>
+        @page { size: A4; margin: 0; }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; }
+        .container { width: 210mm; min-height: 297mm; background: white; padding: 15mm; }
+        
+        /* الهيدر - خلفية خضراء داكنة وخطوط بيضاء واضحة */
+        .header { background: #15803d !important; color: white; padding: 25px; border-radius: 8px; text-align: center; margin-bottom: 25px; border: 1px solid #000; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
+        .header p { margin: 10px 0 0; font-size: 18px; opacity: 1; }
 
-          /* شبكة المعلومات */
-          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-          .info-box { border: 1.5px solid #000; padding: 12px; border-radius: 8px; text-align: center; }
-          .info-lbl { font-size: 14px; color: #334155; font-weight: 600; }
-          .info-val { font-size: 18px; color: #000; font-weight: 800; margin-top: 5px; }
+        /* شبكة المعلومات */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .info-box { border: 1px solid #000; padding: 12px; border-radius: 8px; text-align: center; }
+        .info-lbl { font-size: 14px; color: #1e293b; font-weight: 800; } /* خط أغمق */
+        .info-val { font-size: 18px; color: #000; font-weight: 800; margin-top: 5px; }
 
-          /* الجدول - تعديلات المحاذاة والحدود السوداء */
-          table { width: 100%; border-black: collapse; margin-top: 15px; }
-          th { background-color: #f1f5f9 !important; color: #000; padding: 12px; font-size: 18px; border: 2px solid #000; text-align: center; }
-          td { padding: 12px; border: 1.5px solid #000; text-align: center; font-size: 18px; }
-          
-          /* محاذاة النصوص للوسط في جميع الخلايا */
-          .lbl { text-align: center; font-weight: 600; color: #000; }
-          .num { text-align: center; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
+        /* الجدول - حدود 1px ولون رأس الجدول أخضر متناسق */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background-color: #166534 !important; color: #ffffff !important; padding: 12px; font-size: 18px; border: 1px solid #000; text-align: center; font-weight: 800; }
+        td { padding: 12px; border: 1px solid #000; text-align: center; font-size: 18px; }
+        
+        /* محاذاة العناوين الرئيسية والخط الغامق */
+        .lbl { text-align: right; padding-right: 15px; font-weight: 800; color: #000; }
+        .num { text-align: left; padding-left: 15px; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
 
-          /* تمييز الصفوف بظلال رمادية خفيفة للطباعة */
-          .row-paid { background-color: #f8fafc !important; }
-          .row-due-old { background-color: #f1f5f9 !important; }
-          .row-total-due { background-color: #e2e8f0 !important; font-weight: 800; }
-          .row-total-paid { background-color: #f0fdf4 !important; font-weight: 800; color: #16a34a !important; }
-          .row-final { background-color: #fef2f2 !important; font-weight: 800; font-size: 22px; border: 3px solid #000; }
+        /* تمييز الصفوف لتسهيل القراءة عند الطباعة */
+        .row-due-old { background-color: #f1f5f9 !important; }
+        .row-total-due { background-color: #e2e8f0 !important; }
+        .row-total-paid { background-color: #f0fdf4 !important; }
+        .row-final { background-color: #fef2f2 !important; font-size: 22px; border: 2px solid #000 !important; }
 
-          .footer { margin-top: 40px; text-align: center; border-top: 2px solid #000; padding-top: 15px; color: #000; font-size: 14px; }
+        .footer { margin-top: 40px; text-align: center; border-top: 1px solid #000; padding-top: 15px; color: #000; font-size: 14px; font-weight: 600; }
 
-          @media print { 
-            body { background: white; } 
-            .container { box-shadow: none; padding: 10mm; width: 100%; }
-            th { background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>المجلس اليمني للاختصاصات الطبية</h1>
-            <p>كشف حساب الاقساط - العام ${year}م</p>
-          </div>
-          
-          <div class="info-grid">
-            ${infoCard("اسم المتدرب", row.name)}
-            ${infoCard("الدفعة", row.batch)}
-            ${infoCard("المساق", row.specialty)}
-            ${infoCard("رقم الهاتف", row.phone)}
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 60%">البيان</th>
-                <th style="width: 40%">المبلغ</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${fmt(fees)}</td></tr>
-              ${prevRow}
-              <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${fmt(dueTotal)}</td></tr>
-              ${paidRows}
-              <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${fmt(totalPaid)}</td></tr>
-              <tr class="row-final"><td class="lbl">${remainingLabel}</td><td class="num">${fmt(Math.abs(remaining))}</td></tr>
-            </tbody>
-          </table>
-
-    
+        @media print { 
+          body { background: white; } 
+          .container { box-shadow: none; padding: 10mm; width: 100%; }
+          .header { background: #15803d !important; -webkit-print-color-adjust: exact; }
+          th { background-color: #166534 !important; color: #ffffff !important; -webkit-print-color-adjust: exact; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>المجلس اليمني للاختصاصات الطبية</h1>
+          <p>كشف حساب رسمي - العام ${year}م</p>
         </div>
-      </body>
-      </html>
-    `;
-  };
+        
+        <div class="info-grid">
+          ${infoCard("اسم المتدرب", row.name)}
+          ${infoCard("الدفعة", row.batch)}
+          ${infoCard("المساق", row.specialty)}
+          ${infoCard("رقم الهاتف", row.phone)}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 60%">البيان</th>
+              <th style="width: 40%">المبلغ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${fmt(fees)}</td></tr>
+            ${prevRow}
+            <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${fmt(dueTotal)}</td></tr>
+            ${paidRows}
+            <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${fmt(totalPaid)}</td></tr>
+            <tr class="row-final"><td class="lbl">${remainingLabel}</td><td class="num">${fmt(Math.abs(remaining))}</td></tr>
+          </tbody>
+        </table>
+
+      </div>
+    </body>
+    </html>
+  `;
+};
 
   const printStatement = (row: any, year: number) => {
     const html = generateAccountStatement(row, year);
