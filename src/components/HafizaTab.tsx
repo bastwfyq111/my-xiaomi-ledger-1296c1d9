@@ -136,7 +136,7 @@ export default function HafizaTab() {
   return (
     <div className="w-full space-y-6 p-0" dir="rtl">
       
-      {/* ========== 1. نموذج إدخال الحوافظ المطور زرق سماوي ناعم ========== */}
+      {/* ========== 1. نموذج إدخال الحوافظ المطور ========== */}
       <div className="w-full bg-white shadow-sm border border-black rounded-2xl overflow-hidden">
         <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 px-5 py-4 flex flex-wrap justify-between items-center gap-3 border-b-2 border-black">
           <div className="flex items-center gap-2.5">
@@ -224,7 +224,7 @@ export default function HafizaTab() {
         </div>
       </div>
 
-      {/* ========== 2. جدول مراقبة وتدقيق الحوافظ (بحدود سوداء واحتواء نصوص متميز) ========== */}
+      {/* ========== 2. جدول مراقبة وتدقيق الحوافظ ========== */}
       <div className="w-full bg-white shadow-sm border border-black rounded-xl overflow-hidden">
         <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3 border-b-2 border-black">
           <div>
@@ -233,7 +233,6 @@ export default function HafizaTab() {
               <span className="bg-slate-950/10 text-slate-950 px-2 py-0.5 rounded-full text-[11px] font-black">{hafiza.length}</span>
             </h2>
           </div>
-          {/* مجموعة الأزرار الموحدة بشكل أنيق ومتناسق */}
           <div className="flex gap-1.5 items-center bg-slate-950/10 backdrop-blur rounded-xl p-1 border border-slate-950/20">
             <button
               onClick={handleCopyAmountsToNotify}
@@ -258,35 +257,35 @@ export default function HafizaTab() {
         
         <div className="bg-white">
           <div className="overflow-x-auto overflow-y-auto max-h-[550px] relative">
-            <table className="w-full text-xs sm:text-sm text-right border-collapse border border-black table-auto">
+            <table className="w-full border-collapse border border-black table-auto">
               <thead className="sticky top-0 z-20 shadow-sm text-slate-900 font-bold text-xs bg-slate-100">
                 <tr>
-                  <th className="p-2 border border-black text-center w-10 bg-slate-100 sticky top-0 z-20">م</th>
+                  <th className="p-2 border border-black text-center vertical-align-middle w-10 bg-slate-100 sticky top-0 z-20">م</th>
                   {COLS.map((c) => (
-                    <th key={c.key} className="p-2 border border-black whitespace-normal break-words min-w-[85px] cursor-pointer hover:bg-slate-200 transition-colors select-none sticky top-0 z-20 bg-slate-100" onClick={() => toggleSort(c.key)}>
+                    <th key={c.key} className="p-2 border border-black text-center vertical-align-middle white-space-nowrap min-w-[85px] cursor-pointer hover:bg-slate-200 transition-colors select-none sticky top-0 z-20 bg-slate-100" onClick={() => toggleSort(c.key)}>
                       <div className="flex items-center justify-center gap-1.5">
                         <span>{c.label}</span> 
                         <span className="text-[10px] text-[#10528e] font-mono">{sortIndicator(sortKey === c.key, sortDir)}</span>
                       </div>
                     </th>
                   ))}
-                  <th className="p-2 border border-black text-center bg-slate-100 sticky top-0 z-20 min-w-[60px]">إجراءات</th>
+                  <th className="p-2 border border-black text-center vertical-align-middle bg-slate-100 sticky top-0 z-20 min-w-[60px]">إجراءات</th>
                 </tr>
                 <tr className="bg-slate-50">
                   <th className="p-1 border border-black bg-slate-50"></th>
                   {COLS.map((c) => (
                     <th key={c.key} className="p-1 border border-black bg-slate-50">
                       <input value={filters[c.key] || ""} onChange={(e) => setFilter(c.key, e.target.value)}
-                        placeholder="تصفية..." className="w-full px-1.5 py-1 text-[11px] border border-slate-300 rounded bg-white outline-none focus:border-black font-medium transition-colors" />
+                        placeholder="تصفية..." className="w-full text-center px-1.5 py-1 text-[11px] border border-slate-300 rounded bg-white outline-none focus:border-black font-medium transition-colors" />
                     </th>
                   ))}
                   <th className="p-1 border border-black bg-slate-50"></th>
                 </tr>
               </thead>
-              <tbody className="text-slate-700 font-medium bg-white">
+              <tbody className="text-xs sm:text-sm text-slate-700 font-medium bg-white">
                 {filtered.map((h, i) => (
                   <tr key={h.id} className="hover:bg-slate-100 transition-colors group">
-                    <td className="p-2 border border-black text-center font-mono bg-slate-50/50">{i + 1}</td>
+                    <td className="p-2 border border-black text-center vertical-align-middle font-mono bg-slate-50/50">{i + 1}</td>
                     
                     {COLS.map((col) => {
                       const isEditing = activeCell?.rowId === h.id && activeCell?.colKey === col.key;
@@ -294,9 +293,9 @@ export default function HafizaTab() {
                         <td 
                           key={col.key} 
                           onClick={() => handleCellClick(h.id, col.key, (h as any)[col.key])}
-                          className={`p-2 border border-black text-center whitespace-normal break-words transition-all ${
-                            col.key === 'name' ? 'font-bold text-slate-900 min-w-[120px] text-right' :
-                            col.key === 'description' ? 'min-w-[140px] text-right' :
+                          className={`p-2 border border-black text-center vertical-align-middle white-space-nowrap transition-all ${
+                            col.key === 'name' ? 'font-bold text-slate-900 min-w-[120px]' :
+                            col.key === 'description' ? 'min-w-[140px]' :
                             col.key === 'hafizaAmount' ? 'font-mono font-bold text-emerald-700 bg-emerald-50/20 min-w-[90px]' : 
                             col.key === 'notifyAmount' ? 'font-mono font-bold text-blue-700 bg-blue-50/20 min-w-[90px]' : 'font-mono min-w-[80px]'
                           }`}
@@ -309,10 +308,10 @@ export default function HafizaTab() {
                               onChange={(e) => setCellValue(e.target.value)}
                               onBlur={() => handleCellSave(h)}
                               onKeyDown={(e) => { if (e.key === 'Enter') handleCellSave(h); if (e.key === 'Escape') setActiveCell(null); }}
-                              className="w-full p-1 border border-black rounded bg-white text-slate-900 font-sans text-xs outline-none"
+                              className="w-full text-center p-1 border border-black rounded bg-white text-slate-900 font-sans text-xs outline-none"
                             />
                           ) : (
-                            <span className="block min-h-[18px] w-full">
+                            <span className="block min-h-[18px] w-full align-middle">
                               {col.key === "hafizaAmount" || col.key === "notifyAmount" 
                                 ? fmt((h as any)[col.key]) 
                                 : ((h as any)[col.key] || "—")}
@@ -322,7 +321,7 @@ export default function HafizaTab() {
                       );
                     })}
 
-                    <td className="p-2 border border-black text-center bg-slate-50/50">
+                    <td className="p-2 border border-black text-center vertical-align-middle bg-slate-50/50">
                       <button 
                         onClick={(e) => { e.stopPropagation(); if (confirm("هل تريد حذف هذا القيد بالتأكيد؟")) deleteHafiza(h.id); }} 
                         className="p-1 text-rose-600 hover:bg-rose-100 rounded transition-colors" 
@@ -342,26 +341,26 @@ export default function HafizaTab() {
                 )}
               </tbody>
 
-              {/* صف الإجماليات المالي النهائي والمدقق بحدود سوداء صلبة */}
+              {/* صف الإجماليات المالي النهائي والمدقق */}
               {filtered.length > 0 && (
                 <tfoot className="bg-slate-100 font-bold border-t-2 border-black sticky bottom-0 z-10 text-slate-900 text-xs">
                   <tr>
-                    <td className="p-2 border border-black text-center bg-slate-200">∑</td>
-                    <td className="p-2 border border-black text-right font-black text-slate-900">إجمالي التقارير الحالية</td>
-                    <td className="p-2 border border-black text-center">—</td>
-                    <td className="p-2 border border-black text-center">—</td>
-                    <td className="p-2 border border-black text-center">—</td>
-                    <td className="p-2 border border-black text-center">—</td>
-                    <td className="p-2 border border-black text-center">—</td>
-                    <td className="p-2 border border-black font-mono font-black text-emerald-800 bg-emerald-100 text-center">
+                    <td className="p-2 border border-black text-center vertical-align-middle bg-slate-200">∑</td>
+                    <td className="p-2 border border-black text-center vertical-align-middle font-black text-slate-900 white-space-nowrap">إجمالي التقارير الحالية</td>
+                    <td className="p-2 border border-black text-center vertical-align-middle">—</td>
+                    <td className="p-2 border border-black text-center vertical-align-middle">—</td>
+                    <td className="p-2 border border-black text-center vertical-align-middle">—</td>
+                    <td className="p-2 border border-black text-center vertical-align-middle">—</td>
+                    <td className="p-2 border border-black text-center vertical-align-middle">—</td>
+                    <td className="p-2 border border-black font-mono font-black text-emerald-800 bg-emerald-100 text-center vertical-align-middle white-space-nowrap">
                       {fmt(totalHafizaAmount)}
                     </td>
-                    <td className="p-2 border border-black text-center">—</td>
-                    <td className="p-2 border border-black text-center">—</td>
-                    <td className="p-2 border border-black font-mono font-black text-blue-800 bg-blue-100 text-center">
+                    <td className="p-2 border border-black text-center vertical-align-middle">—</td>
+                    <td className="p-2 border border-black text-center vertical-align-middle">—</td>
+                    <td className="p-2 border border-black font-mono font-black text-blue-800 bg-blue-100 text-center vertical-align-middle white-space-nowrap">
                       {fmt(totalNotifyAmount)}
                     </td>
-                    <td className="p-2 border border-black bg-slate-200"></td>
+                    <td className="p-2 border border-black bg-slate-200 vertical-align-middle"></td>
                   </tr>
                 </tfoot>
               )}
