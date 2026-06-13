@@ -84,7 +84,7 @@ export default function RevenueTab() {
   return (
     <div className="space-y-4 text-right" dir="rtl">
       
-      {/* الفلاتر والأزرار الأصلية كما هي */}
+      {/* الفلاتر والأزرار */}
       <div className="flex flex-wrap gap-4 items-end bg-gray-50 p-4 rounded-lg">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-bold text-gray-600">من تاريخ:</label>
@@ -139,7 +139,7 @@ export default function RevenueTab() {
         </button>
       </div>
 
-      {/* ترويسة الجدول الأصلية */}
+      {/* ترويسة الجدول */}
       <div className="text-center my-4">
         <h2 className="text-xl font-bold text-gray-800">{SCHEMA.title}</h2>
         <p className="text-sm text-gray-600">{SCHEMA.office}</p>
@@ -149,99 +149,121 @@ export default function RevenueTab() {
       </div>
 
       {/* حاوية الجدول وجسم الجدول */}
-      <div className="w-full overflow-x-auto border rounded-lg">
-        {/* تم إضافة min-w-max و table-auto لجعل الخلية تتسع بحجم النص كاملاً أفقياً ورأسياً */}
-        <table className="min-w-max w-full table-auto text-right border-collapse text-sm">
+      <div className="w-full overflow-x-auto border rounded-lg shadow-sm">
+        <table className="min-w-max w-full table-auto text-right border-collapse text-sm border-gray-300">
           <thead>
-            <tr className="bg-gray-100 text-gray-700 font-bold">
-              {/* 💡 تم تصفير جميع الهوامش p-0 مع إضافة whitespace-nowrap لمنع الالتفاف */}
-              <th rowSpan={2} className="border p-0 whitespace-nowrap">بيان مفردات الموارد</th>
-              <th rowSpan={2} className="border p-0 text-center whitespace-nowrap">الباب</th>
-              <th rowSpan={2} className="border p-0 text-center whitespace-nowrap">الفصل</th>
-              <th rowSpan={2} className="border p-0 text-center whitespace-nowrap">البند</th>
-              <th rowSpan={2} className="border p-0 text-center whitespace-nowrap">النوع</th>
-              <th colSpan={2} className="border p-0 text-center whitespace-nowrap">الشهر الجاري</th>
-              <th colSpan={2} className="border p-0 text-center whitespace-nowrap">الأشهر السابقة</th>
-              <th colSpan={2} className="border p-0 text-center whitespace-nowrap">الجمله</th>
+            {/* تنسيق ألوان هيدر الجدول الرئيسي كأعمدة مستقلة */}
+            <tr className="bg-slate-700 text-white font-bold">
+              <th rowSpan={2} className="border border-slate-600 p-0 whitespace-nowrap bg-slate-800">بيان مفردات الموارد</th>
+              <th rowSpan={2} className="border border-slate-600 p-0 text-center whitespace-nowrap bg-neutral-700">الباب</th>
+              <th rowSpan={2} className="border border-slate-600 p-0 text-center whitespace-nowrap bg-neutral-700">الفصل</th>
+              <th rowSpan={2} className="border border-slate-600 p-0 text-center whitespace-nowrap bg-neutral-700">البند</th>
+              <th rowSpan={2} className="border border-slate-600 p-0 text-center whitespace-nowrap bg-neutral-700">النوع</th>
+              <th colSpan={2} className="border border-slate-600 p-0 text-center whitespace-nowrap bg-teal-800">الشهر الجاري</th>
+              <th colSpan={2} className="border border-slate-600 p-0 text-center whitespace-nowrap bg-amber-800">الأشهر السابقة</th>
+              <th colSpan={2} className="border border-slate-600 p-0 text-center whitespace-nowrap bg-emerald-800">الجمله</th>
             </tr>
-            <tr className="bg-gray-50 text-gray-600 font-bold">
-              <th className="border p-0 text-center whitespace-nowrap">ف</th><th className="border p-0 text-center whitespace-nowrap">ريال</th>
-              <th className="border p-0 text-center whitespace-nowrap">ف</th><th className="border p-0 text-center whitespace-nowrap">ريال</th>
-              <th className="border p-0 text-center whitespace-nowrap">ف</th><th className="border p-0 text-center whitespace-nowrap">ريال</th>
+            <tr className="bg-slate-600 text-white font-bold">
+              <th className="border border-slate-500 p-0 text-center whitespace-nowrap bg-teal-700">ف</th>
+              <th className="border border-slate-500 p-0 text-center whitespace-nowrap bg-teal-700">ريال</th>
+              <th className="border border-slate-500 p-0 text-center whitespace-nowrap bg-amber-700">ف</th>
+              <th className="border border-slate-500 p-0 text-center whitespace-nowrap bg-amber-700">ريال</th>
+              <th className="border border-slate-500 p-0 text-center whitespace-nowrap bg-emerald-700">ف</th>
+              <th className="border border-slate-500 p-0 text-center whitespace-nowrap bg-emerald-700">ريال</th>
             </tr>
           </thead>
           <tbody>
             
-            <tr className="bg-gray-100 font-bold text-gray-900">
-              <td className="border p-0 whitespace-nowrap">إجمالي الموارد</td>
-              <td colSpan={4} className="border p-0"></td>
-              <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(data.grandCur)}</td>
-              <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(data.grandPrev)}</td>
-              <td className="border p-0"></td><td className="border p-0 text-left bg-gray-200/50 whitespace-nowrap">{cellNum(data.grandCur + data.grandPrev)}</td>
+            {/* تمييز صف الإجمالي الرئيسي الأول (لون نيلي محاسبي ملكي) */}
+            <tr className="bg-indigo-900 text-white font-black">
+              <td className="border border-indigo-950 p-0 whitespace-nowrap font-bold bg-indigo-950">إجمالي الموارد العامة للوحدة</td>
+              <td colSpan={4} className="border border-indigo-950 p-0 bg-neutral-800"></td>
+              <td className="border border-indigo-950 p-0 bg-teal-900"></td>
+              <td className="border border-indigo-950 p-0 text-left whitespace-nowrap font-mono bg-teal-950">{cellNum(data.grandCur)}</td>
+              <td className="border border-indigo-950 p-0 bg-amber-900"></td>
+              <td className="border border-indigo-950 p-0 text-left whitespace-nowrap font-mono bg-amber-950">{cellNum(data.grandPrev)}</td>
+              <td className="border border-indigo-950 p-0 bg-emerald-900"></td>
+              <td className="border border-indigo-950 p-0 text-left whitespace-nowrap font-mono bg-emerald-950">{cellNum(data.grandCur + data.grandPrev)}</td>
             </tr>
 
             {SCHEMA.chapters.map((ch) =>
               ch.sections.length === 0 ? null : (
                 <Fragment key={`ch-${ch.no}`}>
                   
-                  <tr className="bg-gray-50 font-bold text-gray-800">
-                    <td className="border p-0 whitespace-nowrap">{ch.longTitle || ch.title}</td>
-                    <td className="border p-0 text-center whitespace-nowrap">{ch.no}</td>
-                    <td colSpan={3} className="border p-0"></td>
-                    <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(data.chaptersAgg[ch.no].cur)}</td>
-                    <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(data.chaptersAgg[ch.no].prev)}</td>
-                    <td className="border p-0"></td><td className="border p-0 text-left bg-gray-100 whitespace-nowrap">{cellNum(data.chaptersAgg[ch.no].tot)}</td>
+                  {/* تمييز صف مستوى الأبواب (اللون الأزرق الفاتح المميز) */}
+                  <tr className="bg-blue-100 text-blue-950 font-bold">
+                    <td className="border border-blue-200 p-0 whitespace-nowrap bg-blue-150">{ch.longTitle || ch.title}</td>
+                    <td className="border border-blue-200 p-0 text-center bg-neutral-200">{ch.no}</td>
+                    <td colSpan={3} className="border border-blue-200 p-0 bg-neutral-100"></td>
+                    <td className="border border-blue-200 p-0 bg-teal-100"></td>
+                    <td className="border border-blue-200 p-0 text-left whitespace-nowrap font-mono bg-teal-50">{cellNum(data.chaptersAgg[ch.no].cur)}</td>
+                    <td className="border border-blue-200 p-0 bg-amber-100"></td>
+                    <td className="border border-blue-200 p-0 text-left whitespace-nowrap font-mono bg-amber-50">{cellNum(data.chaptersAgg[ch.no].prev)}</td>
+                    <td className="border border-blue-200 p-0 bg-emerald-100"></td>
+                    <td className="border border-blue-200 p-0 text-left whitespace-nowrap font-mono bg-emerald-50">{cellNum(data.chaptersAgg[ch.no].tot)}</td>
                   </tr>
                   
                   {ch.sections.map((sec) => (
                     <Fragment key={`sec-${ch.no}-${sec.no}`}>
                       
-                      <tr className="font-semibold text-gray-700">
-                        <td className="border p-0 whitespace-nowrap" style={{ paddingRight: "10px" }}>{sec.title}</td>
-                        <td className="border p-0"></td>
-                        <td className="border p-0 text-center whitespace-nowrap">{sec.no}</td>
-                        <td colSpan={2} className="border p-0"></td>
-                        <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(data.sectionsAgg[`${ch.no}-${sec.no}`].cur)}</td>
-                        <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(data.sectionsAgg[`${ch.no}-${sec.no}`].prev)}</td>
-                        <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(data.sectionsAgg[`${ch.no}-${sec.no}`].tot)}</td>
+                      {/* تمييز صف مستوى الفصول (اللون الرمادي والأرجواني الفاتح اللطيف) */}
+                      <tr className="bg-purple-50 text-purple-950 font-semibold">
+                        <td className="border border-purple-100 p-0 whitespace-nowrap bg-purple-100/50" style={{ paddingRight: "10px" }}>{sec.title}</td>
+                        <td className="border border-purple-100 p-0 bg-neutral-100"></td>
+                        <td className="border border-purple-100 p-0 text-center bg-neutral-200">{sec.no}</td>
+                        <td colSpan={2} className="border border-purple-100 p-0 bg-neutral-50"></td>
+                        <td className="border border-purple-100 p-0 bg-teal-50/50"></td>
+                        <td className="border border-purple-100 p-0 text-left whitespace-nowrap font-mono bg-teal-50/30">{cellNum(data.sectionsAgg[`${ch.no}-${sec.no}`].cur)}</td>
+                        <td className="border border-purple-100 p-0 bg-amber-50/50"></td>
+                        <td className="border border-purple-100 p-0 text-left whitespace-nowrap font-mono bg-amber-50/30">{cellNum(data.sectionsAgg[`${ch.no}-${sec.no}`].prev)}</td>
+                        <td className="border border-purple-100 p-0 bg-emerald-50/50"></td>
+                        <td className="border border-purple-100 p-0 text-left whitespace-nowrap font-mono bg-emerald-50/30">{cellNum(data.sectionsAgg[`${ch.no}-${sec.no}`].tot)}</td>
                       </tr>
                       
                       {sec.items.map((it) => (
                         <Fragment key={`it-${ch.no}-${sec.no}-${it.no}`}>
                           
-                          <tr className="text-gray-600">
-                            <td className="border p-0 whitespace-nowrap" style={{ paddingRight: "20px" }}>{it.title}</td>
-                            <td colSpan={2} className="border p-0"></td>
-                            <td className="border p-0 text-center whitespace-nowrap">{it.no}</td>
-                            <td className="border p-0"></td>
-                            <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(data.itemsAgg[`${ch.no}-${sec.no}-${it.no}`].cur)}</td>
-                            <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(data.itemsAgg[`${ch.no}-${sec.no}-${it.no}`].prev)}</td>
-                            <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(data.itemsAgg[`${ch.no}-${sec.no}-${it.no}`].tot)}</td>
+                          {/* تمييز صف مستوى البنود (اللون البرتقالي/البيج الفاتح الهادئ) */}
+                          <tr className="bg-orange-50/60 text-orange-950 font-medium">
+                            <td className="border border-orange-100 p-0 whitespace-nowrap bg-orange-100/30" style={{ paddingRight: "20px" }}>{it.title}</td>
+                            <td colSpan={2} className="border border-orange-100 p-0 bg-neutral-50"></td>
+                            <td className="border border-orange-100 p-0 text-center bg-neutral-200">{it.no}</td>
+                            <td className="border border-orange-100 p-0 bg-neutral-50"></td>
+                            <td className="border border-orange-100 p-0 bg-teal-50/40"></td>
+                            <td className="border border-orange-100 p-0 text-left whitespace-nowrap font-mono bg-teal-50/20">{cellNum(data.itemsAgg[`${ch.no}-${sec.no}-${it.no}`].cur)}</td>
+                            <td className="border border-orange-100 p-0 bg-amber-50/40"></td>
+                            <td className="border border-orange-100 p-0 text-left whitespace-nowrap font-mono bg-amber-50/20">{cellNum(data.itemsAgg[`${ch.no}-${sec.no}-${it.no}`].prev)}</td>
+                            <td className="border border-orange-100 p-0 bg-emerald-50/40"></td>
+                            <td className="border border-orange-100 p-0 text-left whitespace-nowrap font-mono bg-emerald-50/20">{cellNum(data.itemsAgg[`${ch.no}-${sec.no}-${it.no}`].tot)}</td>
                           </tr>
                           
                           {it.types.map((t) => {
                             const k = typeKey(ch.no, sec.no, it.no, t.no);
                             const v = data.types[k];
                             return (
-                              <tr key={k} className="text-gray-500 hover:bg-gray-50">
-                                <td className="border p-0 whitespace-nowrap" style={{ paddingRight: "30px" }}>{t.title}</td>
-                                <td colSpan={3} className="border p-0"></td>
-                                <td className="border p-0 text-center whitespace-nowrap">{t.no}</td>
-                                <td className="border p-0"></td>
+                              
+                              {/* تمييز صف مستوى النوع (الخلايا البيضاء الافتراضية الصافية مع تلوين فئات الأعمدة) */}
+                              <tr key={k} className="text-gray-700 bg-white hover:bg-neutral-50 transition-colors">
+                                <td className="border border-gray-200 p-0 whitespace-nowrap bg-slate-50/80 text-gray-800" style={{ paddingRight: "30px" }}>{t.title}</td>
+                                <td colSpan={3} className="border border-gray-200 p-0 bg-neutral-50/30"></td>
+                                <td className="border border-gray-200 p-0 text-center bg-neutral-100 text-gray-500">{t.no}</td>
+                                <td className="border border-gray-200 p-0 bg-teal-50/20"></td>
                                 
-                                {/* حقل المدخلات - تم إلغاء البوردرات الجانبية وجعل الحدود 0 مع p-0 للالتصاق الكامل */}
-                                <td className="border p-0 whitespace-nowrap">
+                                {/* عمود مدخلات الشهر الجاري الملون بالرمادي الفاتح المائل للزرقة لتسهيل تمييز حقول الإدخال */}
+                                <td className="border border-gray-200 p-0 whitespace-nowrap bg-teal-50/40">
                                   <input
                                     type="number"
                                     value={v.cur || ""}
                                     onChange={(e) => setRevenue(year, month, k, Number(e.target.value) || 0)}
-                                    className="w-24 p-0 text-left font-bold border-0 focus:outline-none focus:ring-0 text-sm bg-transparent"
+                                    className="w-24 p-0 text-left font-bold border-0 focus:outline-none focus:ring-0 text-sm bg-transparent font-mono text-teal-950"
                                     placeholder="0"
                                   />
                                 </td>
                                 
-                                <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(v.prev)}</td>
-                                <td className="border p-0"></td><td className="border p-0 text-left text-gray-800 font-semibold whitespace-nowrap">{cellNum(v.tot)}</td>
+                                <td className="border border-gray-200 p-0 bg-amber-50/20"></td>
+                                <td className="border border-gray-200 p-0 text-left whitespace-nowrap font-mono text-amber-900 bg-amber-50/40">{cellNum(v.prev)}</td>
+                                <td className="border border-gray-200 p-0 bg-emerald-50/20"></td>
+                                <td className="border border-gray-200 p-0 text-left text-emerald-950 font-bold whitespace-nowrap font-mono bg-emerald-50/40">{cellNum(v.tot)}</td>
                               </tr>
                             );
                           })}
@@ -253,19 +275,22 @@ export default function RevenueTab() {
               ),
             )}
 
-            {/* ملخص مجاميع الأبواب */}
-            <tr className="bg-gray-100 font-bold text-gray-700 border-t">
-              <td colSpan={5} className="p-0 text-center whitespace-nowrap">جملة الباب</td>
-              <td colSpan={6} className="p-0 border"></td>
+            {/* تمييز ملخص مجاميع جملة الأبواب النهائية في أسفل الجدول (لون رمادي داكن واضح للفرز العرضي) */}
+            <tr className="bg-neutral-600 text-white font-bold border-t-2 border-neutral-700">
+              <td colSpan={5} className="p-0 text-center whitespace-nowrap bg-neutral-700">ملخص جملة إيرادات الأبواب المعتمدة للمدة المحددة</td>
+              <td colSpan={6} className="p-0 border border-neutral-600 bg-neutral-800"></td>
             </tr>
             {SCHEMA.chapters.map((ch) => {
               const agg = data.chaptersAgg[ch.no] || { cur: 0, prev: 0, tot: 0 };
               return (
-                <tr key={`subt-${ch.no}`} className="text-gray-600 font-bold bg-gray-50">
-                  <td colSpan={5} className="border p-0 whitespace-nowrap">جملة الباب : {ch.title}</td>
-                  <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(agg.cur)}</td>
-                  <td className="border p-0"></td><td className="border p-0 text-left whitespace-nowrap">{cellNum(agg.prev)}</td>
-                  <td className="border p-0"></td><td className="border p-0 text-left text-gray-900 bg-gray-100 whitespace-nowrap">{cellNum(agg.tot)}</td>
+                <tr key={`subt-${ch.no}`} className="text-slate-900 font-bold bg-slate-100 hover:bg-slate-200 transition-colors">
+                  <td colSpan={5} className="border border-slate-300 p-0 whitespace-nowrap text-slate-800 bg-slate-200/60">جملة إيرادات الباب : {ch.title}</td>
+                  <td className="border border-slate-300 p-0 bg-teal-100/40"></td>
+                  <td className="border border-slate-300 p-0 text-left whitespace-nowrap font-mono text-teal-800 bg-teal-100/70">{cellNum(agg.cur)}</td>
+                  <td className="border border-slate-300 p-0 bg-amber-100/40"></td>
+                  <td className="border border-slate-300 p-0 text-left whitespace-nowrap font-mono text-amber-800 bg-amber-100/70">{cellNum(agg.prev)}</td>
+                  <td className="border border-slate-300 p-0 bg-emerald-100/40"></td>
+                  <td className="border border-slate-300 p-0 text-left text-emerald-900 font-black whitespace-nowrap font-mono bg-emerald-100/70">{cellNum(agg.tot)}</td>
                 </tr>
               );
             })}
