@@ -48,7 +48,8 @@
   --destructive-foreground: oklch(0.99 0 0);
   --success: oklch(0.5 0.16 155);
   --success-foreground: oklch(0.99 0 0);
-  --border: oklch(0.85 0.02 230);
+  /* 💡 تم استبدال اللون الباهت القديم بلون رمادي مالي أنيق وواضح للحدود بالتوافق مع التنسيق الجديد */
+  --border: oklch(0.74 0.03 235);
   --input: oklch(0.92 0.015 220);
   --ring: oklch(0.5 0.18 250);
 }
@@ -89,7 +90,8 @@
     vertical-align: middle;       /* محاذاة عمودية إلى الوسط */
     white-space: nowrap;          /* منع التفاف النص نهائياً */
     padding: 10px 14px;           /* حشوة متناسقة ومناسبة للارتفاع والعرض */
-    border: 1px solid #000 !important; /* حدود سوداء موحدة */
+    /* 💡 تم إلغاء الحدود السوداء الحادة المصمتة واستبدالها بحدود ناعمة متناسقة مع التنسيق الاحترافي الجديد */
+    border: 1px solid var(--color-border) !important; 
   }
 
   .font-mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
