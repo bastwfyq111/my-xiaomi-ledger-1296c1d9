@@ -80,8 +80,8 @@
     width: 100%; 
     border-collapse: collapse; 
     font-feature-settings: "tnum" 1, "lnum" 1; 
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    border-radius: 10px;
     overflow: hidden;
   }
   th { 
@@ -92,92 +92,95 @@
     vertical-align: middle;       /* محاذاة عمودية إلى الوسط */
     white-space: nowrap;          /* منع التفاف النص نهائياً */
     padding: 10px 14px;           /* حشوة متناسقة ومناسبة للارتفاع والعرض */
-    border: 1px solid #90a4ae !important; /* حدود رمادية زرقاء */
+    border: 1px solid #b0bec5 !important; /* حدود رمادية متوسطة */
   }
 
-  /* ألوان مميزة للأعمدة والصفوف */
-  /* العمود الأول - أزرق غامق */
+  /* ألوان مميزة للأعمدة والصفوف - خلفيات فاتحة مع نصوص داكنة */
+  /* العمود الأول - أزرق فاتح */
   table th:first-child,
   table td:first-child {
-    background-color: #1a237e; /* أزرق غامق */
-    color: #ffffff;
+    background-color: #bbdefb; /* أزرق فاتح */
+    color: #0d47a1; /* نص أزرق غامق */
   }
 
-  /* العمود الثاني - كحلي غامق */
+  /* العمود الثاني - كحلي فاتح */
   table th:nth-child(2),
   table td:nth-child(2) {
-    background-color: #1a3a4a; /* كحلي غامق */
-    color: #ffffff;
+    background-color: #b2dfdb; /* كحلي فاتح (teal) */
+    color: #004d40; /* نص كحلي غامق */
   }
 
-  /* العمود الثالث - أخضر غامق */
+  /* العمود الثالث - أخضر فاتح */
   table th:nth-child(3),
   table td:nth-child(3) {
-    background-color: #1b5e20; /* أخضر غامق */
-    color: #ffffff;
+    background-color: #c8e6c9; /* أخضر فاتح */
+    color: #1b5e20; /* نص أخضر غامق */
   }
 
-  /* العمود الرابع - ذهبي غامق */
+  /* العمود الرابع - ذهبي فاتح */
   table th:nth-child(4),
   table td:nth-child(4) {
-    background-color: #b8860b; /* ذهبي غامق */
-    color: #ffffff;
+    background-color: #ffe082; /* ذهبي فاتح */
+    color: #e65100; /* نص برتقالي غامق */
   }
 
-  /* العمود الخامس - أزرق كحلي */
+  /* العمود الخامس - بنفسجي فاتح */
   table th:nth-child(5),
   table td:nth-child(5) {
-    background-color: #0d47a1; /* أزرق كحلي */
-    color: #ffffff;
+    background-color: #d1c4e9; /* بنفسجي فاتح */
+    color: #311b92; /* نص بنفسجي غامق */
   }
 
-  /* العمود السادس - أخضر زمردي */
+  /* العمود السادس - وردي فاتح */
   table th:nth-child(6),
   table td:nth-child(6) {
-    background-color: #004d40; /* أخضر زمردي */
-    color: #ffffff;
+    background-color: #f8bbd0; /* وردي فاتح */
+    color: #880e4f; /* نص وردي غامق */
   }
 
-  /* الصف الأول (عادة الرؤوس) - أزرق غامق جداً */
+  /* الصف الأول (عادة الرؤوس) - أزرق متوسط مع نص أبيض */
   table thead tr:first-child th {
-    background-color: #0d47a1 !important; /* أزرق غامق جداً */
-    color: #ffffff !important;
+    background-color: #1565c0 !important; /* أزرق متوسط */
+    color: #ffffff !important; /* نص أبيض */
     font-weight: 800;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     letter-spacing: 0.5px;
     text-transform: uppercase;
+    border-bottom: 3px solid #0d47a1 !important;
   }
 
-  /* صفوف البيانات بالتناوب */
+  /* صفوف البيانات بالتناوب - تأثير خفيف */
   table tbody tr:nth-child(odd) {
-    background-color: rgba(26, 35, 126, 0.08); /* أزرق فاتح جداً */
+    background-color: rgba(21, 101, 192, 0.03); /* أزرق فاتح جداً */
   }
 
   table tbody tr:nth-child(even) {
-    background-color: rgba(184, 134, 11, 0.06); /* ذهبي فاتح جداً */
+    background-color: rgba(255, 160, 0, 0.03); /* برتقالي فاتح جداً */
   }
 
   /* تأثير التحويم على الصفوف */
   table tbody tr:hover {
-    background-color: rgba(13, 71, 161, 0.15) !important; /* أزرق متوسط عند التحويم */
-    transform: scale(1.01);
+    background-color: rgba(21, 101, 192, 0.12) !important; /* أزرق متوسط عند التحويم */
+    transform: scale(1.005);
     transition: all 0.3s ease;
-  }
-
-  /* خلايا الصفوف العادية - نص داكن */
-  table tbody td {
-    color: #ffffff; /* نص أبيض للبيانات */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
 
   /* إضافة خطوط فاصلة بين الصفوف */
   table tbody tr {
-    border-bottom: 2px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
   }
 
   /* تحسين التباين للمحتوى */
   table th {
     letter-spacing: 0.5px;
     text-transform: uppercase;
+  }
+
+  /* تنسيق خاص للصفوف المجمعة أو التلخيصية */
+  table tbody tr.total-row {
+    background-color: #e3f2fd !important;
+    font-weight: 700;
   }
 
   .font-mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
@@ -206,48 +209,65 @@
   
   /* تقليص حجم الخط والحشوة في الجوال ليتناسب العرض مع الشاشات الصغيرة */
   table { 
-    font-size: 12px; 
+    font-size: 11px; 
   }
   table th, table td {
-    padding: 6px 8px; /* حشوة أصغر للموبايل */
-    font-size: 11px;
+    padding: 5px 7px; /* حشوة أصغر للموبايل */
+    font-size: 10px;
   }
   /* Ensure inputs inside table filter rows don't trigger zoom but stay compact visually */
   table input { font-size: 14px; padding: 4px 6px; }
   
-  /* المحافظة على الألوان في الجوال */
+  /* المحافظة على الألوان الفاتحة في الجوال */
   table th:first-child,
   table td:first-child {
-    background-color: #1a237e;
+    background-color: #bbdefb;
+    color: #0d47a1;
   }
   
   table th:nth-child(2),
   table td:nth-child(2) {
-    background-color: #1a3a4a;
+    background-color: #b2dfdb;
+    color: #004d40;
   }
   
   table th:nth-child(3),
   table td:nth-child(3) {
-    background-color: #1b5e20;
+    background-color: #c8e6c9;
+    color: #1b5e20;
   }
   
   table th:nth-child(4),
   table td:nth-child(4) {
-    background-color: #b8860b;
+    background-color: #ffe082;
+    color: #e65100;
   }
   
   table th:nth-child(5),
   table td:nth-child(5) {
-    background-color: #0d47a1;
+    background-color: #d1c4e9;
+    color: #311b92;
   }
   
   table th:nth-child(6),
   table td:nth-child(6) {
-    background-color: #004d40;
+    background-color: #f8bbd0;
+    color: #880e4f;
+  }
+
+  table thead tr:first-child th {
+    background-color: #1565c0 !important;
+    color: #ffffff !important;
   }
 }
 
 @media print {
   .no-print { display: none !important; }
   body { background: white; }
+  
+  /* تحسين الطباعة مع الحفاظ على الألوان */
+  table th, table td {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
