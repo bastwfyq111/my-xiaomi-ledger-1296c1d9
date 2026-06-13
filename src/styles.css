@@ -75,103 +75,59 @@
   }
   h1, h2, h3, h4 { font-family: 'Cairo', 'Tajawal', sans-serif; font-weight: 800; letter-spacing: -0.01em; }
   
-  /* ==========================================
-     تنسيقات الجدول الاحترافية (Clear & Clean UI)
-     ========================================== */
+  /* تنسيق الجداول: مواءمة العرض، منع الالتفاف، ومحاذاة سنتر */
   table { 
     width: 100%; 
     border-collapse: collapse; 
     font-feature-settings: "tnum" 1, "lnum" 1; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* ظل ناعم جداً */
-    border-radius: 8px;
-    overflow: hidden;
-    background-color: #ffffff;
   }
-  
   th { 
     font-weight: 700; 
   }
-  
   table th, table td {
-    text-align: center;
-    vertical-align: middle;
-    white-space: nowrap;
-    padding: 12px 16px; /* حشوة ممتازة لراحة العين */
-    border: 1px solid #e2e8f0 !important; /* حدود رمادية فاتحة جداً وغير مزعجة (Slate 200) */
-    color: #334155; /* لون نص رمادي داكن مريح للعين بدلاً من الأسود الصارخ */
+    text-align: center;         /* محاذاة أفقية إلى الوسط */
+    vertical-align: middle;       /* محاذاة عمودية إلى الوسط */
+    white-space: nowrap;          /* منع التفاف النص نهائياً */
+    padding: 10px 14px;           /* حشوة متناسقة ومناسبة للارتفاع والعرض */
+    border: 1px solid #000 !important; /* حدود سوداء موحدة */
   }
-
-  /* 1. تنسيق ترويسة الجدول (رأس الجدول) */
-  table thead tr {
-    background-color: #0f172a !important; /* لون كحلي غامق احترافي (Slate 900) */
-  }
-  table thead th {
-    color: #ffffff !important; /* نص أبيض ناصع للتباين العالي */
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    border-color: #334155 !important; /* حدود داخلية للترويسة متناسقة مع الخلفية الداكنة */
-  }
-
-  /* 2. تخطيط الصفوف المتناوب (Zebra Striping) لسهولة التتبع الأفقي */
-  table tbody tr {
-    background-color: #ffffff; /* صف باللون الأبيض */
-    transition: background-color 0.2s ease; /* انتقال لوني ناعم */
-  }
-  
-  table tbody tr:nth-child(even) {
-    background-color: #f8fafc; /* صف باللون الرمادي المزرق الفاتح جداً (Slate 50) */
-  }
-
-  /* 3. تأثير التحويم (Hover) ناعم وبدون اهتزاز (بدون scale) */
-  table tbody tr:hover {
-    background-color: #e0f2fe !important; /* إضاءة الصف بلون أزرق سماوي فاتح جداً عند مرور الماوس (Sky 100) */
-  }
-
-  /* 4. تنسيق خاص للصفوف التلخيصية أو الإجمالية (مثلاً صف الإجمالي) */
-  table tbody tr.total-row td,
-  table tbody tr.font-bold td {
-    background-color: #f1f5f9 !important; /* رمادي أغمق قليلاً للإجماليات */
-    color: #0f172a !important; /* نص داكن جداً وواضح */
-    font-weight: 800 !important;
-  }
-
-  /* ========================================== */
 
   .font-mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
   button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   
+  /* Prevent iOS / MIUI auto-zoom on focus by enforcing 16px minimum */
   input, select, textarea {
     font-size: 16px;
   }
+  /* Smooth touch scrolling for horizontally-scrolling tables */
   .overflow-x-auto { -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
 }
 
-/* تعديلات الشاشات الصغيرة (الجوال) */
+/* Mobile-only tweaks (Xiaomi / small Android phones) */
 @media (max-width: 640px) {
   body {
+    /* Lighter background on small screens for performance */
     background:
       radial-gradient(600px 300px at 100% -10%, oklch(0.93 0.05 250 / 0.4), transparent 60%),
       var(--color-background);
   }
+  /* Respect notch / status bar / gesture nav on Xiaomi */
   .safe-pad-x { padding-left: max(0.75rem, env(safe-area-inset-left)); padding-right: max(0.75rem, env(safe-area-inset-right)); }
   .safe-pad-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   .safe-pad-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
   
+  /* تقليص حجم الخط والحشوة في الجوال ليتناسب العرض مع الشاشات الصغيرة */
   table { 
     font-size: 12px; 
   }
   table th, table td {
-    padding: 8px 10px; /* حشوة متناسبة مع الجوال */
+    padding: 6px 8px; /* حشوة أصغر للموبايل */
   }
+  /* Ensure inputs inside table filter rows don't trigger zoom but stay compact visually */
   table input { font-size: 14px; padding: 4px 6px; }
 }
 
 @media print {
   .no-print { display: none !important; }
   body { background: white; }
-  
-  table th, table td {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
 }
