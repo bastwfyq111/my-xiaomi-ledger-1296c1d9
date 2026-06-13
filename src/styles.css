@@ -48,7 +48,7 @@
   --destructive-foreground: oklch(0.99 0 0);
   --success: oklch(0.5 0.16 155);
   --success-foreground: oklch(0.99 0 0);
-  --border: oklch(0.74 0.03 235);
+  --border: oklch(0.85 0.02 230);
   --input: oklch(0.92 0.015 220);
   --ring: oklch(0.5 0.18 250);
 }
@@ -80,85 +80,105 @@
     width: 100%; 
     border-collapse: collapse; 
     font-feature-settings: "tnum" 1, "lnum" 1; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
   }
   th { 
     font-weight: 700; 
   }
   table th, table td {
-    text-align: center;         
-    vertical-align: middle;       
-    white-space: nowrap;          
-    padding: 10px 14px;           
-    border: 1px solid var(--color-border) !important; 
+    text-align: center;         /* محاذاة أفقية إلى الوسط */
+    vertical-align: middle;       /* محاذاة عمودية إلى الوسط */
+    white-space: nowrap;          /* منع التفاف النص نهائياً */
+    padding: 10px 14px;           /* حشوة متناسقة ومناسبة للارتفاع والعرض */
+    border: 1px solid #90a4ae !important; /* حدود رمادية زرقاء */
   }
 
-  /* ==========================================================================
-     👑 تطبيق لوحة الألوان الداكنة والذهبية الفخمة مع تبييض الخطوط للصفوف الرئيسية
-     ========================================================================== */
-
-  /* 1. ترويسة الجدول والهيدر (الكحلي الغامق والأزرق الغامق) */
-  table thead tr {
-    background-color: #0f172a !important; /* كحلي غامق جداً Slate 900 */
-    color: #ffffff !important;            /* خط أبيض ناصع */
-  }
-  table thead th {
-    color: #ffffff !important;            /* تأكيد اللون الأبيض للخطوط */
-  }
-  table thead tr:nth-child(2) th {
-    background-color: #1e3a8a !important; /* أزرق غامق Blue 900 */
+  /* ألوان مميزة للأعمدة والصفوف */
+  /* العمود الأول - أزرق غامق */
+  table th:first-child,
+  table td:first-child {
+    background-color: #1a237e; /* أزرق غامق */
+    color: #ffffff;
   }
 
-  /* 2. صف الإجمالي الرئيسي الأول (الكحلي الغامق الملكي) */
-  table tbody tr.bg-slate-900, 
-  table tbody tr.bg-indigo-900 {
-    background-color: #020617 !important; /* كحلي داكن ناصع */
-    color: #ffffff !important;            /* خط أبيض ناصع */
-  }
-  table tbody tr.bg-slate-900 td,
-  table tbody tr.bg-indigo-900 td {
-    color: #ffffff !important;            /* تحويل كافة الحقول للخط الأبيض */
-    font-weight: 900 !important;
+  /* العمود الثاني - كحلي غامق */
+  table th:nth-child(2),
+  table td:nth-child(2) {
+    background-color: #1a3a4a; /* كحلي غامق */
+    color: #ffffff;
   }
 
-  /* 3. مستوى الأبواب (الأخضر الزمردي الغامق الفاخر) */
-  table tbody tr.bg-blue-600 {
-    background-color: #064e3b !important; /* أخضر غامق جداً Emerald 900 */
-    color: #ffffff !important;            /* خط أبيض ناصع */
-  }
-  table tbody tr.bg-blue-600 td {
-    background-color: #064e3b !important; /* توحيد الخلفية */
-    color: #ffffff !important;            /* خط أبيض ناصع */
-    font-weight: 800 !important;
+  /* العمود الثالث - أخضر غامق */
+  table th:nth-child(3),
+  table td:nth-child(3) {
+    background-color: #1b5e20; /* أخضر غامق */
+    color: #ffffff;
   }
 
-  /* 4. مستوى الفصول والبنود (الذهبي الغامق / البرونزي والنيلي المحاسبي الداكن) */
-  table tbody tr.bg-sky-50 {
-    background-color: #78350f !important; /* ذهبي عتيق غامق Amber/Amber 900 */
-    color: #ffffff !important;            /* خط أبيض ناصع */
-  }
-  table tbody tr.bg-sky-50 td {
-    background-color: #78350f !important; 
-    color: #ffffff !important;            /* خط أبيض ناصع */
+  /* العمود الرابع - ذهبي غامق */
+  table th:nth-child(4),
+  table td:nth-child(4) {
+    background-color: #b8860b; /* ذهبي غامق */
+    color: #ffffff;
   }
 
-  table tbody tr.bg-slate-50 {
-    background-color: #172554 !important; /* أزرق داكن غامق جداً */
-    color: #ffffff !important;            /* خط أبيض ناصع */
-  }
-  table tbody tr.bg-slate-50 td {
-    background-color: #172554 !important;
-    color: #ffffff !important;            /* خط أبيض ناصع */
+  /* العمود الخامس - أزرق كحلي */
+  table th:nth-child(5),
+  table td:nth-child(5) {
+    background-color: #0d47a1; /* أزرق كحلي */
+    color: #ffffff;
   }
 
-  /* 5. تلوين خطوط الحقول الداخلية الملونة افتراضياً داخل الصفوف الرئيسية الداكنة */
-  table tbody tr td[class*="text-indigo-"],
-  table tbody tr td[class*="text-sky-"],
-  table tbody tr td[class*="text-emerald-"],
-  table tbody tr td[class*="text-amber-"] {
-    color: #ffffff !important; /* تحويلها للأبيض تلبيةً للشرط */
+  /* العمود السادس - أخضر زمردي */
+  table th:nth-child(6),
+  table td:nth-child(6) {
+    background-color: #004d40; /* أخضر زمردي */
+    color: #ffffff;
   }
 
-  /* ========================================================================== */
+  /* الصف الأول (عادة الرؤوس) - أزرق غامق جداً */
+  table thead tr:first-child th {
+    background-color: #0d47a1 !important; /* أزرق غامق جداً */
+    color: #ffffff !important;
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* صفوف البيانات بالتناوب */
+  table tbody tr:nth-child(odd) {
+    background-color: rgba(26, 35, 126, 0.08); /* أزرق فاتح جداً */
+  }
+
+  table tbody tr:nth-child(even) {
+    background-color: rgba(184, 134, 11, 0.06); /* ذهبي فاتح جداً */
+  }
+
+  /* تأثير التحويم على الصفوف */
+  table tbody tr:hover {
+    background-color: rgba(13, 71, 161, 0.15) !important; /* أزرق متوسط عند التحويم */
+    transform: scale(1.01);
+    transition: all 0.3s ease;
+  }
+
+  /* خلايا الصفوف العادية - نص داكن */
+  table tbody td {
+    color: #ffffff; /* نص أبيض للبيانات */
+  }
+
+  /* إضافة خطوط فاصلة بين الصفوف */
+  table tbody tr {
+    border-bottom: 2px solid #e0e0e0;
+  }
+
+  /* تحسين التباين للمحتوى */
+  table th {
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
 
   .font-mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
   button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -174,21 +194,57 @@
 /* Mobile-only tweaks (Xiaomi / small Android phones) */
 @media (max-width: 640px) {
   body {
+    /* Lighter background on small screens for performance */
     background:
       radial-gradient(600px 300px at 100% -10%, oklch(0.93 0.05 250 / 0.4), transparent 60%),
       var(--color-background);
   }
+  /* Respect notch / status bar / gesture nav on Xiaomi */
   .safe-pad-x { padding-left: max(0.75rem, env(safe-area-inset-left)); padding-right: max(0.75rem, env(safe-area-inset-right)); }
   .safe-pad-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
   .safe-pad-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
   
+  /* تقليص حجم الخط والحشوة في الجوال ليتناسب العرض مع الشاشات الصغيرة */
   table { 
     font-size: 12px; 
   }
   table th, table td {
-    padding: 6px 8px; 
+    padding: 6px 8px; /* حشوة أصغر للموبايل */
+    font-size: 11px;
   }
+  /* Ensure inputs inside table filter rows don't trigger zoom but stay compact visually */
   table input { font-size: 14px; padding: 4px 6px; }
+  
+  /* المحافظة على الألوان في الجوال */
+  table th:first-child,
+  table td:first-child {
+    background-color: #1a237e;
+  }
+  
+  table th:nth-child(2),
+  table td:nth-child(2) {
+    background-color: #1a3a4a;
+  }
+  
+  table th:nth-child(3),
+  table td:nth-child(3) {
+    background-color: #1b5e20;
+  }
+  
+  table th:nth-child(4),
+  table td:nth-child(4) {
+    background-color: #b8860b;
+  }
+  
+  table th:nth-child(5),
+  table td:nth-child(5) {
+    background-color: #0d47a1;
+  }
+  
+  table th:nth-child(6),
+  table td:nth-child(6) {
+    background-color: #004d40;
+  }
 }
 
 @media print {
