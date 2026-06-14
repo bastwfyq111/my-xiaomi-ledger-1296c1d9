@@ -258,7 +258,7 @@ export default function HafizaTab() {
         <div className="bg-white">
           <div className="overflow-x-auto overflow-y-auto max-h-[550px] relative">
             <table className="w-full border-collapse border border-black table-auto">
-              <thead className="sticky top-0 z-20 shadow-sm text-slate-900 font-bold text-xs bg-slate-100">
+        <thead className="sticky top-0 z-20 shadow-md text-white font-black text-sm bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700">
                 <tr>
                   <th className="p-2 border border-black text-center vertical-align-middle w-10 bg-slate-100 sticky top-0 z-20">م</th>
                   {COLS.map((c) => (
