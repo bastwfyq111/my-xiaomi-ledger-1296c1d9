@@ -214,10 +214,10 @@ export default function HafizaTab() {
           
           {/* أزرار العمليات التفاعلية للنموذج */}
           <div className="mt-5 flex gap-2 flex-wrap border-t border-amber-200 pt-4">
-            <button onClick={submit} className="flex items-center gap-2 px-5 py-2 bg-amber-600 text-slate-950 rounded-xl font-black hover:bg-amber-500 active:scale-95 transition-all text-xs shadow-sm border border-amber-700">
+            <button onClick={submit} className="flex items-center gap-2 px-5 py-2 bg-amber-600 text-slate-950 rounded-xl font-black hover:bg-amber-500 active:scale-95 transition-all text-xs shadow-sm border border-black/10">
               <Save className="w-4 h-4" /> حفظ وترحيل الحافظة
             </button>
-            <button onClick={() => { setForm(empty); setNameQuery(""); }} className="flex items-center gap-2 px-4 py-2 border border-amber-300 text-amber-800 bg-amber-50 rounded-xl font-bold hover:bg-amber-100 active:scale-95 transition-all text-xs shadow-sm">
+            <button onClick={() => { setForm(empty); setNameQuery(""); }} className="flex items-center gap-2 px-4 py-2 border border-black/300 text-amber-800 bg-amber-50 rounded-xl font-bold hover:bg-amber-100 active:scale-95 transition-all text-xs shadow-sm">
               <Eraser className="w-4 h-4" /> تصفية الحقول
             </button>
           </div>
