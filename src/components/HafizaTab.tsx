@@ -258,30 +258,56 @@ export default function HafizaTab() {
         <div className="bg-white">
           <div className="overflow-x-auto overflow-y-auto max-h-[550px] relative">
             <table className="w-full border-collapse border border-black table-auto">
-        <thead className="sticky top-0 z-20 shadow-md text-white font-black text-sm bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700">
-                <tr>
-                  <th className="p-2 border border-black text-center vertical-align-middle w-10 bg-slate-100 sticky top-0 z-20">م</th>
-                  {COLS.map((c) => (
-                    <th key={c.key} className="p-2 border border-black text-center vertical-align-middle white-space-nowrap min-w-[85px] cursor-pointer hover:bg-slate-200 transition-colors select-none sticky top-0 z-20 bg-slate-100" onClick={() => toggleSort(c.key)}>
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span>{c.label}</span> 
-                        <span className="text-[10px] text-[#10528e] font-mono">{sortIndicator(sortKey === c.key, sortDir)}</span>
-                      </div>
-                    </th>
-                  ))}
-                  <th className="p-2 border border-black text-center vertical-align-middle bg-slate-100 sticky top-0 z-20 min-w-[60px]">إجراءات</th>
-                </tr>
-                <tr className="bg-slate-50">
-                  <th className="p-1 border border-black bg-slate-50"></th>
-                  {COLS.map((c) => (
-                    <th key={c.key} className="p-1 border border-black bg-slate-50">
-                      <input value={filters[c.key] || ""} onChange={(e) => setFilter(c.key, e.target.value)}
-                        placeholder="تصفية..." className="w-full text-center px-1.5 py-1 text-[11px] border border-slate-300 rounded bg-white outline-none focus:border-black font-medium transition-colors" />
-                    </th>
-                  ))}
-                  <th className="p-1 border border-black bg-slate-50"></th>
-                </tr>
-              </thead>
+              
+        {/* تعديل رأس الجدول ليصبح أزرق لامع مع نص أبيض عريض */}
+<thead className="sticky top-0 z-20 shadow-md text-white font-black text-sm bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700">
+  <tr>
+    {/* عمود المسلسل 'م' */}
+    <th className="p-2 border border-black/10 text-center vertical-align-middle w-10 bg-blue-700/50 sticky top-0 z-20">
+      م
+    </th>
+
+    {/* رؤوس الأعمدة الديناميكية */}
+    {COLS.map((c) => (
+      <th 
+        key={c.key} 
+        className="p-2 border border-black/10 text-center vertical-align-middle whitespace-nowrap min-w-[85px] cursor-pointer hover:bg-blue-400/30 transition-all select-none sticky top-0 z-20" 
+        onClick={() => toggleSort(c.key)}
+      >
+        <div className="flex items-center justify-center gap-1.5">
+          <span className="drop-shadow-md">{c.label}</span> 
+          <span className="text-[10px] text-blue-100 font-mono">
+            {sortIndicator(sortKey === c.key, sortDir)}
+          </span>
+        </div>
+      </th>
+    ))}
+
+    {/* عمود الإجراءات */}
+    <th className="p-2 border border-black/10 text-center vertical-align-middle bg-blue-700/50 sticky top-0 z-20 min-w-[60px]">
+      إجراءات
+    </th>
+  </tr>
+
+  {/* صف التصفية (الفلاتر) - يفضل أن يكون بلون فاتح لكي لا يختلط مع الرأس */}
+  <tr className="bg-slate-100">
+    <th className="p-1 border border-black/10 bg-slate-100"></th>
+    {COLS.map((c) => (
+      <th key={c.key} className="p-1 border border-black/10 bg-slate-100">
+        <input 
+          value={filters[c.key] || ""} 
+          onChange={(e) => setFilter(c.key, e.target.value)}
+          placeholder="تصفية..." 
+          className="w-full text-center px-1.5 py-1 text-[11px] border border-slate-300 rounded bg-white text-slate-800 outline-none focus:border-blue-500 font-medium transition-colors" 
+        />
+      </th>
+    ))}
+    <th className="p-1 border border-black/10 bg-slate-100"></th>
+  </tr>
+</thead>
+
+
+                    
               <tbody className="text-xs sm:text-sm text-slate-700 font-medium bg-white">
                 {filtered.map((h, i) => (
                   <tr key={h.id} className="hover:bg-slate-100 transition-colors group">
