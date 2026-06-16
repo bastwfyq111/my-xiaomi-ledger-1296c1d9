@@ -357,11 +357,11 @@ export default function AccountsTab() {
             <h2 className="text-sm sm:text-base font-bold text-white">إضافة حركة مالية يدويّة أو ترحيل مطابق</h2>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={handleSyncFromHafiza} className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-black hover:from-amber-400 hover:to-amber-500 transition-all active:scale-95 shadow-sm">
+            <button onClick={handleSyncFromHafiza} className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl text-xs font-white hover:from-amber-400 hover:to-amber-500 transition-all active:scale-95 shadow-sm">
               <RefreshCw className="w-3.5 h-3.5" />
               <span>مطابقة شاملة 2026 ⚡</span>
             </button>
-            <label className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 text-white border border-white/10 rounded-xl text-xs font-bold cursor-pointer hover:bg-white/20 transition-all">
+            <label className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 text-red border border-black rounded-xl text-xs font-bold cursor-pointer hover:bg-white/20 transition-all">
               <FileSpreadsheet className="w-3.5 h-3.5" /> <span>استيراد Excel</span>
               <input type="file" accept=".xlsx, .xls, .csv" onChange={handleImportExcel} className="hidden" />
             </label>
@@ -415,8 +415,10 @@ export default function AccountsTab() {
         <div className="bg-slate-800 px-5 py-3.5 flex flex-wrap justify-between items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-            <h2 className="text-xs sm:text-sm font-bold text-white">جدول مراقبة قيود الحساب الجاري الموزون ({accounts.length})</h2>
-          </div>
+            <h2 className="text-xs sm:text-sm font-bold text-white">
+      جدول مراقبة الحساب الجاري       ({accounts.length})
+            </h2>
+          </div> 
           <div className="flex gap-2 flex-wrap">
             {Object.values(filters).some(Boolean) && (
               <button onClick={clearFilters} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-bold transition-all">مسح مرشحات التصفية</button>
