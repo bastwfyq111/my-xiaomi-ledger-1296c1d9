@@ -1,4 +1,4 @@
-Import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { fmt, today } from "@/lib/format";
 import { DESCRIPTIONS } from "@/lib/accounts";
