@@ -227,14 +227,31 @@ export default function AccountsTab() {
   const totalExpense = useMemo(() => accounts.reduce((sum, a) => sum + (Number(a.expense) || 0), 0), [accounts]);
   const currentBalance = totalIncome - totalExpense;
 
-  // التعديل هنا: حساب الرصيد المتراكم بالتتابع بناءً على السجلات الظاهرة بالجدول حالياً
-  const filteredWithBalance = useMemo(() => {
-    let runningBalance = 0;
-    return filtered.map((row) => {
-      runningBalance += (Number(row.income) || 0) - (Number(row.expense) || 0);
-      return { ...row, balance: runningBalance };
-    });
-  }, [filtered]);
+  // التعديل السليم لحساب الرصيد بشكل ثابت ومنظم زمنياً لحل مشكلة الزيادة عند المطابقة:
+const filteredWithBalance = useMemo(() => {
+  // 1) نقوم بعمل نسخة من السجلات المصفاة وترتيبها أولاً بناءً على التاريخ
+  const sortedByDate = [...filtered].sort((a, b) => {
+    const dateA = a.date ? String(a.date).replace(/[^\d]/g, "") : "";
+    const dateB = b.date ? String(b.date).replace(/[^\d]/g, "") : "";
+    return dateA.localeCompare(dateB);
+  });
+
+  // 2) نحسب الرصيد المتراكم بناءً على هذا الترتيب الزمني الثابت
+  const balanceMap = new Map<string, number>();
+  let runningBalance = 0;
+  
+  sortedByDate.forEach((row) => {
+    runningBalance += (Number(row.income) || 0) - (Number(row.expense) || 0);
+    balanceMap.set(row.id, runningBalance); // ربط الرصيد بالمعرف الفريد للسطر
+  });
+
+  // 3) نعيد السجلات بترتيبها المطلوب للعرض مع إرفاق الرصيد الصحيح لكل سطر
+  return filtered.map((row) => ({
+    ...row,
+    balance: balanceMap.get(row.id) ?? 0,
+  }));
+}, [filtered]);
+
 
   const submit = () => {
     if (!form.description && !form.name) {
