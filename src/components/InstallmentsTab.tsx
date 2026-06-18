@@ -4,7 +4,8 @@ import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls } from "@/hooks/useTableControls";
-import { X, Printer, AlertCircle } from "lucide-react";
+// إضافة أيقونات الفرز من lucide-react
+import { X, Printer, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import TabActions from "./TabActions";
 
 // مصفوفات الأشهر
@@ -57,6 +58,12 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
   );
 };
 
+// دالة مساعدة لرسم أيقونة الترتيب
+const SortIcon = ({ sortConfig, columnKey }: { sortConfig: { key: string; direction: 'asc' | 'desc' } | null, columnKey: string }) => {
+  if (sortConfig?.key !== columnKey) return <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />;
+  return sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />;
+};
+
 export default function InstallmentsTab() {
   const { installments, installments2025, clearInstallments } = useStore() as any;
   const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
@@ -72,20 +79,118 @@ export default function InstallmentsTab() {
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
+  // إضافات التصفية (البحث)
+  const [search2025, setSearch2025] = useState("");
+  const [search2026, setSearch2026] = useState("");
+
+  // إضافات الترتيب (الفرز)
+  const [sortConfig2025, setSortConfig2025] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [sortConfig2026, setSortConfig2026] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining"]);
   const controls2025 = useTableControls(installments2025 || [], ["name", "batch", "specialty", "fees", "totalPaid", "remaining"]);
 
+  // دوال تصفية وترتيب الصفوف بناءً على البحث والفرز
+  const filteredRows2025 = useMemo(() => {
+    let result = controls2025.rows || [];
+    
+    // البحث
+    if (search2025) {
+      const term = search2025.toLowerCase();
+      result = result.filter((r: any) => 
+        (r.name && r.name.toLowerCase().includes(term)) ||
+        (r.batch && String(r.batch).toLowerCase().includes(term)) ||
+        (r.specialty && r.specialty.toLowerCase().includes(term))
+      );
+    }
+
+    // الترتيب
+    if (sortConfig2025) {
+      result = [...result].sort((a: any, b: any) => {
+        let aVal = a[sortConfig2025.key];
+        let bVal = b[sortConfig2025.key];
+
+        if (['fees', 'totalPaid', 'remaining'].includes(sortConfig2025.key)) {
+          aVal = cleanNumber(aVal);
+          bVal = cleanNumber(bVal);
+        } else {
+          aVal = aVal ? String(aVal).toLowerCase() : "";
+          bVal = bVal ? String(bVal).toLowerCase() : "";
+        }
+
+        if (aVal < bVal) return sortConfig2025.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig2025.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [controls2025.rows, search2025, sortConfig2025]);
+
+  const filteredRows2026 = useMemo(() => {
+    let result = controls2026.rows || [];
+    
+    // البحث
+    if (search2026) {
+      const term = search2026.toLowerCase();
+      result = result.filter((r: any) => 
+        (r.name && r.name.toLowerCase().includes(term)) ||
+        (r.batch && String(r.batch).toLowerCase().includes(term)) ||
+        (r.specialty && r.specialty.toLowerCase().includes(term))
+      );
+    }
+
+    // الترتيب
+    if (sortConfig2026) {
+      result = [...result].sort((a: any, b: any) => {
+        let aVal = a[sortConfig2026.key];
+        let bVal = b[sortConfig2026.key];
+
+        if (['prevDue', 'fees', 'totalPaid', 'remaining'].includes(sortConfig2026.key)) {
+          aVal = cleanNumber(aVal);
+          bVal = cleanNumber(bVal);
+        } else {
+          aVal = aVal ? String(aVal).toLowerCase() : "";
+          bVal = bVal ? String(bVal).toLowerCase() : "";
+        }
+
+        if (aVal < bVal) return sortConfig2026.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig2026.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [controls2026.rows, search2026, sortConfig2026]);
+
+  const handleSort2025 = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig2025 && sortConfig2025.key === key && sortConfig2025.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig2025({ key, direction });
+  };
+
+  const handleSort2026 = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig2026 && sortConfig2026.key === key && sortConfig2026.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig2026({ key, direction });
+  };
+
+  // تحديث الإجماليات لتعتمد على البيانات المصفاة بدلاً من البيانات الكاملة
   const totals2025 = useMemo(() => ({
-    fees: (controls2025.rows || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
-    paid: (controls2025.rows || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
-    remaining: (controls2025.rows || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
-  }), [controls2025.rows]);
+    fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
+    paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
+    remaining: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
+  }), [filteredRows2025]);
 
   const totals2026 = useMemo(() => ({
-    prevDue: (controls2026.rows || []).reduce((s, r) => s + cleanNumber(r.prevDue), 0),
-    paid: (controls2026.rows || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
-    remaining: (controls2026.rows || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
-  }), [controls2026.rows]);
+    prevDue: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.prevDue), 0),
+    paid: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
+    remaining: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
+  }), [filteredRows2026]);
 
   const allNames = useMemo(() => {
     const n1 = (installments2025 || []).map((s: any) => s.name);
@@ -242,129 +347,126 @@ export default function InstallmentsTab() {
 
   const getStatusText = (rem: number) => rem <= 0 ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" } : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
 
-  // الدالة المعدلة والمحسنة للطباعة
-  // الدالة المعدلة والمحسنة للطباعة - نسخة عالية التباين للطباعة الواضحة
-  // الدالة المعدلة والمحسنة للطباعة - نسخة ملونة وعالية التباين
-const generateAccountStatement = (row: any, year: number) => {
-  const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-  const fees = cleanNumber(row.fees);
-  const prevDue = cleanNumber(row.prevDue);
-  const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
-  const dueTotal = year === 2026 ? (prevDue || fees) : fees;
-  const remaining = dueTotal - totalPaid;
+  const generateAccountStatement = (row: any, year: number) => {
+    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+    const fees = cleanNumber(row.fees);
+    const prevDue = cleanNumber(row.prevDue);
+    const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
+    const dueTotal = year === 2026 ? (prevDue || fees) : fees;
+    const remaining = dueTotal - totalPaid;
 
-  const paidRows = monthsList
-    .map((m) => {
-      const amount = Number(row.payments?.[m]) || 0;
-      if (amount <= 0) return "";
-      return `
-        <tr>
-          <td class="lbl">سداد شهر ${m}</td>
-          <td class="num">${fmt(amount)}</td>
-        </tr>`;
-    })
-    .join("");
+    const paidRows = monthsList
+      .map((m) => {
+        const amount = Number(row.payments?.[m]) || 0;
+        if (amount <= 0) return "";
+        return `
+          <tr>
+            <td class="lbl">سداد شهر ${m}</td>
+            <td class="num">${fmt(amount)}</td>
+          </tr>`;
+      })
+      .join("");
 
-  const infoCard = (label: string, value: string) =>
-    `<div class="info-box">
-      <div class="info-lbl">${label}</div>
-      <div class="info-val">${value || "—"}</div>
-    </div>`;
+    const infoCard = (label: string, value: string) =>
+      `<div class="info-box">
+        <div class="info-lbl">${label}</div>
+        <div class="info-val">${value || "—"}</div>
+      </div>`;
 
-  const prevRow = year === 2026
-    ? `<tr class="row-due-old">
-        <td class="lbl">متبقي من العام 2025 (مدور)</td>
-        <td class="num">${fmt(prevDue)}</td>
-      </tr>`
-    : "";
+    const prevRow = year === 2026
+      ? `<tr class="row-due-old">
+          <td class="lbl">متبقي من العام 2025 (مدور)</td>
+          <td class="num">${fmt(prevDue)}</td>
+        </tr>`
+      : "";
 
-  const remainingLabel = remaining > 0 ? "الرصيد المتبقي (عليه)" : remaining < 0 ? "الرصيد الإضافي (له)" : "الحالة: تم السداد بالكامل";
+    const remainingLabel = remaining > 0 ? "الرصيد المتبقي (عليه)" : remaining < 0 ? "الرصيد الإضافي (له)" : "الحالة: تم السداد بالكامل";
 
-  return `
-    <html dir="rtl" lang="ar">
-    <head>
-      <meta charset="utf-8" />
-      <title>كشف حساب - ${row.name}</title>
-      <link rel="preconnect" href="https://fonts.googleapis.com">
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
-      <style>
-        @page { size: A4; margin: 0; }
-        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; }
-        .container { width: 210mm; min-height: 297mm; background: white; padding: 15mm; }
-        
-        /* الهيدر - خلفية خضراء داكنة وخطوط بيضاء واضحة */
-        .header { background: #15803d !important; color: white; padding: 25px; border-radius: 8px; text-align: center; margin-bottom: 25px; border: 1px solid #000; }
-        .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
-        .header p { margin: 10px 0 0; font-size: 18px; opacity: 1; }
+    return `
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8" />
+        <title>كشف حساب - ${row.name}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
+        <style>
+          @page { size: A4; margin: 0; }
+          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; }
+          .container { width: 210mm; min-height: 297mm; background: white; padding: 15mm; }
+          
+          /* الهيدر */
+          .header { background: #15803d !important; color: white; padding: 25px; border-radius: 8px; text-align: center; margin-bottom: 25px; border: 1px solid #000; }
+          .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
+          .header p { margin: 10px 0 0; font-size: 18px; opacity: 1; }
 
-        /* شبكة المعلومات */
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-        .info-box { border: 1px solid #000; padding: 12px; border-radius: 8px; text-align: center; }
-        .info-lbl { font-size: 14px; color: #1e293b; font-weight: 800; } /* خط أغمق */
-        .info-val { font-size: 18px; color: #000; font-weight: 800; margin-top: 5px; }
+          /* شبكة المعلومات */
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+          .info-box { border: 1px solid #000; padding: 12px; border-radius: 8px; text-align: center; }
+          .info-lbl { font-size: 14px; color: #1e293b; font-weight: 800; }
+          .info-val { font-size: 18px; color: #000; font-weight: 800; margin-top: 5px; }
 
-        /* الجدول - حدود 1px ولون رأس الجدول أخضر متناسق */
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background-color: #166534 !important; color: #ffffff !important; padding: 12px; font-size: 18px; border: 1px solid #000; text-align: center; font-weight: 800; }
-        td { padding: 12px; border: 1px solid #000; text-align: center; font-size: 18px; }
-        
-        /* محاذاة العناوين الرئيسية والخط الغامق */
-        .lbl { text-align: right; padding-right: 15px; font-weight: 800; color: #000; }
-        .num { text-align: left; padding-left: 15px; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
+          /* الجدول */
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th { background-color: #166534 !important; color: #ffffff !important; padding: 12px; font-size: 18px; border: 1px solid #000; text-align: center; font-weight: 800; }
+          td { padding: 12px; border: 1px solid #000; text-align: center; font-size: 18px; }
+          
+          /* محاذاة */
+          .lbl { text-align: right; padding-right: 15px; font-weight: 800; color: #000; }
+          .num { text-align: left; padding-left: 15px; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
 
-        /* تمييز الصفوف لتسهيل القراءة عند الطباعة */
-        .row-due-old { background-color: #f1f5f9 !important; }
-        .row-total-due { background-color: #e2e8f0 !important; }
-        .row-total-paid { background-color: #f0fdf4 !important; }
-        .row-final { background-color: #fef2f2 !important; font-size: 22px; border: 2px solid #000 !important; }
+          /* تمييز الصفوف */
+          .row-due-old { background-color: #f1f5f9 !important; }
+          .row-total-due { background-color: #e2e8f0 !important; }
+          .row-total-paid { background-color: #f0fdf4 !important; }
+          .row-final { background-color: #fef2f2 !important; font-size: 22px; border: 2px solid #000 !important; }
 
-        .footer { margin-top: 40px; text-align: center; border-top: 1px solid #000; padding-top: 15px; color: #000; font-size: 14px; font-weight: 600; }
+          .footer { margin-top: 40px; text-align: center; border-top: 1px solid #000; padding-top: 15px; color: #000; font-size: 14px; font-weight: 600; }
 
-        @media print { 
-          body { background: white; } 
-          .container { box-shadow: none; padding: 10mm; width: 100%; }
-          .header { background: #15803d !important; -webkit-print-color-adjust: exact; }
-          th { background-color: #166534 !important; color: #ffffff !important; -webkit-print-color-adjust: exact; }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>المجلس اليمني للاختصاصات الطبية</h1>
-          <p>كشف حساب رسمي - العام ${year}م</p>
+          @media print { 
+            body { background: white; } 
+            .container { box-shadow: none; padding: 10mm; width: 100%; }
+            .header { background: #15803d !important; -webkit-print-color-adjust: exact; }
+            th { background-color: #166534 !important; color: #ffffff !important; -webkit-print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>المجلس اليمني للاختصاصات الطبية</h1>
+            <p>كشف حساب رسمي - العام ${year}م</p>
+          </div>
+          
+          <div class="info-grid">
+            ${infoCard("اسم المتدرب", row.name)}
+            ${infoCard("الدفعة", row.batch)}
+            ${infoCard("المساق", row.specialty)}
+            ${infoCard("رقم الهاتف", row.phone)}
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 60%">البيان</th>
+                <th style="width: 40%">المبلغ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${fmt(fees)}</td></tr>
+              ${prevRow}
+              <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${fmt(dueTotal)}</td></tr>
+              ${paidRows}
+              <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${fmt(totalPaid)}</td></tr>
+              <tr class="row-final"><td class="lbl">${remainingLabel}</td><td class="num">${fmt(Math.abs(remaining))}</td></tr>
+            </tbody>
+          </table>
+
         </div>
-        
-        <div class="info-grid">
-          ${infoCard("اسم المتدرب", row.name)}
-          ${infoCard("الدفعة", row.batch)}
-          ${infoCard("المساق", row.specialty)}
-          ${infoCard("رقم الهاتف", row.phone)}
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 60%">البيان</th>
-              <th style="width: 40%">المبلغ</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${fmt(fees)}</td></tr>
-            ${prevRow}
-            <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${fmt(dueTotal)}</td></tr>
-            ${paidRows}
-            <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${fmt(totalPaid)}</td></tr>
-            <tr class="row-final"><td class="lbl">${remainingLabel}</td><td class="num">${fmt(Math.abs(remaining))}</td></tr>
-          </tbody>
-        </table>
-
-      </div>
-    </body>
-    </html>
-  `;
-};
+      </body>
+      </html>
+    `;
+  };
 
   const printStatement = (row: any, year: number) => {
     const html = generateAccountStatement(row, year);
@@ -392,12 +494,24 @@ const generateAccountStatement = (row: any, year: number) => {
     <div className="w-full space-y-4 sm:space-y-6 p-0" dir="rtl">
       {/* ========== واجهة جدول 2025 ========== */}
       <div className="w-full bg-gradient-to-b from-teal-50 to-white shadow border border-teal-200 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-l from-teal-600 to-teal-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+        <div className="bg-gradient-to-l from-teal-600 to-teal-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center flex-wrap gap-2">
           <div>
             <h2 className="text-sm sm:text-lg font-bold text-white">📊 أقساط ومستندات العام 2025</h2>
             <p className="text-xs text-teal-100">يشمل جميع الدفعات لعامي 2024 و 2025</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            {/* إضافة حقل البحث هنا */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute right-2.5 top-2 text-teal-500" />
+              <input 
+                type="text" 
+                placeholder="بحث (الاسم، الدفعة، المساق)..." 
+                value={search2025}
+                onChange={e => setSearch2025(e.target.value)}
+                className="pl-3 pr-8 py-1.5 rounded-lg text-xs border border-teal-300 outline-none focus:ring-2 focus:ring-teal-300 w-48 text-slate-800 shadow-sm"
+              />
+            </div>
+            
             <label className="px-3 py-1.5 bg-white text-teal-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-teal-50 shadow">
               📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2025)} className="hidden" />
             </label>
@@ -426,22 +540,34 @@ const generateAccountStatement = (row: any, year: number) => {
               <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
                 <tr>
                   <th className="p-2 text-center whitespace-nowrap">#</th>
-                  <th className="p-2 text-center whitespace-nowrap">اسم المتدرب</th>
-                  <th className="p-2 text-center whitespace-nowrap">الدفعة</th>
-                  <th className="p-2 text-center whitespace-nowrap">المساق</th>
-                  <th className="p-2 text-center whitespace-nowrap">الرسوم</th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('name')}>
+                    <div className="flex items-center justify-center gap-1">اسم المتدرب <SortIcon sortConfig={sortConfig2025} columnKey="name" /></div>
+                  </th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('batch')}>
+                    <div className="flex items-center justify-center gap-1">الدفعة <SortIcon sortConfig={sortConfig2025} columnKey="batch" /></div>
+                  </th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('specialty')}>
+                    <div className="flex items-center justify-center gap-1">المساق <SortIcon sortConfig={sortConfig2025} columnKey="specialty" /></div>
+                  </th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('fees')}>
+                    <div className="flex items-center justify-center gap-1">الرسوم <SortIcon sortConfig={sortConfig2025} columnKey="fees" /></div>
+                  </th>
                   {MONTHS_2025.map(m => <th key={m} className="p-1 text-center text-[11px] bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m}</th>)}
-                  <th className="p-2 text-center text-emerald-700 whitespace-nowrap">المسدد</th>
-                  <th className="p-2 text-center text-rose-700 whitespace-nowrap">المتبقي</th>
+                  <th className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('totalPaid')}>
+                    <div className="flex items-center justify-center gap-1">المسدد <SortIcon sortConfig={sortConfig2025} columnKey="totalPaid" /></div>
+                  </th>
+                  <th className="p-2 text-center text-rose-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('remaining')}>
+                    <div className="flex items-center justify-center gap-1">المتبقي <SortIcon sortConfig={sortConfig2025} columnKey="remaining" /></div>
+                  </th>
                   <th className="p-2 text-center whitespace-nowrap">طباعة</th>
                 </tr>
               </thead>
               <tbody>
-                {controls2025.rows.length === 0 ? (
-                  <tr><td colSpan={8 + MONTHS_2025.length} className="p-6 text-center text-slate-400">يرجى استيراد ملف "الاقساط للعام 2025.xlsx"</td></tr>
+                {filteredRows2025.length === 0 ? (
+                  <tr><td colSpan={8 + MONTHS_2025.length} className="p-6 text-center text-slate-400">لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)</td></tr>
                 ) : (
                   <>
-                    {controls2025.rows.map((r, i) => (
+                    {filteredRows2025.map((r: any, i: number) => (
                       <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
                         <td className="p-2 text-center text-slate-500 whitespace-nowrap">{i + 1}</td>
                         <td className="p-2 text-center font-semibold text-slate-900 whitespace-nowrap">{r.name}</td>
@@ -465,7 +591,7 @@ const generateAccountStatement = (row: any, year: number) => {
                       <td className="p-2 text-center whitespace-nowrap" colSpan={4}>الإجمالي العام</td>
                       <td className="p-2 text-center font-mono whitespace-nowrap">{fmt(totals2025.fees)}</td>
                       {MONTHS_2025.map(m => {
-                        const total = controls2025.rows.reduce((sum, r) => sum + (Number(r.payments?.[m]) || 0), 0);
+                        const total = filteredRows2025.reduce((sum: number, r: any) => sum + (Number(r.payments?.[m]) || 0), 0);
                         return <td key={m} className="p-1 text-center bg-teal-50 border-l border-teal-200 font-mono text-emerald-800 whitespace-nowrap">{total > 0 ? fmt(total) : "—"}</td>;
                       })}
                       <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50 whitespace-nowrap">{fmt(totals2025.paid)}</td>
@@ -482,12 +608,24 @@ const generateAccountStatement = (row: any, year: number) => {
 
       {/* ========== واجهة جدول 2026 ========== */}
       <div className="w-full bg-gradient-to-b from-purple-50 to-white shadow border border-purple-200 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-l from-purple-600 to-purple-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+        <div className="bg-gradient-to-l from-purple-600 to-purple-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center flex-wrap gap-2">
           <div>
             <h2 className="text-sm sm:text-lg font-bold text-white">📊 سجل أقساط العام الحالي 2026</h2>
             <p className="text-xs text-purple-100">بيانات المسدد والرصيد المدور لعام 2026</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            {/* إضافة حقل البحث هنا */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute right-2.5 top-2 text-purple-500" />
+              <input 
+                type="text" 
+                placeholder="بحث (الاسم، الدفعة، المساق)..." 
+                value={search2026}
+                onChange={e => setSearch2026(e.target.value)}
+                className="pl-3 pr-8 py-1.5 rounded-lg text-xs border border-purple-300 outline-none focus:ring-2 focus:ring-purple-300 w-48 text-slate-800 shadow-sm"
+              />
+            </div>
+
             <button onClick={() => setNewPaymentModal(true)} className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold shadow hover:bg-purple-200 transition-colors">➕ إضافة قسط</button>
             <label className="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-xs font-bold cursor-pointer shadow hover:bg-purple-50 transition-colors">
               📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2026)} className="hidden" />
@@ -517,23 +655,35 @@ const generateAccountStatement = (row: any, year: number) => {
               <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
                 <tr>
                   <th className="p-2 text-center whitespace-nowrap">#</th>
-                  <th className="p-2 text-center whitespace-nowrap">اسم المتدرب</th>
-                  <th className="p-2 text-center whitespace-nowrap">دفعة</th>
-                  <th className="p-2 text-center whitespace-nowrap">المساق</th>
-                  <th className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap">المتبقي من 2025</th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('name')}>
+                    <div className="flex items-center justify-center gap-1">اسم المتدرب <SortIcon sortConfig={sortConfig2026} columnKey="name" /></div>
+                  </th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('batch')}>
+                    <div className="flex items-center justify-center gap-1">دفعة <SortIcon sortConfig={sortConfig2026} columnKey="batch" /></div>
+                  </th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('specialty')}>
+                    <div className="flex items-center justify-center gap-1">المساق <SortIcon sortConfig={sortConfig2026} columnKey="specialty" /></div>
+                  </th>
+                  <th className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap cursor-pointer hover:bg-amber-100" onClick={() => handleSort2026('prevDue')}>
+                    <div className="flex items-center justify-center gap-1">المتبقي من 2025 <SortIcon sortConfig={sortConfig2026} columnKey="prevDue" /></div>
+                  </th>
                   {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m.trim()}</th>)}
-                  <th className="p-2 text-center text-emerald-700 whitespace-nowrap">مسدد 2026</th>
-                  <th className="p-2 text-center text-rose-700 whitespace-nowrap">الرصيد المتبقي</th>
+                  <th className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('totalPaid')}>
+                    <div className="flex items-center justify-center gap-1">مسدد 2026 <SortIcon sortConfig={sortConfig2026} columnKey="totalPaid" /></div>
+                  </th>
+                  <th className="p-2 text-center text-rose-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('remaining')}>
+                    <div className="flex items-center justify-center gap-1">الرصيد المتبقي <SortIcon sortConfig={sortConfig2026} columnKey="remaining" /></div>
+                  </th>
                   <th className="p-2 text-center whitespace-nowrap">حالة</th>
                   <th className="p-2 text-center whitespace-nowrap">طباعة</th>
                 </tr>
               </thead>
               <tbody>
-                {controls2026.rows.length === 0 ? (
-                  <tr><td colSpan={6 + MONTHS_2026.length} className="p-6 text-center text-slate-400">يرجى استيراد ملف "الاقساط للعام 2026.xlsx"</td></tr>
+                {filteredRows2026.length === 0 ? (
+                  <tr><td colSpan={6 + MONTHS_2026.length} className="p-6 text-center text-slate-400">لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)</td></tr>
                 ) : (
                   <>
-                    {controls2026.rows.map((r, i) => {
+                    {filteredRows2026.map((r: any, i: number) => {
                       const status = getStatusText(r.remaining);
                       return (
                         <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
@@ -579,7 +729,7 @@ const generateAccountStatement = (row: any, year: number) => {
                       <td className="p-2 text-center whitespace-nowrap" colSpan={4}>الإجمالي العام</td>
                       <td className="p-2 text-center font-mono text-amber-700 bg-amber-100/30 whitespace-nowrap">{fmt(totals2026.prevDue)}</td>
                       {MONTHS_2026.map(m => {
-                        const total = controls2026.rows.reduce((sum, r) => sum + (Number(r.payments?.[m]) || 0), 0);
+                        const total = filteredRows2026.reduce((sum: number, r: any) => sum + (Number(r.payments?.[m]) || 0), 0);
                         return <td key={m} className="p-1 text-center bg-purple-50 border-l border-purple-200 font-mono text-emerald-800 whitespace-nowrap">{total > 0 ? fmt(total) : "—"}</td>;
                       })}
                       <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50 whitespace-nowrap">{fmt(totals2026.paid)}</td>
