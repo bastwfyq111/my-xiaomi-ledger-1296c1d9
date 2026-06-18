@@ -16,7 +16,7 @@ const QUARTERS = [
   { key: "p4", label: "المدة الرابعة", months: [9,10,11] },
 ];
 
-const YEAR_DEFAULT = 2025;
+const YEAR_DEFAULT = 2026;
 const STORAGE_KEY  = "expenses-data-v1";
 
 type Cell  = { f: number; r: number };
