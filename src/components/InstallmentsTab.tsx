@@ -4,7 +4,6 @@ import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls } from "@/hooks/useTableControls";
-// 🆕 تم إضافة أيقونات Edit و Plus و Trash
 import { X, Printer, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, Edit, Plus, Trash } from "lucide-react";
 import TabActions from "./TabActions";
 
@@ -80,13 +79,16 @@ export default function InstallmentsTab() {
   const [sortConfig2025, setSortConfig2025] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [sortConfig2026, setSortConfig2026] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
-  // 🆕 متغيرات حالة جديدة للتعديل وإضافة الأعمدة والصفوف
   const [editRowModal, setEditRowModal] = useState<{ year: number, row: any, index: number } | null>(null);
   const [editRowData, setEditRowData] = useState<any>({});
   
-  const [extraCols2026, setExtraCols2026] = useState<string[]>([]);
+  // المتغيرات الجديدة للأعمدة المخصصة (نصوص، قوائم، معادلات)
+  const [extraCols2026, setExtraCols2026] = useState<Array<{ name: string, type: 'text' | 'select' | 'formula', options?: string[], formula?: string }>>([]);
   const [newColModal, setNewColModal] = useState(false);
   const [newColName, setNewColName] = useState("");
+  const [newColType, setNewColType] = useState<'text' | 'select' | 'formula'>('text');
+  const [newColOptions, setNewColOptions] = useState("");
+  const [newColFormula, setNewColFormula] = useState("");
 
   const [newRowModal2026, setNewRowModal2026] = useState(false);
   const [newRowData2026, setNewRowData2026] = useState({ name: "", batch: "", specialty: "", prevDue: 0, fees: 0 });
@@ -191,20 +193,17 @@ export default function InstallmentsTab() {
   const updateInstallments = (list: any[]) => useStore.setState({ installments: list });
   const updateInstallments2025 = (list: any[]) => useStore.setState({ installments2025: list });
 
-  // 🆕 دالة لحفظ تعديلات الصف للعامين
   const saveRowEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editRowModal) return;
 
     if (editRowModal.year === 2025) {
       const list = [...(installments2025 || [])];
-      // تحديث المتبقي بناءً على الرسوم الجديدة والمسدد
       const updatedRow = { ...editRowData, remaining: Math.max(0, cleanNumber(editRowData.fees) - cleanNumber(editRowData.totalPaid)) };
       list[editRowModal.index] = updatedRow;
       updateInstallments2025(list);
     } else {
       const list = [...(installments || [])];
-      // تحديث المتبقي بناءً على المتبقي السابق الجديد والمسدد
       const updatedRow = { ...editRowData, remaining: Math.max(0, cleanNumber(editRowData.prevDue) - cleanNumber(editRowData.totalPaid)) };
       list[editRowModal.index] = updatedRow;
       updateInstallments(list);
@@ -214,19 +213,56 @@ export default function InstallmentsTab() {
     setEditRowModal(null);
   };
 
-  // 🆕 دالة لإضافة عمود جديد 2026
   const addCustomColumn = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newColName.trim()) return;
-    if (extraCols2026.includes(newColName)) return toast.error("اسم العمود موجود مسبقاً");
+    if (extraCols2026.some(c => c.name === newColName)) return toast.error("اسم العمود موجود مسبقاً");
     
-    setExtraCols2026([...extraCols2026, newColName]);
+    setExtraCols2026([...extraCols2026, {
+      name: newColName,
+      type: newColType,
+      options: newColType === 'select' ? newColOptions.split(',').map(s => s.trim()) : [],
+      formula: newColType === 'formula' ? newColFormula : ""
+    }]);
+    
     toast.success(`تم إضافة العمود: ${newColName}`);
     setNewColModal(false);
     setNewColName("");
+    setNewColType("text");
+    setNewColOptions("");
+    setNewColFormula("");
   };
 
-  // 🆕 دالة لتحديث قيم الأعمدة الإضافية
+  const evaluateFormula = (formula: string, row: any) => {
+    if (!formula) return "";
+    try {
+      let parsedFormula = formula;
+      
+      const variables: Record<string, number> = {
+        fees: cleanNumber(row.fees),
+        prevDue: cleanNumber(row.prevDue),
+        totalPaid: cleanNumber(row.totalPaid),
+        remaining: cleanNumber(row.remaining)
+      };
+
+      extraCols2026.forEach(col => {
+        if(col.type !== 'formula') {
+            variables[col.name] = cleanNumber(row.customData?.[col.name]);
+        }
+      });
+
+      Object.keys(variables).forEach(key => {
+        const regex = new RegExp(`\\b${key}\\b`, 'g');
+        parsedFormula = parsedFormula.replace(regex, variables[key].toString());
+      });
+
+      const result = new Function(`return ${parsedFormula}`)();
+      return isNaN(result) ? "خطأ" : Number(result).toFixed(2);
+    } catch (e) {
+      return "صيغة غير صالحة";
+    }
+  };
+
   const updateCustomColValue = (rowIndex: number, colName: string, value: string) => {
     const list = [...(installments || [])];
     const row = list[rowIndex];
@@ -236,7 +272,6 @@ export default function InstallmentsTab() {
     updateInstallments(list);
   };
 
-  // 🆕 دالة لإضافة صف جديد لعام 2026
   const addNewRow2026 = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRowData2026.name) return toast.error("يرجى إدخال اسم المتدرب");
@@ -261,7 +296,6 @@ export default function InstallmentsTab() {
     setNewRowModal2026(false);
     setNewRowData2026({ name: "", batch: "", specialty: "", prevDue: 0, fees: 0 });
   };
-
 
   const addPayment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -383,7 +417,7 @@ export default function InstallmentsTab() {
             notes: row[notesKey] || "",
             phone: row[phoneKey] || "",
             payments,
-            customData: {} // 🆕 للبيانات المخصصة الجديدة
+            customData: {} 
           };
         });
 
@@ -609,7 +643,6 @@ export default function InstallmentsTab() {
                 ) : (
                   <>
                     {filteredRows2025.map((r: any, i: number) => {
-                      // 🆕 إيجاد الفهرس الأصلي في المصفوفة الكلية للتعديل الدقيق
                       const originalIndex = (installments2025 || []).findIndex((orig: any) => orig.name === r.name);
                       return (
                       <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
@@ -672,12 +705,10 @@ export default function InstallmentsTab() {
               />
             </div>
             
-            {/* 🆕 زر إضافة صف جديد لعام 2026 */}
             <button onClick={() => setNewRowModal2026(true)} className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold shadow hover:bg-blue-200 transition-colors flex items-center gap-1">
               <Plus className="w-3 h-3" /> طالب جديد
             </button>
 
-            {/* 🆕 زر إضافة عمود جديد لعام 2026 */}
             <button onClick={() => setNewColModal(true)} className="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold shadow hover:bg-amber-200 transition-colors flex items-center gap-1">
               <Plus className="w-3 h-3" /> عمود جديد
             </button>
@@ -688,7 +719,14 @@ export default function InstallmentsTab() {
             </label>
             <TabActions
               title="أقساط العام 2026"
-              rows={installments || []}
+              rows={(installments || []).map((r: any) => {
+                // دمج البيانات المخصصة ونواتج المعادلات لضمان نجاح التصدير
+                const customValues: any = { ...r.customData };
+                extraCols2026.forEach(col => {
+                  if (col.type === 'formula') customValues[col.name] = evaluateFormula(col.formula || "", r);
+                });
+                return { ...r, ...customValues };
+              })}
               columns={[
                 { key: "name", label: "اسم المتدرب" },
                 { key: "batch", label: "الدفعة" },
@@ -697,7 +735,7 @@ export default function InstallmentsTab() {
                 { key: "fees", label: "الرسوم" },
                 { key: "totalPaid", label: "المسدد" },
                 { key: "remaining", label: "المتبقي" },
-                ...extraCols2026.map(c => ({ key: c, label: c })) // إضافة الأعمدة للتصدير
+                ...extraCols2026.map(c => ({ key: c.name, label: c.name }))
               ]}
               fileName="اقساط-2026"
               numericKeys={["prevDue","fees","totalPaid","remaining"]}
@@ -726,9 +764,9 @@ export default function InstallmentsTab() {
                   </th>
                   {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m.trim()}</th>)}
                   
-                  {/* 🆕 عناوين الأعمدة المخصصة */}
+                  {/* عناوين الأعمدة المخصصة */}
                   {extraCols2026.map(col => (
-                    <th key={col} className="p-2 text-center text-xs bg-blue-50 border-l border-slate-200 whitespace-nowrap text-blue-800">{col}</th>
+                    <th key={col.name} className="p-2 text-center text-xs bg-blue-50 border-l border-slate-200 whitespace-nowrap text-blue-800">{col.name}</th>
                   ))}
 
                   <th className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('totalPaid')}>
@@ -748,7 +786,6 @@ export default function InstallmentsTab() {
                   <>
                     {filteredRows2026.map((r: any, i: number) => {
                       const status = getStatusText(r.remaining);
-                      // 🆕 إيجاد الفهرس الأصلي في المصفوفة الكلية
                       const originalIndex = (installments || []).findIndex((orig: any) => orig.name === r.name);
                       
                       return (
@@ -781,16 +818,33 @@ export default function InstallmentsTab() {
                             );
                           })}
 
-                          {/* 🆕 حقول الأعمدة المخصصة (قابلة للتعديل المباشر) */}
+                          {/* حقول الأعمدة المخصصة */}
                           {extraCols2026.map(col => (
-                            <td key={col} className="p-1 border-l border-slate-200">
-                              <input 
-                                type="text"
-                                className="w-full text-center bg-transparent outline-none focus:bg-white focus:ring-1 ring-blue-300 rounded px-1 py-1 text-xs"
-                                value={r.customData?.[col] || ""}
-                                onChange={(e) => updateCustomColValue(originalIndex, col, e.target.value)}
-                                placeholder="—"
-                              />
+                            <td key={col.name} className="p-1 border-l border-slate-200">
+                              {col.type === 'select' ? (
+                                <select 
+                                  className="w-full text-center bg-transparent outline-none focus:bg-white focus:ring-1 ring-blue-300 rounded px-1 py-1 text-xs"
+                                  value={r.customData?.[col.name] || ""}
+                                  onChange={(e) => updateCustomColValue(originalIndex, col.name, e.target.value)}
+                                >
+                                  <option value="">- اختر -</option>
+                                  {col.options?.map((opt, idx) => (
+                                    <option key={idx} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              ) : col.type === 'formula' ? (
+                                <div className="text-center font-mono text-xs font-bold text-indigo-700 bg-indigo-50/50 py-1.5 rounded">
+                                  {evaluateFormula(col.formula || "", r)}
+                                </div>
+                              ) : (
+                                <input 
+                                  type="text"
+                                  className="w-full text-center bg-transparent outline-none focus:bg-white focus:ring-1 ring-blue-300 rounded px-1 py-1 text-xs"
+                                  value={r.customData?.[col.name] || ""}
+                                  onChange={(e) => updateCustomColValue(originalIndex, col.name, e.target.value)}
+                                  placeholder="—"
+                                />
+                              )}
                             </td>
                           ))}
 
@@ -798,7 +852,6 @@ export default function InstallmentsTab() {
                           <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">{fmt(r.remaining)}</td>
                           <td className="p-2 text-center whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color}`}>{status.text}</span></td>
                           <td className="p-2 text-center whitespace-nowrap flex justify-center gap-1">
-                            {/* 🆕 زر تعديل بيانات الصف */}
                             <button onClick={() => { setEditRowData(r); setEditRowModal({ year: 2026, row: r, index: originalIndex }); }} className="p-1 bg-amber-50 text-amber-600 rounded border border-amber-200 hover:bg-amber-500 hover:text-white transition-colors" title="تعديل الصف">
                               <Edit className="w-3.5 h-3.5" />
                             </button>
@@ -816,7 +869,7 @@ export default function InstallmentsTab() {
                         const total = filteredRows2026.reduce((sum: number, r: any) => sum + (Number(r.payments?.[m]) || 0), 0);
                         return <td key={m} className="p-1 text-center bg-purple-50 border-l border-purple-200 font-mono text-emerald-800 whitespace-nowrap">{total > 0 ? fmt(total) : "—"}</td>;
                       })}
-                      {extraCols2026.map(col => <td key={col} className="bg-purple-50 border-l border-purple-200"></td>)}
+                      {extraCols2026.map(col => <td key={col.name} className="bg-purple-50 border-l border-purple-200"></td>)}
                       <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50 whitespace-nowrap">{fmt(totals2026.paid)}</td>
                       <td className="p-2 text-center font-mono text-rose-700 bg-rose-100/50 whitespace-nowrap">{fmt(totals2026.remaining)}</td>
                       <td className="whitespace-nowrap"></td><td className="whitespace-nowrap"></td>
@@ -831,7 +884,6 @@ export default function InstallmentsTab() {
 
       {/* ========== النوافذ المنبثقة ========== */}
 
-      {/* 🆕 نافذة تعديل بيانات الصف (شاملة للعامين) */}
       <Modal title={`✏️ تعديل بيانات المتدرب (${editRowModal?.year})`} isOpen={!!editRowModal} onClose={() => setEditRowModal(null)}>
         <form onSubmit={saveRowEdit} className="space-y-3">
           <div><label className="block text-xs font-semibold text-slate-700 mb-1">اسم المتدرب</label><input type="text" required value={editRowData?.name || ''} onChange={e => setEditRowData({...editRowData, name: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
@@ -852,14 +904,39 @@ export default function InstallmentsTab() {
         </form>
       </Modal>
 
-      {/* 🆕 نافذة إضافة عمود جديد 2026 */}
       <Modal title="➕ إضافة عمود جديد (2026)" isOpen={newColModal} onClose={() => setNewColModal(false)}>
         <form onSubmit={addCustomColumn} className="space-y-3">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">اسم العمود الجديد (مثل: ملاحظات، غرامة...)</label>
-            <input type="text" required value={newColName} onChange={e => setNewColName(e.target.value)} className="w-full p-2 border rounded-lg" autoFocus placeholder="أدخل اسم العمود" />
+            <label className="block text-xs font-semibold text-slate-700 mb-1">اسم العمود</label>
+            <input type="text" required value={newColName} onChange={e => setNewColName(e.target.value)} className="w-full p-2 border rounded-lg" autoFocus placeholder="مثل: حالة الاعتماد، الخصم..." />
           </div>
-          <p className="text-[10px] text-slate-500">ملاحظة: هذا العمود سيكون قابلاً للكتابة النصية المباشرة داخل الجدول.</p>
+          
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">نوع العمود</label>
+            <select value={newColType} onChange={(e: any) => setNewColType(e.target.value)} className="w-full p-2 border rounded-lg">
+              <option value="text">نص أو رقم حر (إدخال يدوي)</option>
+              <option value="select">قائمة منسدلة (خيارات محددة)</option>
+              <option value="formula">معادلة رياضية دالة (حساب تلقائي)</option>
+            </select>
+          </div>
+
+          {newColType === 'select' && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">الخيارات (افصل بينها بفاصلة)</label>
+              <input type="text" required value={newColOptions} onChange={e => setNewColOptions(e.target.value)} className="w-full p-2 border rounded-lg" placeholder="مثال: معتمد, غير معتمد, قيد المراجعة" />
+            </div>
+          )}
+
+          {newColType === 'formula' && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">المعادلة (استخدم المتغيرات الإنجليزية)</label>
+              <input type="text" required value={newColFormula} onChange={e => setNewColFormula(e.target.value)} className="w-full p-2 border rounded-lg text-left" dir="ltr" placeholder="مثال: fees - totalPaid" />
+              <p className="text-[10px] text-slate-500 mt-1 text-right">
+                المتغيرات المتاحة: <code className="bg-slate-100 px-1 rounded text-red-600">fees</code> (الرسوم), <code className="bg-slate-100 px-1 rounded text-red-600">totalPaid</code> (المسدد), <code className="bg-slate-100 px-1 rounded text-red-600">prevDue</code> (المدور), <code className="bg-slate-100 px-1 rounded text-red-600">remaining</code> (المتبقي).
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-3 border-t mt-4">
             <button type="button" onClick={() => setNewColModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
             <button type="submit" className="px-4 py-2 bg-amber-600 text-white rounded-lg font-bold">إضافة العمود</button>
@@ -867,7 +944,6 @@ export default function InstallmentsTab() {
         </form>
       </Modal>
 
-      {/* 🆕 نافذة إضافة صف جديد لعام 2026 */}
       <Modal title="➕ إضافة طالب جديد لعام 2026" isOpen={newRowModal2026} onClose={() => setNewRowModal2026(false)}>
         <form onSubmit={addNewRow2026} className="space-y-3">
           <div><label className="block text-xs font-semibold text-slate-700 mb-1">اسم المتدرب *</label><input type="text" required value={newRowData2026.name} onChange={e => setNewRowData2026({...newRowData2026, name: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
