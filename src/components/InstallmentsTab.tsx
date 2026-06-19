@@ -4,11 +4,10 @@ import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls } from "@/hooks/useTableControls";
-// إضافة أيقونات الفرز من lucide-react
-import { X, Printer, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+// 🆕 تم إضافة أيقونات Edit و Plus و Trash
+import { X, Printer, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, Edit, Plus, Trash } from "lucide-react";
 import TabActions from "./TabActions";
 
-// مصفوفات الأشهر
 const MONTHS_2025 = [
   "يونيو 2024", "يوليو 2024", "أغسطس 2024", 
   "مارس 2025", "ابريل 2025", "مايو 2025", 
@@ -21,13 +20,11 @@ const MONTHS_2026 = [
   "يوليو", "اغسطس", "سبتمبر", "اكتوبر ", "نوفمبر", "ديسمبر"
 ];
 
-// دالة لتنظيف وتحويل القيم النصية
 const cleanNumber = (val: any): number => {
   if (!val || isNaN(Number(String(val).replace(/[^0-9.-]/g, "")))) return 0;
   return Number(String(val).replace(/[^0-9.-]/g, "")) || 0;
 };
 
-// مكون الإحصائيات
 const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) => {
   const colClass = columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3";
   return (
@@ -42,7 +39,6 @@ const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) =
   );
 };
 
-// مكون النافذة المنبثقة
 const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: boolean; onClose: () => void; children: React.ReactNode }) => {
   if (!isOpen) return null;
   return (
@@ -58,7 +54,6 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
   );
 };
 
-// دالة مساعدة لرسم أيقونة الترتيب
 const SortIcon = ({ sortConfig, columnKey }: { sortConfig: { key: string; direction: 'asc' | 'desc' } | null, columnKey: string }) => {
   if (sortConfig?.key !== columnKey) return <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />;
   return sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-emerald-600" /> : <ArrowDown className="w-3 h-3 text-emerald-600" />;
@@ -79,22 +74,28 @@ export default function InstallmentsTab() {
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
-  // إضافات التصفية (البحث)
   const [search2025, setSearch2025] = useState("");
   const [search2026, setSearch2026] = useState("");
 
-  // إضافات الترتيب (الفرز)
   const [sortConfig2025, setSortConfig2025] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [sortConfig2026, setSortConfig2026] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  // 🆕 متغيرات حالة جديدة للتعديل وإضافة الأعمدة والصفوف
+  const [editRowModal, setEditRowModal] = useState<{ year: number, row: any, index: number } | null>(null);
+  const [editRowData, setEditRowData] = useState<any>({});
+  
+  const [extraCols2026, setExtraCols2026] = useState<string[]>([]);
+  const [newColModal, setNewColModal] = useState(false);
+  const [newColName, setNewColName] = useState("");
+
+  const [newRowModal2026, setNewRowModal2026] = useState(false);
+  const [newRowData2026, setNewRowData2026] = useState({ name: "", batch: "", specialty: "", prevDue: 0, fees: 0 });
 
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining"]);
   const controls2025 = useTableControls(installments2025 || [], ["name", "batch", "specialty", "fees", "totalPaid", "remaining"]);
 
-  // دوال تصفية وترتيب الصفوف بناءً على البحث والفرز
   const filteredRows2025 = useMemo(() => {
     let result = controls2025.rows || [];
-    
-    // البحث
     if (search2025) {
       const term = search2025.toLowerCase();
       result = result.filter((r: any) => 
@@ -103,13 +104,10 @@ export default function InstallmentsTab() {
         (r.specialty && r.specialty.toLowerCase().includes(term))
       );
     }
-
-    // الترتيب
     if (sortConfig2025) {
       result = [...result].sort((a: any, b: any) => {
         let aVal = a[sortConfig2025.key];
         let bVal = b[sortConfig2025.key];
-
         if (['fees', 'totalPaid', 'remaining'].includes(sortConfig2025.key)) {
           aVal = cleanNumber(aVal);
           bVal = cleanNumber(bVal);
@@ -117,20 +115,16 @@ export default function InstallmentsTab() {
           aVal = aVal ? String(aVal).toLowerCase() : "";
           bVal = bVal ? String(bVal).toLowerCase() : "";
         }
-
         if (aVal < bVal) return sortConfig2025.direction === 'asc' ? -1 : 1;
         if (aVal > bVal) return sortConfig2025.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
-
     return result;
   }, [controls2025.rows, search2025, sortConfig2025]);
 
   const filteredRows2026 = useMemo(() => {
     let result = controls2026.rows || [];
-    
-    // البحث
     if (search2026) {
       const term = search2026.toLowerCase();
       result = result.filter((r: any) => 
@@ -139,13 +133,10 @@ export default function InstallmentsTab() {
         (r.specialty && r.specialty.toLowerCase().includes(term))
       );
     }
-
-    // الترتيب
     if (sortConfig2026) {
       result = [...result].sort((a: any, b: any) => {
         let aVal = a[sortConfig2026.key];
         let bVal = b[sortConfig2026.key];
-
         if (['prevDue', 'fees', 'totalPaid', 'remaining'].includes(sortConfig2026.key)) {
           aVal = cleanNumber(aVal);
           bVal = cleanNumber(bVal);
@@ -153,33 +144,26 @@ export default function InstallmentsTab() {
           aVal = aVal ? String(aVal).toLowerCase() : "";
           bVal = bVal ? String(bVal).toLowerCase() : "";
         }
-
         if (aVal < bVal) return sortConfig2026.direction === 'asc' ? -1 : 1;
         if (aVal > bVal) return sortConfig2026.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
-
     return result;
   }, [controls2026.rows, search2026, sortConfig2026]);
 
   const handleSort2025 = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig2025 && sortConfig2025.key === key && sortConfig2025.direction === 'asc') {
-      direction = 'desc';
-    }
+    if (sortConfig2025 && sortConfig2025.key === key && sortConfig2025.direction === 'asc') direction = 'desc';
     setSortConfig2025({ key, direction });
   };
 
   const handleSort2026 = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig2026 && sortConfig2026.key === key && sortConfig2026.direction === 'asc') {
-      direction = 'desc';
-    }
+    if (sortConfig2026 && sortConfig2026.key === key && sortConfig2026.direction === 'asc') direction = 'desc';
     setSortConfig2026({ key, direction });
   };
 
-  // تحديث الإجماليات لتعتمد على البيانات المصفاة بدلاً من البيانات الكاملة
   const totals2025 = useMemo(() => ({
     fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
     paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
@@ -205,6 +189,79 @@ export default function InstallmentsTab() {
   };
 
   const updateInstallments = (list: any[]) => useStore.setState({ installments: list });
+  const updateInstallments2025 = (list: any[]) => useStore.setState({ installments2025: list });
+
+  // 🆕 دالة لحفظ تعديلات الصف للعامين
+  const saveRowEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editRowModal) return;
+
+    if (editRowModal.year === 2025) {
+      const list = [...(installments2025 || [])];
+      // تحديث المتبقي بناءً على الرسوم الجديدة والمسدد
+      const updatedRow = { ...editRowData, remaining: Math.max(0, cleanNumber(editRowData.fees) - cleanNumber(editRowData.totalPaid)) };
+      list[editRowModal.index] = updatedRow;
+      updateInstallments2025(list);
+    } else {
+      const list = [...(installments || [])];
+      // تحديث المتبقي بناءً على المتبقي السابق الجديد والمسدد
+      const updatedRow = { ...editRowData, remaining: Math.max(0, cleanNumber(editRowData.prevDue) - cleanNumber(editRowData.totalPaid)) };
+      list[editRowModal.index] = updatedRow;
+      updateInstallments(list);
+    }
+
+    toast.success("تم تحديث البيانات بنجاح");
+    setEditRowModal(null);
+  };
+
+  // 🆕 دالة لإضافة عمود جديد 2026
+  const addCustomColumn = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newColName.trim()) return;
+    if (extraCols2026.includes(newColName)) return toast.error("اسم العمود موجود مسبقاً");
+    
+    setExtraCols2026([...extraCols2026, newColName]);
+    toast.success(`تم إضافة العمود: ${newColName}`);
+    setNewColModal(false);
+    setNewColName("");
+  };
+
+  // 🆕 دالة لتحديث قيم الأعمدة الإضافية
+  const updateCustomColValue = (rowIndex: number, colName: string, value: string) => {
+    const list = [...(installments || [])];
+    const row = list[rowIndex];
+    if (!row.customData) row.customData = {};
+    row.customData[colName] = value;
+    list[rowIndex] = row;
+    updateInstallments(list);
+  };
+
+  // 🆕 دالة لإضافة صف جديد لعام 2026
+  const addNewRow2026 = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRowData2026.name) return toast.error("يرجى إدخال اسم المتدرب");
+
+    const payments = MONTHS_2026.reduce((acc, m) => ({ ...acc, [m]: 0 }), {} as any);
+    const newRec = { 
+      name: newRowData2026.name, 
+      batch: newRowData2026.batch, 
+      specialty: newRowData2026.specialty, 
+      fees: Number(newRowData2026.fees) || 0, 
+      prevDue: Number(newRowData2026.prevDue) || 0, 
+      totalPaid: 0, 
+      remaining: Number(newRowData2026.prevDue) || 0, 
+      notes: "", 
+      phone: "", 
+      payments,
+      customData: {} 
+    };
+    
+    updateInstallments([...(installments || []), newRec]);
+    toast.success("تم إضافة الصف بنجاح");
+    setNewRowModal2026(false);
+    setNewRowData2026({ name: "", batch: "", specialty: "", prevDue: 0, fees: 0 });
+  };
+
 
   const addPayment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -325,7 +382,8 @@ export default function InstallmentsTab() {
             remaining: cleanNumber(row[remainingKey]),
             notes: row[notesKey] || "",
             phone: row[phoneKey] || "",
-            payments
+            payments,
+            customData: {} // 🆕 للبيانات المخصصة الجديدة
           };
         });
 
@@ -394,35 +452,22 @@ export default function InstallmentsTab() {
           * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; }
           .container { width: 210mm; min-height: 297mm; background: white; padding: 15mm; }
-          
-          /* الهيدر */
           .header { background: #15803d !important; color: white; padding: 25px; border-radius: 8px; text-align: center; margin-bottom: 25px; border: 1px solid #000; }
           .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
           .header p { margin: 10px 0 0; font-size: 18px; opacity: 1; }
-
-          /* شبكة المعلومات */
           .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
           .info-box { border: 1px solid #000; padding: 12px; border-radius: 8px; text-align: center; }
           .info-lbl { font-size: 14px; color: #1e293b; font-weight: 800; }
           .info-val { font-size: 18px; color: #000; font-weight: 800; margin-top: 5px; }
-
-          /* الجدول */
           table { width: 100%; border-collapse: collapse; margin-top: 15px; }
           th { background-color: #166534 !important; color: #ffffff !important; padding: 12px; font-size: 18px; border: 1px solid #000; text-align: center; font-weight: 800; }
           td { padding: 12px; border: 1px solid #000; text-align: center; font-size: 18px; }
-          
-          /* محاذاة */
           .lbl { text-align: right; padding-right: 15px; font-weight: 800; color: #000; }
           .num { text-align: left; padding-left: 15px; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
-
-          /* تمييز الصفوف */
           .row-due-old { background-color: #f1f5f9 !important; }
           .row-total-due { background-color: #e2e8f0 !important; }
           .row-total-paid { background-color: #f0fdf4 !important; }
           .row-final { background-color: #fef2f2 !important; font-size: 22px; border: 2px solid #000 !important; }
-
-          .footer { margin-top: 40px; text-align: center; border-top: 1px solid #000; padding-top: 15px; color: #000; font-size: 14px; font-weight: 600; }
-
           @media print { 
             body { background: white; } 
             .container { box-shadow: none; padding: 10mm; width: 100%; }
@@ -437,14 +482,12 @@ export default function InstallmentsTab() {
             <h1>المجلس اليمني للاختصاصات الطبية</h1>
             <p>كشف حساب رسمي - العام ${year}م</p>
           </div>
-          
           <div class="info-grid">
             ${infoCard("اسم المتدرب", row.name)}
             ${infoCard("الدفعة", row.batch)}
             ${infoCard("المساق", row.specialty)}
             ${infoCard("رقم الهاتف", row.phone)}
           </div>
-
           <table>
             <thead>
               <tr>
@@ -461,7 +504,6 @@ export default function InstallmentsTab() {
               <tr class="row-final"><td class="lbl">${remainingLabel}</td><td class="num">${fmt(Math.abs(remaining))}</td></tr>
             </tbody>
           </table>
-
         </div>
       </body>
       </html>
@@ -500,7 +542,6 @@ export default function InstallmentsTab() {
             <p className="text-xs text-teal-100">يشمل جميع الدفعات لعامي 2024 و 2025</p>
           </div>
           <div className="flex gap-2 flex-wrap items-center">
-            {/* إضافة حقل البحث هنا */}
             <div className="relative">
               <Search className="w-4 h-4 absolute right-2.5 top-2 text-teal-500" />
               <input 
@@ -559,15 +600,18 @@ export default function InstallmentsTab() {
                   <th className="p-2 text-center text-rose-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('remaining')}>
                     <div className="flex items-center justify-center gap-1">المتبقي <SortIcon sortConfig={sortConfig2025} columnKey="remaining" /></div>
                   </th>
-                  <th className="p-2 text-center whitespace-nowrap">طباعة</th>
+                  <th className="p-2 text-center whitespace-nowrap">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows2025.length === 0 ? (
-                  <tr><td colSpan={8 + MONTHS_2025.length} className="p-6 text-center text-slate-400">لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)</td></tr>
+                  <tr><td colSpan={9 + MONTHS_2025.length} className="p-6 text-center text-slate-400">لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)</td></tr>
                 ) : (
                   <>
-                    {filteredRows2025.map((r: any, i: number) => (
+                    {filteredRows2025.map((r: any, i: number) => {
+                      // 🆕 إيجاد الفهرس الأصلي في المصفوفة الكلية للتعديل الدقيق
+                      const originalIndex = (installments2025 || []).findIndex((orig: any) => orig.name === r.name);
+                      return (
                       <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
                         <td className="p-2 text-center text-slate-500 whitespace-nowrap">{i + 1}</td>
                         <td className="p-2 text-center font-semibold text-slate-900 whitespace-nowrap">{r.name}</td>
@@ -580,13 +624,16 @@ export default function InstallmentsTab() {
                         })}
                         <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">{fmt(r.totalPaid)}</td>
                         <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">{fmt(r.remaining)}</td>
-                        <td className="p-2 text-center whitespace-nowrap">
-                          <button onClick={() => printStatement(r, 2025)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors">
-                            <Printer className="w-3.5 h-3.5 mx-auto" />
+                        <td className="p-2 text-center whitespace-nowrap flex justify-center gap-1">
+                          <button onClick={() => { setEditRowData(r); setEditRowModal({ year: 2025, row: r, index: originalIndex }); }} className="p-1 bg-amber-50 text-amber-600 rounded border border-amber-200 hover:bg-amber-500 hover:text-white transition-colors" title="تعديل الصف">
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => printStatement(r, 2025)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors" title="طباعة الكشف">
+                            <Printer className="w-3.5 h-3.5" />
                           </button>
                         </td>
                       </tr>
-                    ))}
+                    )})}
                     <tr className="border-t-2 border-teal-300 bg-teal-50 font-bold text-teal-900">
                       <td className="p-2 text-center whitespace-nowrap" colSpan={4}>الإجمالي العام</td>
                       <td className="p-2 text-center font-mono whitespace-nowrap">{fmt(totals2025.fees)}</td>
@@ -614,7 +661,6 @@ export default function InstallmentsTab() {
             <p className="text-xs text-purple-100">بيانات المسدد والرصيد المدور لعام 2026</p>
           </div>
           <div className="flex gap-2 flex-wrap items-center">
-            {/* إضافة حقل البحث هنا */}
             <div className="relative">
               <Search className="w-4 h-4 absolute right-2.5 top-2 text-purple-500" />
               <input 
@@ -625,10 +671,20 @@ export default function InstallmentsTab() {
                 className="pl-3 pr-8 py-1.5 rounded-lg text-xs border border-purple-300 outline-none focus:ring-2 focus:ring-purple-300 w-48 text-slate-800 shadow-sm"
               />
             </div>
+            
+            {/* 🆕 زر إضافة صف جديد لعام 2026 */}
+            <button onClick={() => setNewRowModal2026(true)} className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold shadow hover:bg-blue-200 transition-colors flex items-center gap-1">
+              <Plus className="w-3 h-3" /> طالب جديد
+            </button>
+
+            {/* 🆕 زر إضافة عمود جديد لعام 2026 */}
+            <button onClick={() => setNewColModal(true)} className="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold shadow hover:bg-amber-200 transition-colors flex items-center gap-1">
+              <Plus className="w-3 h-3" /> عمود جديد
+            </button>
 
             <button onClick={() => setNewPaymentModal(true)} className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold shadow hover:bg-purple-200 transition-colors">➕ إضافة قسط</button>
             <label className="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-xs font-bold cursor-pointer shadow hover:bg-purple-50 transition-colors">
-              📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2026)} className="hidden" />
+              📥 استيراد <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2026)} className="hidden" />
             </label>
             <TabActions
               title="أقساط العام 2026"
@@ -641,6 +697,7 @@ export default function InstallmentsTab() {
                 { key: "fees", label: "الرسوم" },
                 { key: "totalPaid", label: "المسدد" },
                 { key: "remaining", label: "المتبقي" },
+                ...extraCols2026.map(c => ({ key: c, label: c })) // إضافة الأعمدة للتصدير
               ]}
               fileName="اقساط-2026"
               numericKeys={["prevDue","fees","totalPaid","remaining"]}
@@ -668,6 +725,12 @@ export default function InstallmentsTab() {
                     <div className="flex items-center justify-center gap-1">المتبقي من 2025 <SortIcon sortConfig={sortConfig2026} columnKey="prevDue" /></div>
                   </th>
                   {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m.trim()}</th>)}
+                  
+                  {/* 🆕 عناوين الأعمدة المخصصة */}
+                  {extraCols2026.map(col => (
+                    <th key={col} className="p-2 text-center text-xs bg-blue-50 border-l border-slate-200 whitespace-nowrap text-blue-800">{col}</th>
+                  ))}
+
                   <th className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('totalPaid')}>
                     <div className="flex items-center justify-center gap-1">مسدد 2026 <SortIcon sortConfig={sortConfig2026} columnKey="totalPaid" /></div>
                   </th>
@@ -675,16 +738,19 @@ export default function InstallmentsTab() {
                     <div className="flex items-center justify-center gap-1">الرصيد المتبقي <SortIcon sortConfig={sortConfig2026} columnKey="remaining" /></div>
                   </th>
                   <th className="p-2 text-center whitespace-nowrap">حالة</th>
-                  <th className="p-2 text-center whitespace-nowrap">طباعة</th>
+                  <th className="p-2 text-center whitespace-nowrap">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows2026.length === 0 ? (
-                  <tr><td colSpan={6 + MONTHS_2026.length} className="p-6 text-center text-slate-400">لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)</td></tr>
+                  <tr><td colSpan={8 + MONTHS_2026.length + extraCols2026.length} className="p-6 text-center text-slate-400">لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)</td></tr>
                 ) : (
                   <>
                     {filteredRows2026.map((r: any, i: number) => {
                       const status = getStatusText(r.remaining);
+                      // 🆕 إيجاد الفهرس الأصلي في المصفوفة الكلية
+                      const originalIndex = (installments || []).findIndex((orig: any) => orig.name === r.name);
+                      
                       return (
                         <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
                           <td className="p-2 text-center text-slate-500 whitespace-nowrap">{i + 1}</td>
@@ -714,12 +780,30 @@ export default function InstallmentsTab() {
                               </td>
                             );
                           })}
+
+                          {/* 🆕 حقول الأعمدة المخصصة (قابلة للتعديل المباشر) */}
+                          {extraCols2026.map(col => (
+                            <td key={col} className="p-1 border-l border-slate-200">
+                              <input 
+                                type="text"
+                                className="w-full text-center bg-transparent outline-none focus:bg-white focus:ring-1 ring-blue-300 rounded px-1 py-1 text-xs"
+                                value={r.customData?.[col] || ""}
+                                onChange={(e) => updateCustomColValue(originalIndex, col, e.target.value)}
+                                placeholder="—"
+                              />
+                            </td>
+                          ))}
+
                           <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">{fmt(r.totalPaid)}</td>
                           <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">{fmt(r.remaining)}</td>
                           <td className="p-2 text-center whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color}`}>{status.text}</span></td>
-                          <td className="p-2 text-center whitespace-nowrap">
-                            <button onClick={() => printStatement(r, 2026)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors">
-                              <Printer className="w-3.5 h-3.5 mx-auto" />
+                          <td className="p-2 text-center whitespace-nowrap flex justify-center gap-1">
+                            {/* 🆕 زر تعديل بيانات الصف */}
+                            <button onClick={() => { setEditRowData(r); setEditRowModal({ year: 2026, row: r, index: originalIndex }); }} className="p-1 bg-amber-50 text-amber-600 rounded border border-amber-200 hover:bg-amber-500 hover:text-white transition-colors" title="تعديل الصف">
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => printStatement(r, 2026)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors" title="طباعة الكشف">
+                              <Printer className="w-3.5 h-3.5" />
                             </button>
                           </td>
                         </tr>
@@ -732,6 +816,7 @@ export default function InstallmentsTab() {
                         const total = filteredRows2026.reduce((sum: number, r: any) => sum + (Number(r.payments?.[m]) || 0), 0);
                         return <td key={m} className="p-1 text-center bg-purple-50 border-l border-purple-200 font-mono text-emerald-800 whitespace-nowrap">{total > 0 ? fmt(total) : "—"}</td>;
                       })}
+                      {extraCols2026.map(col => <td key={col} className="bg-purple-50 border-l border-purple-200"></td>)}
                       <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50 whitespace-nowrap">{fmt(totals2026.paid)}</td>
                       <td className="p-2 text-center font-mono text-rose-700 bg-rose-100/50 whitespace-nowrap">{fmt(totals2026.remaining)}</td>
                       <td className="whitespace-nowrap"></td><td className="whitespace-nowrap"></td>
@@ -745,6 +830,62 @@ export default function InstallmentsTab() {
       </div>
 
       {/* ========== النوافذ المنبثقة ========== */}
+
+      {/* 🆕 نافذة تعديل بيانات الصف (شاملة للعامين) */}
+      <Modal title={`✏️ تعديل بيانات المتدرب (${editRowModal?.year})`} isOpen={!!editRowModal} onClose={() => setEditRowModal(null)}>
+        <form onSubmit={saveRowEdit} className="space-y-3">
+          <div><label className="block text-xs font-semibold text-slate-700 mb-1">اسم المتدرب</label><input type="text" required value={editRowData?.name || ''} onChange={e => setEditRowData({...editRowData, name: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">الدفعة</label><input type="text" value={editRowData?.batch || ''} onChange={e => setEditRowData({...editRowData, batch: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">المساق</label><input type="text" value={editRowData?.specialty || ''} onChange={e => setEditRowData({...editRowData, specialty: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          </div>
+          {editRowModal?.year === 2025 && (
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">الرسوم الكلية</label><input type="number" value={editRowData?.fees || 0} onChange={e => setEditRowData({...editRowData, fees: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          )}
+          {editRowModal?.year === 2026 && (
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">المتبقي من 2025 (المدور)</label><input type="number" value={editRowData?.prevDue || 0} onChange={e => setEditRowData({...editRowData, prevDue: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          )}
+          <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+            <button type="button" onClick={() => setEditRowModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+            <button type="submit" className="px-4 py-2 bg-amber-600 text-white rounded-lg font-bold">حفظ التعديلات</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 🆕 نافذة إضافة عمود جديد 2026 */}
+      <Modal title="➕ إضافة عمود جديد (2026)" isOpen={newColModal} onClose={() => setNewColModal(false)}>
+        <form onSubmit={addCustomColumn} className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">اسم العمود الجديد (مثل: ملاحظات، غرامة...)</label>
+            <input type="text" required value={newColName} onChange={e => setNewColName(e.target.value)} className="w-full p-2 border rounded-lg" autoFocus placeholder="أدخل اسم العمود" />
+          </div>
+          <p className="text-[10px] text-slate-500">ملاحظة: هذا العمود سيكون قابلاً للكتابة النصية المباشرة داخل الجدول.</p>
+          <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+            <button type="button" onClick={() => setNewColModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+            <button type="submit" className="px-4 py-2 bg-amber-600 text-white rounded-lg font-bold">إضافة العمود</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 🆕 نافذة إضافة صف جديد لعام 2026 */}
+      <Modal title="➕ إضافة طالب جديد لعام 2026" isOpen={newRowModal2026} onClose={() => setNewRowModal2026(false)}>
+        <form onSubmit={addNewRow2026} className="space-y-3">
+          <div><label className="block text-xs font-semibold text-slate-700 mb-1">اسم المتدرب *</label><input type="text" required value={newRowData2026.name} onChange={e => setNewRowData2026({...newRowData2026, name: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">الدفعة</label><input type="text" value={newRowData2026.batch} onChange={e => setNewRowData2026({...newRowData2026, batch: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">المساق</label><input type="text" value={newRowData2026.specialty} onChange={e => setNewRowData2026({...newRowData2026, specialty: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">الرسوم الكلية</label><input type="number" value={newRowData2026.fees} onChange={e => setNewRowData2026({...newRowData2026, fees: Number(e.target.value)})} className="w-full p-2 border rounded-lg" /></div>
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">المتبقي من 2025</label><input type="number" value={newRowData2026.prevDue} onChange={e => setNewRowData2026({...newRowData2026, prevDue: Number(e.target.value)})} className="w-full p-2 border rounded-lg" /></div>
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+            <button type="button" onClick={() => setNewRowModal2026(false)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold">إضافة المتدرب</button>
+          </div>
+        </form>
+      </Modal>
+
       <Modal title="➕ إضافة قسط جديد - 2026" isOpen={newPaymentModal} onClose={() => setNewPaymentModal(false)}>
         <form onSubmit={addNewPayment} className="space-y-3">
           <div className="relative">
