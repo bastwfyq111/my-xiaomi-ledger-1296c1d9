@@ -96,6 +96,8 @@ export default function InstallmentsTab() {
   // [جديد] متغيرات التنسيق الشرطي
   const [condFormatModal, setCondFormatModal] = useState(false);
   const [condFormatParams, setCondFormatParams] = useState({ text: "", color: "bg-yellow-100" });
+  const [condFormatRules, setCondFormatRules] = useState<Array<{ text: string; color: string }>>([]);
+  const [hiddenCols2026, setHiddenCols2026] = useState<string[]>([]);
 
   const [newRowModal2026, setNewRowModal2026] = useState(false);
   const [newRowData2026, setNewRowData2026] = useState({ name: "", batch: "", specialty: "", prevDue: 0, fees: 0 });
@@ -103,23 +105,41 @@ export default function InstallmentsTab() {
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining"]);
   const controls2025 = useTableControls(installments2025 || [], ["name", "batch", "specialty", "fees", "totalPaid", "remaining"]);
 
-  // التحديث: التنسيق الشرطي للصف
-  const isRowHighlighted = (row: any) => {
-    if (!condFormatParams.text.trim()) return false;
-    const term = condFormatParams.text.toLowerCase();
-    
-    // فحص الحقول الأساسية
-    if (
-      (row.name && String(row.name).toLowerCase().includes(term)) ||
-      (row.batch && String(row.batch).toLowerCase().includes(term)) ||
-      (row.specialty && String(row.specialty).toLowerCase().includes(term))
-    ) return true;
+  const visibleMonths2026 = useMemo(() => MONTHS_2026.filter(m => !hiddenCols2026.includes(`month:${m}`)), [hiddenCols2026]);
+  const visibleExtraCols2026 = useMemo(() => extraCols2026.filter(c => !hiddenCols2026.includes(`custom:${c.name}`)), [extraCols2026, hiddenCols2026]);
+  const isBaseColVisible2026 = (key: string) => !hiddenCols2026.includes(`base:${key}`);
 
-    // فحص حقول الأعمدة المخصصة
-    if (row.customData) {
-      return Object.values(row.customData).some(val => String(val).toLowerCase().includes(term));
-    }
-    return false;
+  // التحديث: التنسيق الشرطي للصف مع دعم عدة قواعد
+  const getConditionalRowClass = (row: any) => {
+    const searchableValues = [
+      row.name,
+      row.batch,
+      row.specialty,
+      row.prevDue,
+      row.fees,
+      row.totalPaid,
+      row.remaining,
+      ...Object.values(row.payments || {}),
+      ...Object.values(row.customData || {})
+    ].map(val => String(val ?? "").toLowerCase());
+
+    const matchedRule = condFormatRules.find(rule => {
+      const term = rule.text.trim().toLowerCase();
+      return term && searchableValues.some(value => value.includes(term));
+    });
+
+    return matchedRule?.color || "hover:bg-slate-50/80";
+  };
+
+  const addConditionalRule = () => {
+    if (!condFormatParams.text.trim()) return toast.error("يرجى إدخال نص الشرط");
+    setCondFormatRules([...condFormatRules, { ...condFormatParams, text: condFormatParams.text.trim() }]);
+    setCondFormatParams({ text: "", color: "bg-yellow-100" });
+    toast.success("تمت إضافة قاعدة التنسيق");
+  };
+
+  const deleteConditionalRule = (index: number) => {
+    setCondFormatRules(condFormatRules.filter((_, i) => i !== index));
   };
 
   const filteredRows2025 = useMemo(() => {
@@ -336,13 +356,50 @@ export default function InstallmentsTab() {
     }
   };
 
+  const recalculate2026Row = (row: any) => {
+    const payments = { ...(row.payments || {}) };
+    const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
+    return { ...row, payments, totalPaid, remaining: Math.max(0, cleanNumber(row.prevDue) - totalPaid) };
+  };
+
+  const update2026CellValue = (rowIndex: number, key: string, value: string) => {
+    if (rowIndex < 0) return;
+    const list = [...(installments || [])];
+    const current = { ...list[rowIndex] };
+    const numericKeys = ["prevDue", "fees", "totalPaid", "remaining"];
+    const nextValue: any = numericKeys.includes(key) ? cleanNumber(value) : value;
+    list[rowIndex] = key === "prevDue" ? recalculate2026Row({ ...current, [key]: nextValue }) : { ...current, [key]: nextValue };
+    updateInstallments(list);
+  };
+
+  const update2026PaymentValue = (rowIndex: number, month: string, value: string) => {
+    if (rowIndex < 0) return;
+    const list = [...(installments || [])];
+    const row = { ...list[rowIndex], payments: { ...(list[rowIndex]?.payments || {}) } };
+    row.payments[month] = cleanNumber(value);
+    list[rowIndex] = recalculate2026Row(row);
+    updateInstallments(list);
+  };
+
   const updateCustomColValue = (rowIndex: number, colName: string, value: string) => {
     const list = [...(installments || [])];
-    const row = list[rowIndex];
-    if (!row.customData) row.customData = {};
+    const row = { ...list[rowIndex], customData: { ...(list[rowIndex]?.customData || {}) } };
     row.customData[colName] = value;
     list[rowIndex] = row;
     updateInstallments(list);
+  };
+
+  const hideColumn2026 = (kind: 'base' | 'month' | 'custom', key: string) => {
+    if (!confirm(`هل تريد حذف/إخفاء هذا العمود من جدول 2026: ${key}؟`)) return;
+    setHiddenCols2026(prev => [...new Set([...prev, `${kind}:${key}`])]);
+    toast.success("تم حذف العمود من العرض");
+  };
+
+  const deleteRow2026 = (rowIndex: number, name: string) => {
+    if (rowIndex < 0) return;
+    if (!confirm(`هل أنت متأكد من حذف صف المتدرب "${name}" من جدول 2026؟`)) return;
+    updateInstallments((installments || []).filter((_: any, i: number) => i !== rowIndex));
+    toast.success("تم حذف الصف");
   };
 
   const addNewRow2026 = (e: React.FormEvent) => {
@@ -760,9 +817,9 @@ export default function InstallmentsTab() {
           <div className="flex gap-2 flex-wrap items-center">
             
             {/* [جديد] زر التنسيق الشرطي */}
-            <button onClick={() => setCondFormatModal(true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow transition-colors flex items-center gap-1 ${condFormatParams.text ? 'bg-yellow-400 text-yellow-900 animate-pulse' : 'bg-white/20 text-white hover:bg-white/30'}`} title="تلوين الصفوف حسب نص معين">
+            <button onClick={() => setCondFormatModal(true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow transition-colors flex items-center gap-1 ${condFormatRules.length ? 'bg-yellow-400 text-yellow-900 animate-pulse' : 'bg-white/20 text-white hover:bg-white/30'}`} title="تلوين الصفوف حسب نص معين">
               <Palette className="w-4 h-4" /> 
-              {condFormatParams.text ? `تنسيق نشط (${condFormatParams.text})` : "تنسيق شرطي"}
+              {condFormatRules.length ? `تنسيق نشط (${condFormatRules.length})` : "تنسيق شرطي"}
             </button>
 
             <div className="relative">
@@ -805,7 +862,7 @@ export default function InstallmentsTab() {
                 { key: "fees", label: "الرسوم" },
                 { key: "totalPaid", label: "المسدد" },
                 { key: "remaining", label: "المتبقي" },
-                ...extraCols2026.map(c => ({ key: c.name, label: c.name }))
+                ...visibleExtraCols2026.map(c => ({ key: c.name, label: c.name }))
               ]}
               fileName="اقساط-2026"
               numericKeys={["prevDue","fees","totalPaid","remaining"]}
@@ -820,22 +877,22 @@ export default function InstallmentsTab() {
               <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
                 <tr>
                   <th className="p-2 text-center whitespace-nowrap">#</th>
-                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('name')}>
-                    <div className="flex items-center justify-center gap-1">اسم المتدرب <SortIcon sortConfig={sortConfig2026} columnKey="name" /></div>
-                  </th>
-                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('batch')}>
-                    <div className="flex items-center justify-center gap-1">دفعة <SortIcon sortConfig={sortConfig2026} columnKey="batch" /></div>
-                  </th>
-                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('specialty')}>
-                    <div className="flex items-center justify-center gap-1">المساق <SortIcon sortConfig={sortConfig2026} columnKey="specialty" /></div>
-                  </th>
-                  <th className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap cursor-pointer hover:bg-amber-100" onClick={() => handleSort2026('prevDue')}>
-                    <div className="flex items-center justify-center gap-1">المتبقي من 2025 <SortIcon sortConfig={sortConfig2026} columnKey="prevDue" /></div>
-                  </th>
-                  {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m.trim()}</th>)}
+                  {isBaseColVisible2026('name') && <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200 group" onClick={() => handleSort2026('name')}>
+                    <div className="flex items-center justify-center gap-1">اسم المتدرب <SortIcon sortConfig={sortConfig2026} columnKey="name" /><button onClick={(e) => { e.stopPropagation(); hideColumn2026('base', 'name'); }} className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700" title="حذف العمود"><Trash className="w-3 h-3" /></button></div>
+                  </th>}
+                  {isBaseColVisible2026('batch') && <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200 group" onClick={() => handleSort2026('batch')}>
+                    <div className="flex items-center justify-center gap-1">دفعة <SortIcon sortConfig={sortConfig2026} columnKey="batch" /><button onClick={(e) => { e.stopPropagation(); hideColumn2026('base', 'batch'); }} className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700" title="حذف العمود"><Trash className="w-3 h-3" /></button></div>
+                  </th>}
+                  {isBaseColVisible2026('specialty') && <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200 group" onClick={() => handleSort2026('specialty')}>
+                    <div className="flex items-center justify-center gap-1">المساق <SortIcon sortConfig={sortConfig2026} columnKey="specialty" /><button onClick={(e) => { e.stopPropagation(); hideColumn2026('base', 'specialty'); }} className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700" title="حذف العمود"><Trash className="w-3 h-3" /></button></div>
+                  </th>}
+                  {isBaseColVisible2026('prevDue') && <th className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap cursor-pointer hover:bg-amber-100 group" onClick={() => handleSort2026('prevDue')}>
+                    <div className="flex items-center justify-center gap-1">المتبقي من 2025 <SortIcon sortConfig={sortConfig2026} columnKey="prevDue" /><button onClick={(e) => { e.stopPropagation(); hideColumn2026('base', 'prevDue'); }} className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700" title="حذف العمود"><Trash className="w-3 h-3" /></button></div>
+                  </th>}
+                  {visibleMonths2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap group"><div className="flex items-center justify-center gap-1">{m.trim()}<button onClick={() => hideColumn2026('month', m)} className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700" title="حذف العمود"><Trash className="w-3 h-3" /></button></div></th>)}
                   
                   {/* [تحديث] عناوين الأعمدة المخصصة مع زر التعديل */}
-                  {extraCols2026.map(col => (
+                  {visibleExtraCols2026.map(col => (
                     <th key={col.name} className="p-2 text-center text-xs bg-blue-50 border-l border-slate-200 whitespace-nowrap text-blue-800 group">
                       <div className="flex items-center justify-center gap-1">
                         {col.name}
@@ -850,19 +907,19 @@ export default function InstallmentsTab() {
                     </th>
                   ))}
 
-                  <th className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('totalPaid')}>
-                    <div className="flex items-center justify-center gap-1">مسدد 2026 <SortIcon sortConfig={sortConfig2026} columnKey="totalPaid" /></div>
-                  </th>
-                  <th className="p-2 text-center text-rose-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('remaining')}>
-                    <div className="flex items-center justify-center gap-1">الرصيد المتبقي <SortIcon sortConfig={sortConfig2026} columnKey="remaining" /></div>
-                  </th>
+                  {isBaseColVisible2026('totalPaid') && <th className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200 group" onClick={() => handleSort2026('totalPaid')}>
+                    <div className="flex items-center justify-center gap-1">مسدد 2026 <SortIcon sortConfig={sortConfig2026} columnKey="totalPaid" /><button onClick={(e) => { e.stopPropagation(); hideColumn2026('base', 'totalPaid'); }} className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700" title="حذف العمود"><Trash className="w-3 h-3" /></button></div>
+                  </th>}
+                  {isBaseColVisible2026('remaining') && <th className="p-2 text-center text-rose-700 whitespace-nowrap cursor-pointer hover:bg-slate-200 group" onClick={() => handleSort2026('remaining')}>
+                    <div className="flex items-center justify-center gap-1">الرصيد المتبقي <SortIcon sortConfig={sortConfig2026} columnKey="remaining" /><button onClick={(e) => { e.stopPropagation(); hideColumn2026('base', 'remaining'); }} className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700" title="حذف العمود"><Trash className="w-3 h-3" /></button></div>
+                  </th>}
                   <th className="p-2 text-center whitespace-nowrap">حالة</th>
                   <th className="p-2 text-center whitespace-nowrap">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows2026.length === 0 ? (
-                  <tr><td colSpan={8 + MONTHS_2026.length + extraCols2026.length} className="p-6 text-center text-slate-400">لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)</td></tr>
+                  <tr><td colSpan={4 + ['name','batch','specialty','prevDue','totalPaid','remaining'].filter(isBaseColVisible2026).length + visibleMonths2026.length + visibleExtraCols2026.length} className="p-6 text-center text-slate-400">لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)</td></tr>
                 ) : (
                   <>
                     {filteredRows2026.map((r: any, i: number) => {
@@ -870,40 +927,36 @@ export default function InstallmentsTab() {
                       const originalIndex = (installments || []).findIndex((orig: any) => orig.name === r.name);
                       
                       // [جديد] تطبيق التنسيق الشرطي على الصف
-                      const rowBgClass = isRowHighlighted(r) ? condFormatParams.color : "hover:bg-slate-50/80";
+                      const rowBgClass = getConditionalRowClass(r);
                       
                       return (
                         <tr key={i} className={`border-t border-slate-200 transition-colors ${rowBgClass}`}>
                           <td className="p-2 text-center text-slate-500 whitespace-nowrap">{i + 1}</td>
-                          <td className="p-2 text-center font-semibold text-slate-900 whitespace-nowrap">{r.name}</td>
-                          <td className="p-2 text-center text-slate-600 whitespace-nowrap">{r.batch || "—"}</td>
-                          <td className="p-2 text-center text-slate-600 whitespace-nowrap">{r.specialty || "—"}</td>
-                          <td className="p-2 text-center font-mono text-amber-700 font-bold bg-amber-50/20 whitespace-nowrap">{fmt(r.prevDue)}</td>
-                          {MONTHS_2026.map(m => {
+                          {isBaseColVisible2026('name') && <td className="p-1 text-center font-semibold text-slate-900 whitespace-nowrap"><input value={r.name || ''} onChange={e => update2026CellValue(originalIndex, 'name', e.target.value)} className="w-full min-w-32 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1" /></td>}
+                          {isBaseColVisible2026('batch') && <td className="p-1 text-center text-slate-600 whitespace-nowrap"><input value={r.batch || ''} onChange={e => update2026CellValue(originalIndex, 'batch', e.target.value)} className="w-full min-w-20 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1" placeholder="—" /></td>}
+                          {isBaseColVisible2026('specialty') && <td className="p-1 text-center text-slate-600 whitespace-nowrap"><input value={r.specialty || ''} onChange={e => update2026CellValue(originalIndex, 'specialty', e.target.value)} className="w-full min-w-24 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1" placeholder="—" /></td>}
+                          {isBaseColVisible2026('prevDue') && <td className="p-1 text-center font-mono text-amber-700 font-bold bg-amber-50/20 whitespace-nowrap"><input type="number" value={r.prevDue || 0} onChange={e => update2026CellValue(originalIndex, 'prevDue', e.target.value)} className="w-full min-w-20 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1" /></td>}
+                          {visibleMonths2026.map(m => {
                             const paid = Number(r.payments?.[m]) || 0;
                             const cellId = `${r.name}-${m}`;
                             return (
                               <td key={m} className="p-1 text-center relative bg-white/40 border-l border-slate-200 hover:bg-slate-100 cursor-pointer group transition-colors whitespace-nowrap"
                                 onMouseEnter={() => setHoveredCell(cellId)} onMouseLeave={() => setHoveredCell(null)}>
-                                {paid > 0 ? (
-                                  <div className="relative flex justify-center">
-                                    <span className="font-mono text-emerald-700 font-bold">{fmt(paid)}</span>
-                                    {hoveredCell === cellId && (
-                                      <div className="absolute -top-7 right-0 flex gap-0.5 bg-white shadow-xl border rounded px-1 py-1 z-30">
-                                        <button onClick={() => { setEditPaymentModal({ row: r, month: m, amount: paid }); setEditAmount(String(paid)); setHoveredCell(null); }} className="px-1.5 py-0.5 bg-blue-500 text-white rounded text-[10px]">✏️</button>
-                                        <button onClick={() => { deletePayment(r, m); setHoveredCell(null); }} className="px-1.5 py-0.5 bg-red-500 text-white rounded text-[10px]">🗑️</button>
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <button onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }} className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-full w-5 h-5 flex items-center justify-center font-bold mx-auto">+</button>
-                                )}
+                                <input
+                                  type="number"
+                                  value={paid || ''}
+                                  onChange={e => update2026PaymentValue(originalIndex, m, e.target.value)}
+                                  className="w-20 bg-transparent text-center font-mono text-emerald-700 font-bold outline-none focus:bg-white focus:ring-1 ring-emerald-300 rounded px-1 py-1"
+                                  placeholder="—"
+                                  min="0"
+                                  step="0.01"
+                                />
                               </td>
                             );
                           })}
 
                           {/* حقول الأعمدة المخصصة */}
-                          {extraCols2026.map(col => (
+                          {visibleExtraCols2026.map(col => (
                             <td key={col.name} className="p-1 border-l border-slate-200">
                               {col.type === 'select' ? (
                                 <select 
@@ -932,8 +985,8 @@ export default function InstallmentsTab() {
                             </td>
                           ))}
 
-                          <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">{fmt(r.totalPaid)}</td>
-                          <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">{fmt(r.remaining)}</td>
+                          {isBaseColVisible2026('totalPaid') && <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">{fmt(r.totalPaid)}</td>}
+                          {isBaseColVisible2026('remaining') && <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">{fmt(r.remaining)}</td>}
                           <td className="p-2 text-center whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color}`}>{status.text}</span></td>
                           <td className="p-2 text-center whitespace-nowrap flex justify-center gap-1">
                             <button onClick={() => { setEditRowData(r); setEditRowModal({ year: 2026, row: r, index: originalIndex }); }} className="p-1 bg-amber-50 text-amber-600 rounded border border-amber-200 hover:bg-amber-500 hover:text-white transition-colors" title="تعديل الصف">
@@ -941,6 +994,9 @@ export default function InstallmentsTab() {
                             </button>
                             <button onClick={() => printStatement(r, 2026)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors" title="طباعة الكشف">
                               <Printer className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => deleteRow2026(originalIndex, r.name)} className="p-1 bg-red-50 text-red-600 rounded border border-red-200 hover:bg-red-500 hover:text-white transition-colors" title="حذف الصف">
+                              <Trash className="w-3.5 h-3.5" />
                             </button>
                           </td>
                         </tr>
@@ -992,9 +1048,24 @@ export default function InstallmentsTab() {
             </div>
           </div>
 
+          {condFormatRules.length > 0 && (
+            <div className="space-y-2 border-t pt-3">
+              <div className="text-xs font-bold text-slate-700">القواعد الحالية</div>
+              {condFormatRules.map((rule, idx) => (
+                <div key={`${rule.text}-${idx}`} className="flex items-center justify-between gap-2 bg-slate-50 border rounded-lg p-2">
+                  <span className={`px-2 py-1 rounded text-xs ${rule.color}`}>{rule.text}</span>
+                  <button onClick={() => deleteConditionalRule(idx)} className="text-red-600 hover:text-red-800 text-xs font-bold">حذف</button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex justify-between items-center pt-3 border-t mt-4">
-            <button onClick={() => { setCondFormatParams({ text: "", color: "bg-yellow-100" }); setCondFormatModal(false); }} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100">إلغاء التنسيق تماماً</button>
-            <button onClick={() => setCondFormatModal(false)} className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold">تطبيق وحفظ</button>
+            <button onClick={() => { setCondFormatParams({ text: "", color: "bg-yellow-100" }); setCondFormatRules([]); setCondFormatModal(false); }} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100">إلغاء التنسيق تماماً</button>
+            <div className="flex gap-2">
+              <button onClick={addConditionalRule} className="px-4 py-2 bg-amber-500 text-white rounded-lg font-bold">إضافة قاعدة</button>
+              <button onClick={() => setCondFormatModal(false)} className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold">إغلاق</button>
+            </div>
           </div>
         </div>
       </Modal>
