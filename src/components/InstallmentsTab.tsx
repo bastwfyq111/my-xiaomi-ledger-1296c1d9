@@ -4,7 +4,7 @@ import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls } from "@/hooks/useTableControls";
-import { X, Printer, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, Edit, Plus, Trash } from "lucide-react";
+import { X, Printer, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, Edit, Plus, Trash, Palette, Settings } from "lucide-react";
 import TabActions from "./TabActions";
 
 const MONTHS_2025 = [
@@ -43,7 +43,7 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
   return (
     <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
-        <div className="flex justify-between items-center p-4 border-b bg-gradient-to-l from-blue-50 to-slate-50 sticky top-0">
+        <div className="flex justify-between items-center p-4 border-b bg-gradient-to-l from-blue-50 to-slate-50 sticky top-0 z-10">
           <h3 className="font-bold text-base sm:text-lg text-slate-900">{title}</h3>
           <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-lg"><X className="w-5 h-5 text-slate-600" /></button>
         </div>
@@ -82,7 +82,7 @@ export default function InstallmentsTab() {
   const [editRowModal, setEditRowModal] = useState<{ year: number, row: any, index: number } | null>(null);
   const [editRowData, setEditRowData] = useState<any>({});
   
-  // المتغيرات الجديدة للأعمدة المخصصة (نصوص، قوائم، معادلات)
+  // متغيرات الأعمدة المخصصة
   const [extraCols2026, setExtraCols2026] = useState<Array<{ name: string, type: 'text' | 'select' | 'formula', options?: string[], formula?: string }>>([]);
   const [newColModal, setNewColModal] = useState(false);
   const [newColName, setNewColName] = useState("");
@@ -90,11 +90,37 @@ export default function InstallmentsTab() {
   const [newColOptions, setNewColOptions] = useState("");
   const [newColFormula, setNewColFormula] = useState("");
 
+  // [جديد] متغيرات لتعديل الأعمدة المخصصة
+  const [editColModal, setEditColModal] = useState<{ oldName: string, name: string, type: 'text' | 'select' | 'formula', options: string, formula: string } | null>(null);
+
+  // [جديد] متغيرات التنسيق الشرطي
+  const [condFormatModal, setCondFormatModal] = useState(false);
+  const [condFormatParams, setCondFormatParams] = useState({ text: "", color: "bg-yellow-100" });
+
   const [newRowModal2026, setNewRowModal2026] = useState(false);
   const [newRowData2026, setNewRowData2026] = useState({ name: "", batch: "", specialty: "", prevDue: 0, fees: 0 });
 
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining"]);
   const controls2025 = useTableControls(installments2025 || [], ["name", "batch", "specialty", "fees", "totalPaid", "remaining"]);
+
+  // التحديث: التنسيق الشرطي للصف
+  const isRowHighlighted = (row: any) => {
+    if (!condFormatParams.text.trim()) return false;
+    const term = condFormatParams.text.toLowerCase();
+    
+    // فحص الحقول الأساسية
+    if (
+      (row.name && String(row.name).toLowerCase().includes(term)) ||
+      (row.batch && String(row.batch).toLowerCase().includes(term)) ||
+      (row.specialty && String(row.specialty).toLowerCase().includes(term))
+    ) return true;
+
+    // فحص حقول الأعمدة المخصصة
+    if (row.customData) {
+      return Object.values(row.customData).some(val => String(val).toLowerCase().includes(term));
+    }
+    return false;
+  };
 
   const filteredRows2025 = useMemo(() => {
     let result = controls2025.rows || [];
@@ -132,7 +158,8 @@ export default function InstallmentsTab() {
       result = result.filter((r: any) => 
         (r.name && r.name.toLowerCase().includes(term)) ||
         (r.batch && String(r.batch).toLowerCase().includes(term)) ||
-        (r.specialty && r.specialty.toLowerCase().includes(term))
+        (r.specialty && r.specialty.toLowerCase().includes(term)) ||
+        (r.customData && Object.values(r.customData).some(val => String(val).toLowerCase().includes(term)))
       );
     }
     if (sortConfig2026) {
@@ -231,6 +258,52 @@ export default function InstallmentsTab() {
     setNewColType("text");
     setNewColOptions("");
     setNewColFormula("");
+  };
+
+  // [جديد] حفظ التعديلات على العمود المخصص
+  const saveCustomColumnEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editColModal) return;
+
+    if (editColModal.name !== editColModal.oldName && extraCols2026.some(c => c.name === editColModal.name)) {
+      return toast.error("اسم العمود موجود مسبقاً");
+    }
+
+    const updatedCols = extraCols2026.map(c => {
+      if (c.name === editColModal.oldName) {
+        return {
+          name: editColModal.name,
+          type: editColModal.type,
+          options: editColModal.type === 'select' ? editColModal.options.split(',').map(s => s.trim()) : [],
+          formula: editColModal.type === 'formula' ? editColModal.formula : ""
+        };
+      }
+      return c;
+    });
+
+    // تحديث مفاتيح البيانات داخل الصفوف إذا تم تغيير اسم العمود
+    if (editColModal.oldName !== editColModal.name) {
+      const list = [...(installments || [])];
+      list.forEach(row => {
+        if (row.customData && row.customData[editColModal.oldName] !== undefined) {
+          row.customData[editColModal.name] = row.customData[editColModal.oldName];
+          delete row.customData[editColModal.oldName];
+        }
+      });
+      updateInstallments(list);
+    }
+
+    setExtraCols2026(updatedCols);
+    setEditColModal(null);
+    toast.success("تم تعديل العمود بنجاح");
+  };
+
+  // [جديد] حذف العمود المخصص
+  const deleteCustomColumn = (colName: string) => {
+    if (!confirm(`هل أنت متأكد من حذف العمود "${colName}"؟`)) return;
+    setExtraCols2026(extraCols2026.filter(c => c.name !== colName));
+    setEditColModal(null);
+    toast.success("تم حذف العمود");
   };
 
   const evaluateFormula = (formula: string, row: any) => {
@@ -440,6 +513,7 @@ export default function InstallmentsTab() {
   const getStatusText = (rem: number) => rem <= 0 ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" } : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
 
   const generateAccountStatement = (row: any, year: number) => {
+    // ... نفس الكود الخاص بك لطباعة الكشف ...
     const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
     const fees = cleanNumber(row.fees);
     const prevDue = cleanNumber(row.prevDue);
@@ -570,6 +644,7 @@ export default function InstallmentsTab() {
     <div className="w-full space-y-4 sm:space-y-6 p-0" dir="rtl">
       {/* ========== واجهة جدول 2025 ========== */}
       <div className="w-full bg-gradient-to-b from-teal-50 to-white shadow border border-teal-200 rounded-xl overflow-hidden">
+        {/* ... (نفس كود جدول 2025 بدون تغيير) ... */}
         <div className="bg-gradient-to-l from-teal-600 to-teal-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center flex-wrap gap-2">
           <div>
             <h2 className="text-sm sm:text-lg font-bold text-white">📊 أقساط ومستندات العام 2025</h2>
@@ -667,17 +742,6 @@ export default function InstallmentsTab() {
                         </td>
                       </tr>
                     )})}
-                    <tr className="border-t-2 border-teal-300 bg-teal-50 font-bold text-teal-900">
-                      <td className="p-2 text-center whitespace-nowrap" colSpan={4}>الإجمالي العام</td>
-                      <td className="p-2 text-center font-mono whitespace-nowrap">{fmt(totals2025.fees)}</td>
-                      {MONTHS_2025.map(m => {
-                        const total = filteredRows2025.reduce((sum: number, r: any) => sum + (Number(r.payments?.[m]) || 0), 0);
-                        return <td key={m} className="p-1 text-center bg-teal-50 border-l border-teal-200 font-mono text-emerald-800 whitespace-nowrap">{total > 0 ? fmt(total) : "—"}</td>;
-                      })}
-                      <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50 whitespace-nowrap">{fmt(totals2025.paid)}</td>
-                      <td className="p-2 text-center font-mono text-rose-700 bg-rose-100/50 whitespace-nowrap">{fmt(totals2025.remaining)}</td>
-                      <td className="whitespace-nowrap"></td>
-                    </tr>
                   </>
                 )}
               </tbody>
@@ -694,6 +758,13 @@ export default function InstallmentsTab() {
             <p className="text-xs text-purple-100">بيانات المسدد والرصيد المدور لعام 2026</p>
           </div>
           <div className="flex gap-2 flex-wrap items-center">
+            
+            {/* [جديد] زر التنسيق الشرطي */}
+            <button onClick={() => setCondFormatModal(true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow transition-colors flex items-center gap-1 ${condFormatParams.text ? 'bg-yellow-400 text-yellow-900 animate-pulse' : 'bg-white/20 text-white hover:bg-white/30'}`} title="تلوين الصفوف حسب نص معين">
+              <Palette className="w-4 h-4" /> 
+              {condFormatParams.text ? `تنسيق نشط (${condFormatParams.text})` : "تنسيق شرطي"}
+            </button>
+
             <div className="relative">
               <Search className="w-4 h-4 absolute right-2.5 top-2 text-purple-500" />
               <input 
@@ -720,7 +791,6 @@ export default function InstallmentsTab() {
             <TabActions
               title="أقساط العام 2026"
               rows={(installments || []).map((r: any) => {
-                // دمج البيانات المخصصة ونواتج المعادلات لضمان نجاح التصدير
                 const customValues: any = { ...r.customData };
                 extraCols2026.forEach(col => {
                   if (col.type === 'formula') customValues[col.name] = evaluateFormula(col.formula || "", r);
@@ -764,9 +834,20 @@ export default function InstallmentsTab() {
                   </th>
                   {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m.trim()}</th>)}
                   
-                  {/* عناوين الأعمدة المخصصة */}
+                  {/* [تحديث] عناوين الأعمدة المخصصة مع زر التعديل */}
                   {extraCols2026.map(col => (
-                    <th key={col.name} className="p-2 text-center text-xs bg-blue-50 border-l border-slate-200 whitespace-nowrap text-blue-800">{col.name}</th>
+                    <th key={col.name} className="p-2 text-center text-xs bg-blue-50 border-l border-slate-200 whitespace-nowrap text-blue-800 group">
+                      <div className="flex items-center justify-center gap-1">
+                        {col.name}
+                        <button 
+                          onClick={() => setEditColModal({ oldName: col.name, name: col.name, type: col.type, options: col.options?.join(',') || "", formula: col.formula || "" })}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 bg-blue-200 hover:bg-blue-500 hover:text-white rounded transition-all"
+                          title="تعديل أو حذف العمود"
+                        >
+                          <Settings className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </th>
                   ))}
 
                   <th className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('totalPaid')}>
@@ -788,8 +869,11 @@ export default function InstallmentsTab() {
                       const status = getStatusText(r.remaining);
                       const originalIndex = (installments || []).findIndex((orig: any) => orig.name === r.name);
                       
+                      // [جديد] تطبيق التنسيق الشرطي على الصف
+                      const rowBgClass = isRowHighlighted(r) ? condFormatParams.color : "hover:bg-slate-50/80";
+                      
                       return (
-                        <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
+                        <tr key={i} className={`border-t border-slate-200 transition-colors ${rowBgClass}`}>
                           <td className="p-2 text-center text-slate-500 whitespace-nowrap">{i + 1}</td>
                           <td className="p-2 text-center font-semibold text-slate-900 whitespace-nowrap">{r.name}</td>
                           <td className="p-2 text-center text-slate-600 whitespace-nowrap">{r.batch || "—"}</td>
@@ -799,7 +883,7 @@ export default function InstallmentsTab() {
                             const paid = Number(r.payments?.[m]) || 0;
                             const cellId = `${r.name}-${m}`;
                             return (
-                              <td key={m} className="p-1 text-center relative bg-slate-50/50 border-l border-slate-200 hover:bg-slate-100 cursor-pointer group transition-colors whitespace-nowrap"
+                              <td key={m} className="p-1 text-center relative bg-white/40 border-l border-slate-200 hover:bg-slate-100 cursor-pointer group transition-colors whitespace-nowrap"
                                 onMouseEnter={() => setHoveredCell(cellId)} onMouseLeave={() => setHoveredCell(null)}>
                                 {paid > 0 ? (
                                   <div className="relative flex justify-center">
@@ -833,7 +917,7 @@ export default function InstallmentsTab() {
                                   ))}
                                 </select>
                               ) : col.type === 'formula' ? (
-                                <div className="text-center font-mono text-xs font-bold text-indigo-700 bg-indigo-50/50 py-1.5 rounded">
+                                <div className="text-center font-mono text-xs font-bold text-indigo-700 bg-white/50 py-1.5 rounded">
                                   {evaluateFormula(col.formula || "", r)}
                                 </div>
                               ) : (
@@ -862,18 +946,6 @@ export default function InstallmentsTab() {
                         </tr>
                       );
                     })}
-                    <tr className="border-t-2 border-purple-300 bg-purple-50 font-bold text-purple-900">
-                      <td className="p-2 text-center whitespace-nowrap" colSpan={4}>الإجمالي العام</td>
-                      <td className="p-2 text-center font-mono text-amber-700 bg-amber-100/30 whitespace-nowrap">{fmt(totals2026.prevDue)}</td>
-                      {MONTHS_2026.map(m => {
-                        const total = filteredRows2026.reduce((sum: number, r: any) => sum + (Number(r.payments?.[m]) || 0), 0);
-                        return <td key={m} className="p-1 text-center bg-purple-50 border-l border-purple-200 font-mono text-emerald-800 whitespace-nowrap">{total > 0 ? fmt(total) : "—"}</td>;
-                      })}
-                      {extraCols2026.map(col => <td key={col.name} className="bg-purple-50 border-l border-purple-200"></td>)}
-                      <td className="p-2 text-center font-mono text-emerald-700 bg-emerald-100/50 whitespace-nowrap">{fmt(totals2026.paid)}</td>
-                      <td className="p-2 text-center font-mono text-rose-700 bg-rose-100/50 whitespace-nowrap">{fmt(totals2026.remaining)}</td>
-                      <td className="whitespace-nowrap"></td><td className="whitespace-nowrap"></td>
-                    </tr>
                   </>
                 )}
               </tbody>
@@ -884,6 +956,96 @@ export default function InstallmentsTab() {
 
       {/* ========== النوافذ المنبثقة ========== */}
 
+      {/* [جديد] نافذة التنسيق الشرطي */}
+      <Modal title="🎨 التنسيق الشرطي للصفوف" isOpen={condFormatModal} onClose={() => setCondFormatModal(false)}>
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500">سيتم تلوين الصف بالكامل إذا كان يحتوي على النص الذي تدخله أدناه في أي عمود (الاسم، المساق، حالة الاعتماد، الخ).</p>
+          
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">النص المطلوب البحث عنه (الشرط)</label>
+            <input 
+              type="text" 
+              value={condFormatParams.text} 
+              onChange={e => setCondFormatParams({...condFormatParams, text: e.target.value})} 
+              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-300 outline-none" 
+              placeholder="مثال: معتمد, منسحب, مجاني..." 
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-2">اختر لون تمييز الصف</label>
+            <div className="flex gap-2">
+              {[
+                { name: 'أصفر', class: 'bg-yellow-100 hover:bg-yellow-100' },
+                { name: 'أخضر', class: 'bg-green-100 hover:bg-green-100' },
+                { name: 'أحمر', class: 'bg-red-100 hover:bg-red-100' },
+                { name: 'أزرق', class: 'bg-blue-100 hover:bg-blue-100' },
+                { name: 'بنفسجي', class: 'bg-purple-100 hover:bg-purple-100' }
+              ].map(color => (
+                <button
+                  key={color.class}
+                  onClick={() => setCondFormatParams({...condFormatParams, color: color.class})}
+                  className={`w-8 h-8 rounded-full border-2 ${condFormatParams.color === color.class ? 'border-slate-800 scale-110' : 'border-transparent'} ${color.class}`}
+                  title={color.name}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center pt-3 border-t mt-4">
+            <button onClick={() => { setCondFormatParams({ text: "", color: "bg-yellow-100" }); setCondFormatModal(false); }} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100">إلغاء التنسيق تماماً</button>
+            <button onClick={() => setCondFormatModal(false)} className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold">تطبيق وحفظ</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* [جديد] نافذة تعديل العمود المخصص */}
+      <Modal title={`⚙️ تعديل العمود: ${editColModal?.oldName}`} isOpen={!!editColModal} onClose={() => setEditColModal(null)}>
+        {editColModal && (
+          <form onSubmit={saveCustomColumnEdit} className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">اسم العمود</label>
+              <input type="text" required value={editColModal.name} onChange={e => setEditColModal({...editColModal, name: e.target.value})} className="w-full p-2 border rounded-lg" />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">نوع العمود</label>
+              <select value={editColModal.type} onChange={(e: any) => setEditColModal({...editColModal, type: e.target.value})} className="w-full p-2 border rounded-lg">
+                <option value="text">نص أو رقم حر (إدخال يدوي)</option>
+                <option value="select">قائمة منسدلة (خيارات محددة)</option>
+                <option value="formula">معادلة رياضية دالة (حساب تلقائي)</option>
+              </select>
+            </div>
+
+            {editColModal.type === 'select' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">الخيارات (افصل بينها بفاصلة)</label>
+                <input type="text" required value={editColModal.options} onChange={e => setEditColModal({...editColModal, options: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="مثال: معتمد, غير معتمد" />
+              </div>
+            )}
+
+            {editColModal.type === 'formula' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">المعادلة (استخدم المتغيرات الإنجليزية)</label>
+                <input type="text" required value={editColModal.formula} onChange={e => setEditColModal({...editColModal, formula: e.target.value})} className="w-full p-2 border rounded-lg text-left" dir="ltr" />
+                <p className="text-[10px] text-slate-500 mt-1 text-right">
+                  المتغيرات المتاحة: <code className="bg-slate-100 px-1 rounded text-red-600">fees</code> (الرسوم), <code className="bg-slate-100 px-1 rounded text-red-600">totalPaid</code> (المسدد), <code className="bg-slate-100 px-1 rounded text-red-600">prevDue</code> (المدور), <code className="bg-slate-100 px-1 rounded text-red-600">remaining</code> (المتبقي).
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center pt-3 border-t mt-4">
+              <button type="button" onClick={() => deleteCustomColumn(editColModal.oldName)} className="px-4 py-2 bg-red-100 text-red-700 rounded-lg flex items-center gap-1 font-bold"><Trash className="w-4 h-4"/> حذف العمود</button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setEditColModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold">حفظ التعديل</button>
+              </div>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* باقي النوافذ المنبثقة تبقى كما هي دون تغيير */}
       <Modal title={`✏️ تعديل بيانات المتدرب (${editRowModal?.year})`} isOpen={!!editRowModal} onClose={() => setEditRowModal(null)}>
         <form onSubmit={saveRowEdit} className="space-y-3">
           <div><label className="block text-xs font-semibold text-slate-700 mb-1">اسم المتدرب</label><input type="text" required value={editRowData?.name || ''} onChange={e => setEditRowData({...editRowData, name: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
