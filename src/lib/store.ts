@@ -14,6 +14,12 @@ export const INSTALLMENT_MONTHS = [
   "يوليو","اغسطس","سبتمبر","اكتوبر","نوفمبر","ديسمبر",
 ] as const;
 
+export type Installments2026Settings = {
+  extraCols: Array<{ name: string; type: 'text' | 'select' | 'formula'; options?: string[]; formula?: string }>;
+  conditionalRules: Array<{ text: string; color: string }>;
+  hiddenColumns: string[];
+};
+
 export type Installment = {
   no?: number | null;
   name: string;
@@ -97,6 +103,7 @@ type State = {
   journal: Journal[];
   installments: Installment[];
   installments2025: Installment[];
+  installments2026Settings: Installments2026Settings;
   openingBalance: number;
   revenue: RevenueMap;
   customTabs: CustomTab[];
@@ -196,6 +203,7 @@ export const useStore = create<State>()(
       journal: [],
       installments: (seedInstallments as Installment[]).map(recalcInstallment),
       installments2025: [],
+      installments2026Settings: { extraCols: [], conditionalRules: [], hiddenColumns: [] },
       openingBalance: 811664,
       revenue: {},
       customTabs: [],
@@ -413,6 +421,7 @@ export const useStore = create<State>()(
             revenue: d.accounts ? recalculateRevenueMap(importedAccounts) : (d.revenue ? { ...s.revenue, ...d.revenue } : s.revenue), 
             installments: d.installments ? [...s.installments, ...d.installments.map(recalcInstallment)] : s.installments,
             installments2025: d.installments2025 ? [...s.installments2025, ...d.installments2025.map(recalcInstallment)] : s.installments2025,
+            installments2026Settings: d.installments2026Settings ? { ...s.installments2026Settings, ...d.installments2026Settings } : s.installments2026Settings,
             openingBalance: d.openingBalance ?? s.openingBalance,
           };
         }),
@@ -420,9 +429,9 @@ export const useStore = create<State>()(
       exportAllData: () => ({
         trainees: get().trainees, hafiza: get().hafiza, hafizas: get().hafizas, accounts: get().accounts, journal: get().journal,
         installments: get().installments, installments2025: get().installments2025, openingBalance: get().openingBalance,
-        revenue: get().revenue, customTabs: get().customTabs,
+        revenue: get().revenue, customTabs: get().customTabs, installments2026Settings: get().installments2026Settings,
       }),
-      clearAll: () => set({ hafiza: [], hafizas: [], accounts: [], journal: [], installments: [], installments2025: [], revenue: {} }),
+      clearAll: () => set({ hafiza: [], hafizas: [], accounts: [], journal: [], installments: [], installments2025: [], installments2026Settings: { extraCols: [], conditionalRules: [], hiddenColumns: [] }, revenue: {} }),
       clearTab: (tab) => set((s) => {
         if(tab === 'hafiza' || tab === 'hafizas') return { ...s, hafiza: [], hafizas: [] };
         return { ...s, [tab]: [] };

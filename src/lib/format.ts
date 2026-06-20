@@ -1,6 +1,6 @@
 export const fmt = (n: number | undefined | null) => {
   if (n === undefined || n === null || isNaN(Number(n))) return "";
-  return Number(n).toLocaleString("en-US");
+  return Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 export const today = () => new Date().toISOString().slice(0, 10);
