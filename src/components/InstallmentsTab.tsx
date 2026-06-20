@@ -4,7 +4,7 @@ import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls } from "@/hooks/useTableControls";
-import { X, Printer, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, Edit, Plus, Trash, Palette, Settings, Check } from "lucide-react";
+import { X, Printer, AlertCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, Edit, Plus, Trash, Palette, Settings } from "lucide-react";
 import TabActions from "./TabActions";
 
 const MONTHS_2025 = [
@@ -60,13 +60,17 @@ const SortIcon = ({ sortConfig, columnKey }: { sortConfig: { key: string; direct
 
 export default function InstallmentsTab() {
   const { installments, installments2025, clearInstallments } = useStore() as any;
+  const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
+  const [payAmount, setPayAmount] = useState("");
   const [newPaymentModal, setNewPaymentModal] = useState(false);
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentAmount, setNewStudentAmount] = useState("");
   const [newStudentMonth, setNewStudentMonth] = useState("");
-  
+  const [editPaymentModal, setEditPaymentModal] = useState<{ row: any; month: string; amount: number } | null>(null);
+  const [editAmount, setEditAmount] = useState("");
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
   const [search2025, setSearch2025] = useState("");
@@ -75,23 +79,23 @@ export default function InstallmentsTab() {
   const [sortConfig2025, setSortConfig2025] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [sortConfig2026, setSortConfig2026] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
-  // حالة التعديل المباشر (Inline Edit)
-  const [editingCell, setEditingCell] = useState<{ rowName: string, key: string, isCustom: boolean, month?: string, year: number } | null>(null);
-  const [editValue, setEditValue] = useState("");
-
+  const [editRowModal, setEditRowModal] = useState<{ year: number, row: any, index: number } | null>(null);
+  const [editRowData, setEditRowData] = useState<any>({});
+  
+  // متغيرات الأعمدة المخصصة
   const [extraCols2026, setExtraCols2026] = useState<Array<{ name: string, type: 'text' | 'select' | 'formula', options?: string[], formula?: string }>>([]);
   const [newColModal, setNewColModal] = useState(false);
   const [newColName, setNewColName] = useState("");
   const [newColType, setNewColType] = useState<'text' | 'select' | 'formula'>('text');
   const [newColOptions, setNewColOptions] = useState("");
   const [newColFormula, setNewColFormula] = useState("");
+
+  // [جديد] متغيرات لتعديل الأعمدة المخصصة
   const [editColModal, setEditColModal] = useState<{ oldName: string, name: string, type: 'text' | 'select' | 'formula', options: string, formula: string } | null>(null);
 
-  // التنسيق الشرطي المتعدد
+  // [جديد] متغيرات التنسيق الشرطي
   const [condFormatModal, setCondFormatModal] = useState(false);
-  const [condRules, setCondRules] = useState<Array<{ text: string, color: string }>>([]);
-  const [newCondText, setNewCondText] = useState("");
-  const [newCondColor, setNewCondColor] = useState("bg-yellow-100");
+  const [condFormatParams, setCondFormatParams] = useState({ text: "", color: "bg-yellow-100" });
 
   const [newRowModal2026, setNewRowModal2026] = useState(false);
   const [newRowData2026, setNewRowData2026] = useState({ name: "", batch: "", specialty: "", prevDue: 0, fees: 0 });
@@ -99,55 +103,49 @@ export default function InstallmentsTab() {
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining"]);
   const controls2025 = useTableControls(installments2025 || [], ["name", "batch", "specialty", "fees", "totalPaid", "remaining"]);
 
-  const updateInstallments = (list: any[]) => useStore.setState({ installments: list });
-  const updateInstallments2025 = (list: any[]) => useStore.setState({ installments2025: list });
-
-  // دالة تحديد لون الصف بناءً على قواعد التنسيق
-  const getRowHighlightColor = (row: any) => {
-    if (condRules.length === 0) return "hover:bg-slate-50/80";
+  // التحديث: التنسيق الشرطي للصف
+  const isRowHighlighted = (row: any) => {
+    if (!condFormatParams.text.trim()) return false;
+    const term = condFormatParams.text.toLowerCase();
     
-    // البحث في قيم الصف
-    const rowValues = [
-      String(row.name || ""),
-      String(row.batch || ""),
-      String(row.specialty || ""),
-      ...Object.values(row.customData || {}).map(String)
-    ].map(v => v.toLowerCase());
+    // فحص الحقول الأساسية
+    if (
+      (row.name && String(row.name).toLowerCase().includes(term)) ||
+      (row.batch && String(row.batch).toLowerCase().includes(term)) ||
+      (row.specialty && String(row.specialty).toLowerCase().includes(term))
+    ) return true;
 
-    for (const rule of condRules) {
-      if (rowValues.some(val => val.includes(rule.text.toLowerCase()))) {
-        return rule.color; // إرجاع لون أول قاعدة تتحقق
-      }
+    // فحص حقول الأعمدة المخصصة
+    if (row.customData) {
+      return Object.values(row.customData).some(val => String(val).toLowerCase().includes(term));
     }
-    return "hover:bg-slate-50/80";
+    return false;
   };
 
-  const addCondRule = () => {
-    if (!newCondText.trim()) return toast.error("يرجى إدخال نص الشرط");
-    setCondRules([...condRules, { text: newCondText, color: newCondColor }]);
-    setNewCondText("");
-  };
-
-  const removeCondRule = (index: number) => {
-    setCondRules(condRules.filter((_, i) => i !== index));
-  };
-
-  // دوال الفلترة والفرز
   const filteredRows2025 = useMemo(() => {
     let result = controls2025.rows || [];
     if (search2025) {
       const term = search2025.toLowerCase();
-      result = result.filter((r: any) => (r.name && r.name.toLowerCase().includes(term)) || (r.batch && String(r.batch).toLowerCase().includes(term)) || (r.specialty && r.specialty.toLowerCase().includes(term)));
+      result = result.filter((r: any) => 
+        (r.name && r.name.toLowerCase().includes(term)) ||
+        (r.batch && String(r.batch).toLowerCase().includes(term)) ||
+        (r.specialty && r.specialty.toLowerCase().includes(term))
+      );
     }
     if (sortConfig2025) {
       result = [...result].sort((a: any, b: any) => {
-        let aVal = a[sortConfig2025.key], bVal = b[sortConfig2025.key];
+        let aVal = a[sortConfig2025.key];
+        let bVal = b[sortConfig2025.key];
         if (['fees', 'totalPaid', 'remaining'].includes(sortConfig2025.key)) {
-          aVal = cleanNumber(aVal); bVal = cleanNumber(bVal);
+          aVal = cleanNumber(aVal);
+          bVal = cleanNumber(bVal);
         } else {
-          aVal = String(aVal || "").toLowerCase(); bVal = String(bVal || "").toLowerCase();
+          aVal = aVal ? String(aVal).toLowerCase() : "";
+          bVal = bVal ? String(bVal).toLowerCase() : "";
         }
-        return aVal < bVal ? (sortConfig2025.direction === 'asc' ? -1 : 1) : aVal > bVal ? (sortConfig2025.direction === 'asc' ? 1 : -1) : 0;
+        if (aVal < bVal) return sortConfig2025.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig2025.direction === 'asc' ? 1 : -1;
+        return 0;
       });
     }
     return result;
@@ -166,264 +164,1022 @@ export default function InstallmentsTab() {
     }
     if (sortConfig2026) {
       result = [...result].sort((a: any, b: any) => {
-        let aVal = a[sortConfig2026.key], bVal = b[sortConfig2026.key];
+        let aVal = a[sortConfig2026.key];
+        let bVal = b[sortConfig2026.key];
         if (['prevDue', 'fees', 'totalPaid', 'remaining'].includes(sortConfig2026.key)) {
-          aVal = cleanNumber(aVal); bVal = cleanNumber(bVal);
+          aVal = cleanNumber(aVal);
+          bVal = cleanNumber(bVal);
         } else {
-          aVal = String(aVal || "").toLowerCase(); bVal = String(bVal || "").toLowerCase();
+          aVal = aVal ? String(aVal).toLowerCase() : "";
+          bVal = bVal ? String(bVal).toLowerCase() : "";
         }
-        return aVal < bVal ? (sortConfig2026.direction === 'asc' ? -1 : 1) : aVal > bVal ? (sortConfig2026.direction === 'asc' ? 1 : -1) : 0;
+        if (aVal < bVal) return sortConfig2026.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig2026.direction === 'asc' ? 1 : -1;
+        return 0;
       });
     }
     return result;
   }, [controls2026.rows, search2026, sortConfig2026]);
 
-  const handleSort2025 = (key: string) => setSortConfig2025({ key, direction: sortConfig2025?.key === key && sortConfig2025.direction === 'asc' ? 'desc' : 'asc' });
-  const handleSort2026 = (key: string) => setSortConfig2026({ key, direction: sortConfig2026?.key === key && sortConfig2026.direction === 'asc' ? 'desc' : 'asc' });
+  const handleSort2025 = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig2025 && sortConfig2025.key === key && sortConfig2025.direction === 'asc') direction = 'desc';
+    setSortConfig2025({ key, direction });
+  };
 
-  // حفظ التعديل المباشر في الخلية
-  const saveInlineEdit = () => {
-    if (!editingCell) return;
-    const { rowName, key, isCustom, month, year } = editingCell;
-    const is2026 = year === 2026;
-    const list = is2026 ? [...(installments || [])] : [...(installments2025 || [])];
-    const rowIndex = list.findIndex(r => r.name === rowName);
-    
-    if (rowIndex === -1) { setEditingCell(null); return; }
-    
-    const row = { ...list[rowIndex] };
+  const handleSort2026 = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig2026 && sortConfig2026.key === key && sortConfig2026.direction === 'asc') direction = 'desc';
+    setSortConfig2026({ key, direction });
+  };
 
-    if (month) {
-      // تعديل قسط شهر
-      if (!row.payments) row.payments = {};
-      row.payments[month] = cleanNumber(editValue);
-    } else if (isCustom) {
-      // تعديل عمود مخصص
-      if (!row.customData) row.customData = {};
-      row.customData[key] = editValue;
+  const totals2025 = useMemo(() => ({
+    fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
+    paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
+    remaining: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
+  }), [filteredRows2025]);
+
+  const totals2026 = useMemo(() => ({
+    prevDue: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.prevDue), 0),
+    paid: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
+    remaining: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
+  }), [filteredRows2026]);
+
+  const allNames = useMemo(() => {
+    const n1 = (installments2025 || []).map((s: any) => s.name);
+    const n2 = (installments || []).map((s: any) => s.name);
+    return [...new Set([...n1, ...n2])];
+  }, [installments2025, installments]);
+
+  const handleNameChange = (val: string) => {
+    setNewStudentName(val);
+    setShowSuggestions(val.length > 0);
+    setNameSuggestions(val.length > 0 ? allNames.filter(n => n.toLowerCase().includes(val.toLowerCase())) : []);
+  };
+
+  const updateInstallments = (list: any[]) => useStore.setState({ installments: list });
+  const updateInstallments2025 = (list: any[]) => useStore.setState({ installments2025: list });
+
+  const saveRowEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editRowModal) return;
+
+    if (editRowModal.year === 2025) {
+      const list = [...(installments2025 || [])];
+      const updatedRow = { ...editRowData, remaining: Math.max(0, cleanNumber(editRowData.fees) - cleanNumber(editRowData.totalPaid)) };
+      list[editRowModal.index] = updatedRow;
+      updateInstallments2025(list);
     } else {
-      // تعديل عمود أساسي (اسم، رسوم، دفعة...)
-      const numKeys = ["fees", "prevDue"];
-      row[key] = numKeys.includes(key) ? cleanNumber(editValue) : editValue;
+      const list = [...(installments || [])];
+      const updatedRow = { ...editRowData, remaining: Math.max(0, cleanNumber(editRowData.prevDue) - cleanNumber(editRowData.totalPaid)) };
+      list[editRowModal.index] = updatedRow;
+      updateInstallments(list);
     }
 
-    // إعادة حساب المجاميع
-    const monthsList = is2026 ? MONTHS_2026 : MONTHS_2025;
-    let totalPaid = 0;
-    monthsList.forEach(m => { totalPaid += Number(row.payments?.[m]) || 0; });
-    row.totalPaid = totalPaid;
-    
-    const due = is2026 ? cleanNumber(row.prevDue) : cleanNumber(row.fees);
-    row.remaining = Math.max(0, due - totalPaid);
-
-    list[rowIndex] = row;
-    is2026 ? updateInstallments(list) : updateInstallments2025(list);
-    
-    setEditingCell(null);
-    setEditValue("");
+    toast.success("تم تحديث البيانات بنجاح");
+    setEditRowModal(null);
   };
 
-  const handleCellClick = (rowName: string, key: string, currentValue: any, isCustom = false, month?: string, year = 2026) => {
-    setEditingCell({ rowName, key, isCustom, month, year });
-    setEditValue(currentValue?.toString() || "");
+  const addCustomColumn = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newColName.trim()) return;
+    if (extraCols2026.some(c => c.name === newColName)) return toast.error("اسم العمود موجود مسبقاً");
+    
+    setExtraCols2026([...extraCols2026, {
+      name: newColName,
+      type: newColType,
+      options: newColType === 'select' ? newColOptions.split(',').map(s => s.trim()) : [],
+      formula: newColType === 'formula' ? newColFormula : ""
+    }]);
+    
+    toast.success(`تم إضافة العمود: ${newColName}`);
+    setNewColModal(false);
+    setNewColName("");
+    setNewColType("text");
+    setNewColOptions("");
+    setNewColFormula("");
   };
 
-  const renderEditableCell = (row: any, key: string, value: any, className: string, isCustom = false, month?: string, year = 2026, type = "text") => {
-    const isEditing = editingCell?.rowName === row.name && editingCell?.key === key && editingCell?.month === month && editingCell?.year === year;
-    
-    if (isEditing) {
-      return (
-        <td className={`${className} p-0`}>
-          <input 
-            autoFocus 
-            type={type === "number" || ["fees", "prevDue"].includes(key) || month ? "number" : "text"}
-            value={editValue} 
-            onChange={e => setEditValue(e.target.value)} 
-            onBlur={saveInlineEdit} 
-            onKeyDown={e => e.key === 'Enter' && saveInlineEdit()} 
-            className="w-full h-full min-h-[30px] text-center px-1 text-sm border-2 border-blue-500 outline-none text-slate-800 bg-white" 
-          />
-        </td>
-      );
+  // [جديد] حفظ التعديلات على العمود المخصص
+  const saveCustomColumnEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editColModal) return;
+
+    if (editColModal.name !== editColModal.oldName && extraCols2026.some(c => c.name === editColModal.name)) {
+      return toast.error("اسم العمود موجود مسبقاً");
     }
-    
-    return (
-      <td 
-        onClick={() => handleCellClick(row.name, key, value, isCustom, month, year)} 
-        className={`${className} cursor-pointer hover:bg-blue-100/50 transition-colors relative group`}
-        title="انقر للتعديل"
-      >
-        {value === 0 && month ? <span className="text-slate-300 opacity-0 group-hover:opacity-100">+</span> : value}
-      </td>
-    );
-  };
 
-  const deleteStudentRow = (rowName: string, year: number) => {
-    if (!confirm(`هل أنت متأكد من حذف المتدرب "${rowName}" بالكامل من السجل؟ لا يمكن التراجع عن هذا الإجراء.`)) return;
-    
-    if (year === 2025) {
-      updateInstallments2025((installments2025 || []).filter((r: any) => r.name !== rowName));
-    } else {
-      updateInstallments((installments || []).filter((r: any) => r.name !== rowName));
+    const updatedCols = extraCols2026.map(c => {
+      if (c.name === editColModal.oldName) {
+        return {
+          name: editColModal.name,
+          type: editColModal.type,
+          options: editColModal.type === 'select' ? editColModal.options.split(',').map(s => s.trim()) : [],
+          formula: editColModal.type === 'formula' ? editColModal.formula : ""
+        };
+      }
+      return c;
+    });
+
+    // تحديث مفاتيح البيانات داخل الصفوف إذا تم تغيير اسم العمود
+    if (editColModal.oldName !== editColModal.name) {
+      const list = [...(installments || [])];
+      list.forEach(row => {
+        if (row.customData && row.customData[editColModal.oldName] !== undefined) {
+          row.customData[editColModal.name] = row.customData[editColModal.oldName];
+          delete row.customData[editColModal.oldName];
+        }
+      });
+      updateInstallments(list);
     }
-    toast.success("تم الحذف بنجاح");
+
+    setExtraCols2026(updatedCols);
+    setEditColModal(null);
+    toast.success("تم تعديل العمود بنجاح");
   };
 
-  // ... (باقي الدوال: addCustomColumn, saveCustomColumnEdit, evaluateFormula, importFile, printStatement مطابقة لنسختك السابقة)
-  // سأقوم باختصار إدراجها هنا للحفاظ على المساحة والتركيز على الواجهة المعدلة
-  
+  // [جديد] حذف العمود المخصص
+  const deleteCustomColumn = (colName: string) => {
+    if (!confirm(`هل أنت متأكد من حذف العمود "${colName}"؟`)) return;
+    setExtraCols2026(extraCols2026.filter(c => c.name !== colName));
+    setEditColModal(null);
+    toast.success("تم حذف العمود");
+  };
+
   const evaluateFormula = (formula: string, row: any) => {
     if (!formula) return "";
     try {
       let parsedFormula = formula;
-      const variables: Record<string, number> = { fees: cleanNumber(row.fees), prevDue: cleanNumber(row.prevDue), totalPaid: cleanNumber(row.totalPaid), remaining: cleanNumber(row.remaining) };
-      extraCols2026.forEach(col => { if(col.type !== 'formula') variables[col.name] = cleanNumber(row.customData?.[col.name]); });
-      Object.keys(variables).forEach(key => { parsedFormula = parsedFormula.replace(new RegExp(`\\b${key}\\b`, 'g'), variables[key].toString()); });
+      
+      const variables: Record<string, number> = {
+        fees: cleanNumber(row.fees),
+        prevDue: cleanNumber(row.prevDue),
+        totalPaid: cleanNumber(row.totalPaid),
+        remaining: cleanNumber(row.remaining)
+      };
+
+      extraCols2026.forEach(col => {
+        if(col.type !== 'formula') {
+            variables[col.name] = cleanNumber(row.customData?.[col.name]);
+        }
+      });
+
+      Object.keys(variables).forEach(key => {
+        const regex = new RegExp(`\\b${key}\\b`, 'g');
+        parsedFormula = parsedFormula.replace(regex, variables[key].toString());
+      });
+
       const result = new Function(`return ${parsedFormula}`)();
       return isNaN(result) ? "خطأ" : Number(result).toFixed(2);
-    } catch (e) { return "خطأ"; }
+    } catch (e) {
+      return "صيغة غير صالحة";
+    }
   };
 
-  const totals2025 = useMemo(() => ({ fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0), paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0), remaining: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0) }), [filteredRows2025]);
-  const totals2026 = useMemo(() => ({ prevDue: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.prevDue), 0), paid: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0), remaining: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0) }), [filteredRows2026]);
+  const updateCustomColValue = (rowIndex: number, colName: string, value: string) => {
+    const list = [...(installments || [])];
+    const row = list[rowIndex];
+    if (!row.customData) row.customData = {};
+    row.customData[colName] = value;
+    list[rowIndex] = row;
+    updateInstallments(list);
+  };
+
+  const addNewRow2026 = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRowData2026.name) return toast.error("يرجى إدخال اسم المتدرب");
+
+    const payments = MONTHS_2026.reduce((acc, m) => ({ ...acc, [m]: 0 }), {} as any);
+    const newRec = { 
+      name: newRowData2026.name, 
+      batch: newRowData2026.batch, 
+      specialty: newRowData2026.specialty, 
+      fees: Number(newRowData2026.fees) || 0, 
+      prevDue: Number(newRowData2026.prevDue) || 0, 
+      totalPaid: 0, 
+      remaining: Number(newRowData2026.prevDue) || 0, 
+      notes: "", 
+      phone: "", 
+      payments,
+      customData: {} 
+    };
+    
+    updateInstallments([...(installments || []), newRec]);
+    toast.success("تم إضافة الصف بنجاح");
+    setNewRowModal2026(false);
+    setNewRowData2026({ name: "", batch: "", specialty: "", prevDue: 0, fees: 0 });
+  };
+
+  const addPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentModal || !payAmount) return toast.error("يرجى إدخل المبلغ");
+    const amount = Number(payAmount) || 0;
+    if (amount <= 0) return toast.error("مبلغ غير صحيح");
+    const list = [...(installments || [])];
+    const updated = list.map(s => {
+      if (s.name !== paymentModal.row.name) return s;
+      const payments = { ...s.payments, [paymentModal.month]: (Number(s.payments[paymentModal.month]) || 0) + amount };
+      const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
+      return { ...s, payments, totalPaid, remaining: Math.max(0, cleanNumber(s.prevDue) - totalPaid) };
+    });
+    updateInstallments(updated);
+    toast.success(`تم تسجيل دفعة ${fmt(amount)}`);
+    setPaymentModal(null);
+    setPayAmount("");
+  };
+
+  const addNewPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStudentName || !newStudentAmount || !newStudentMonth) return toast.error("يرجى إدخال جميع البيانات");
+    const amount = Number(newStudentAmount) || 0;
+    if (amount <= 0) return toast.error("مبلغ غير صحيح");
+    const list = [...(installments || [])];
+    const exist = list.find(s => s.name === newStudentName);
+    if (exist) {
+      const updated = list.map(s => {
+        if (s.name !== newStudentName) return s;
+        const payments = { ...s.payments, [newStudentMonth]: (Number(s.payments[newStudentMonth]) || 0) + amount };
+        const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
+        return { ...s, payments, totalPaid, remaining: Math.max(0, cleanNumber(s.prevDue) - totalPaid) };
+      });
+      updateInstallments(updated);
+    } else {
+      const payments = MONTHS_2026.reduce((acc, m) => ({ ...acc, [m]: m === newStudentMonth ? amount : 0 }), {} as any);
+      const newRec = { name: newStudentName, batch: "", specialty: "", fees: 0, prevDue: 0, totalPaid: amount, remaining: Math.max(0, 0 - amount), notes: "", phone: "", payments };
+      updateInstallments([...list, newRec]);
+    }
+    toast.success(`تم إضافة دفعة ${fmt(amount)}`);
+    setNewPaymentModal(false);
+    setNewStudentName("");
+    setNewStudentAmount("");
+    setNewStudentMonth("");
+  };
+
+  const editPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editPaymentModal || !editAmount) return;
+    const newAmount = Number(editAmount) || 0;
+    const list = [...(installments || [])];
+    const updated = list.map(s => {
+      if (s.name !== editPaymentModal.row.name) return s;
+      const payments = { ...s.payments, [editPaymentModal.month]: newAmount };
+      const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
+      return { ...s, payments, totalPaid, remaining: Math.max(0, cleanNumber(s.prevDue) - totalPaid) };
+    });
+    updateInstallments(updated);
+    toast.success("تم تعديل القسط");
+    setEditPaymentModal(null);
+    setEditAmount("");
+  };
+
+  const deletePayment = (row: any, month: string) => {
+    if (!confirm(`حذف قسط شهر ${month}؟`)) return;
+    const list = [...(installments || [])];
+    const updated = list.map(s => {
+      if (s.name !== row.name) return s;
+      const payments = { ...s.payments, [month]: 0 };
+      const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
+      return { ...s, payments, totalPaid, remaining: Math.max(0, cleanNumber(s.prevDue) - totalPaid) };
+    });
+    updateInstallments(updated);
+    toast.success(`تم حذف قسط شهر ${month}`);
+    if (editPaymentModal) setEditPaymentModal(null);
+  };
+
+  const importFile = (e: React.ChangeEvent<HTMLInputElement>, year: 2025 | 2026) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(worksheet) as any[];
+        
+        const formattedData = json.map((row: any) => {
+          const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+          const payments: any = {};
+          let totalPaid = 0;
+          
+          monthsList.forEach(m => {
+            const cleanTarget = m.trim();
+            const foundKey = Object.keys(row).find(k => k.trim() === cleanTarget || k === m);
+            const amount = foundKey ? cleanNumber(row[foundKey]) : 0;
+            payments[m] = amount;
+            totalPaid += amount;
+          });
+
+          const nameKey = Object.keys(row).find(k => k.includes("اسم المتدرب")) || "name";
+          const batchKey = Object.keys(row).find(k => k.includes("رقم الدفعة")) || "batch";
+          const specialtyKey = Object.keys(row).find(k => k.includes("المساق")) || "specialty";
+          const feesKey = Object.keys(row).find(k => k.includes("مبلغ الرسوم")) || "fees";
+          const prevDueKey = Object.keys(row).find(k => k.includes("المتبقي عليهم من العام 2025")) || "prevDue";
+          const remainingKey = Object.keys(row).find(k => k.trim() === "المتبقي") || "remaining";
+          const notesKey = Object.keys(row).find(k => k.includes("ملاحظات")) || "notes";
+          const phoneKey = Object.keys(row).find(k => k.includes("رقم الهاتف")) || "phone";
+
+          return {
+            name: row[nameKey] || "بدون اسم",
+            batch: row[batchKey] || "",
+            specialty: row[specialtyKey] || "",
+            fees: cleanNumber(row[feesKey]),
+            prevDue: cleanNumber(row[prevDueKey]),
+            totalPaid: row['الإجمالي'] ? cleanNumber(row['الإجمالي']) : totalPaid,
+            remaining: cleanNumber(row[remainingKey]),
+            notes: row[notesKey] || "",
+            phone: row[phoneKey] || "",
+            payments,
+            customData: {} 
+          };
+        });
+
+        if (year === 2025) {
+            useStore.setState({ installments2025: formattedData });
+        } else {
+            useStore.setState({ installments: formattedData });
+        }
+        
+        toast.success(`تم استيراد بيانات العام ${year} بنجاح!`);
+        setImportError(null);
+      } catch (error) {
+        setImportError("حدث خطأ في قراءة الملف.");
+        toast.error("فشل استيراد الملف");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
 
   const getStatusText = (rem: number) => rem <= 0 ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" } : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
 
+  const generateAccountStatement = (row: any, year: number) => {
+    // ... نفس الكود الخاص بك لطباعة الكشف ...
+    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+    const fees = cleanNumber(row.fees);
+    const prevDue = cleanNumber(row.prevDue);
+    const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
+    const dueTotal = year === 2026 ? (prevDue || fees) : fees;
+    const remaining = dueTotal - totalPaid;
+
+    const paidRows = monthsList
+      .map((m) => {
+        const amount = Number(row.payments?.[m]) || 0;
+        if (amount <= 0) return "";
+        return `
+          <tr>
+            <td class="lbl">سداد شهر ${m}</td>
+            <td class="num">${fmt(amount)}</td>
+          </tr>`;
+      })
+      .join("");
+
+    const infoCard = (label: string, value: string) =>
+      `<div class="info-box">
+        <div class="info-lbl">${label}</div>
+        <div class="info-val">${value || "—"}</div>
+      </div>`;
+
+    const prevRow = year === 2026
+      ? `<tr class="row-due-old">
+          <td class="lbl">متبقي من العام 2025 (مدور)</td>
+          <td class="num">${fmt(prevDue)}</td>
+        </tr>`
+      : "";
+
+    const remainingLabel = remaining > 0 ? "الرصيد المتبقي (عليه)" : remaining < 0 ? "الرصيد الإضافي (له)" : "الحالة: تم السداد بالكامل";
+
+    return `
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8" />
+        <title>كشف حساب - ${row.name}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
+        <style>
+          @page { size: A4; margin: 0; }
+          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; }
+          .container { width: 210mm; min-height: 297mm; background: white; padding: 15mm; }
+          .header { background: #15803d !important; color: white; padding: 25px; border-radius: 8px; text-align: center; margin-bottom: 25px; border: 1px solid #000; }
+          .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
+          .header p { margin: 10px 0 0; font-size: 18px; opacity: 1; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+          .info-box { border: 1px solid #000; padding: 12px; border-radius: 8px; text-align: center; }
+          .info-lbl { font-size: 14px; color: #1e293b; font-weight: 800; }
+          .info-val { font-size: 18px; color: #000; font-weight: 800; margin-top: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th { background-color: #166534 !important; color: #ffffff !important; padding: 12px; font-size: 18px; border: 1px solid #000; text-align: center; font-weight: 800; }
+          td { padding: 12px; border: 1px solid #000; text-align: center; font-size: 18px; }
+          .lbl { text-align: right; padding-right: 15px; font-weight: 800; color: #000; }
+          .num { text-align: left; padding-left: 15px; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
+          .row-due-old { background-color: #f1f5f9 !important; }
+          .row-total-due { background-color: #e2e8f0 !important; }
+          .row-total-paid { background-color: #f0fdf4 !important; }
+          .row-final { background-color: #fef2f2 !important; font-size: 22px; border: 2px solid #000 !important; }
+          @media print { 
+            body { background: white; } 
+            .container { box-shadow: none; padding: 10mm; width: 100%; }
+            .header { background: #15803d !important; -webkit-print-color-adjust: exact; }
+            th { background-color: #166534 !important; color: #ffffff !important; -webkit-print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>المجلس اليمني للاختصاصات الطبية</h1>
+            <p>كشف حساب رسمي - العام ${year}م</p>
+          </div>
+          <div class="info-grid">
+            ${infoCard("اسم المتدرب", row.name)}
+            ${infoCard("الدفعة", row.batch)}
+            ${infoCard("المساق", row.specialty)}
+            ${infoCard("رقم الهاتف", row.phone)}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 60%">البيان</th>
+                <th style="width: 40%">المبلغ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${fmt(fees)}</td></tr>
+              ${prevRow}
+              <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${fmt(dueTotal)}</td></tr>
+              ${paidRows}
+              <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${fmt(totalPaid)}</td></tr>
+              <tr class="row-final"><td class="lbl">${remainingLabel}</td><td class="num">${fmt(Math.abs(remaining))}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
+  const printStatement = (row: any, year: number) => {
+    const html = generateAccountStatement(row, year);
+    const w = window.open("", "", "width=850,height=700");
+    if (w) { 
+      w.document.write(html); 
+      w.document.close(); 
+      setTimeout(() => w.print(), 500); 
+    }
+  };
+
+  const stats2025 = [
+    { label: "إجمالي الرسوم التقديرية", value: fmt(totals2025.fees), bgClass: "bg-slate-50", borderClass: "border-slate-200" },
+    { label: "إجمالي الأقساط المسددة", value: fmt(totals2025.paid), bgClass: "bg-emerald-50", borderClass: "border-emerald-200" },
+    { label: "إجمالي المتبقي والأرشيف", value: fmt(totals2025.remaining), bgClass: "bg-rose-50", borderClass: "border-rose-200" }
+  ];
+
+  const stats2026 = [
+    { label: "المدور (متبقي 2025)", value: fmt(totals2026.prevDue), bgClass: "bg-amber-50", borderClass: "border-amber-200" },
+    { label: "إجمالي مسدد 2026", value: fmt(totals2026.paid), bgClass: "bg-emerald-50", borderClass: "border-emerald-200" },
+    { label: "صافي رصيد المتبقي", value: fmt(totals2026.remaining), bgClass: "bg-rose-50", borderClass: "border-rose-200" }
+  ];
+
   return (
     <div className="w-full space-y-4 sm:space-y-6 p-0" dir="rtl">
-      
-      {/* ========== واجهة جدول 2026 ========== */}
-      <div className="w-full bg-gradient-to-b from-purple-50 to-white shadow border border-purple-200 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-l from-purple-600 to-purple-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center flex-wrap gap-2">
+      {/* ========== واجهة جدول 2025 ========== */}
+      <div className="w-full bg-gradient-to-b from-teal-50 to-white shadow border border-teal-200 rounded-xl overflow-hidden">
+        {/* ... (نفس كود جدول 2025 بدون تغيير) ... */}
+        <div className="bg-gradient-to-l from-teal-600 to-teal-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center flex-wrap gap-2">
           <div>
-            <h2 className="text-sm sm:text-lg font-bold text-white">📊 سجل أقساط العام الحالي 2026</h2>
-            <p className="text-xs text-purple-100">اضغط على أي خلية للتعديل المباشر</p>
+            <h2 className="text-sm sm:text-lg font-bold text-white">📊 أقساط ومستندات العام 2025</h2>
+            <p className="text-xs text-teal-100">يشمل جميع الدفعات لعامي 2024 و 2025</p>
           </div>
           <div className="flex gap-2 flex-wrap items-center">
-            <button onClick={() => setCondFormatModal(true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow transition-colors flex items-center gap-1 ${condRules.length > 0 ? 'bg-yellow-400 text-yellow-900' : 'bg-white/20 text-white hover:bg-white/30'}`} title="تلوين الصفوف">
-              <Palette className="w-4 h-4" /> {condRules.length > 0 ? `التنسيق مفعل (${condRules.length})` : "تنسيق شرطي"}
-            </button>
             <div className="relative">
-              <Search className="w-4 h-4 absolute right-2.5 top-2 text-purple-500" />
-              <input type="text" placeholder="بحث..." value={search2026} onChange={e => setSearch2026(e.target.value)} className="pl-3 pr-8 py-1.5 rounded-lg text-xs border border-purple-300 outline-none focus:ring-2 focus:ring-purple-300 w-48 text-slate-800" />
+              <Search className="w-4 h-4 absolute right-2.5 top-2 text-teal-500" />
+              <input 
+                type="text" 
+                placeholder="بحث (الاسم، الدفعة، المساق)..." 
+                value={search2025}
+                onChange={e => setSearch2025(e.target.value)}
+                className="pl-3 pr-8 py-1.5 rounded-lg text-xs border border-teal-300 outline-none focus:ring-2 focus:ring-teal-300 w-48 text-slate-800 shadow-sm"
+              />
             </div>
-            <button onClick={() => setNewColModal(true)} className="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold shadow hover:bg-amber-200">➕ عمود</button>
+            
+            <label className="px-3 py-1.5 bg-white text-teal-700 rounded-lg text-xs font-bold cursor-pointer hover:bg-teal-50 shadow">
+              📥 استيراد الملف <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2025)} className="hidden" />
+            </label>
+            <TabActions
+              title="أقساط العام 2025"
+              rows={installments2025 || []}
+              columns={[
+                { key: "name", label: "اسم المتدرب" },
+                { key: "batch", label: "الدفعة" },
+                { key: "specialty", label: "المساق" },
+                { key: "fees", label: "الرسوم" },
+                { key: "totalPaid", label: "المسدد" },
+                { key: "remaining", label: "المتبقي" },
+              ]}
+              fileName="اقساط-2025"
+              numericKeys={["fees","totalPaid","remaining"]}
+              onClear={() => clearInstallments('2025')}
+            />
           </div>
         </div>
-        
+        {importError && <div className="bg-red-50 border-b border-red-200 p-3 flex gap-2"><AlertCircle className="w-5 h-5 text-red-600" /><p className="text-sm text-red-700">{importError}</p></div>}
         <div className="p-3 sm:p-4">
-          <StatsGrid stats={[
-            { label: "المدور (متبقي 2025)", value: fmt(totals2026.prevDue), bgClass: "bg-amber-50", borderClass: "border-amber-200" },
-            { label: "إجمالي مسدد 2026", value: fmt(totals2026.paid), bgClass: "bg-emerald-50", borderClass: "border-emerald-200" },
-            { label: "صافي رصيد المتبقي", value: fmt(totals2026.remaining), bgClass: "bg-rose-50", borderClass: "border-rose-200" }
-          ]} />
-          
+          <StatsGrid stats={stats2025} columns={3} />
           <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
             <table className="w-full text-xs sm:text-sm">
               <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
                 <tr>
                   <th className="p-2 text-center whitespace-nowrap">#</th>
-                  <th className="p-2 text-center whitespace-nowrap">اسم المتدرب</th>
-                  <th className="p-2 text-center whitespace-nowrap">دفعة</th>
-                  <th className="p-2 text-center whitespace-nowrap">المساق</th>
-                  <th className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap">متبقي 2025</th>
-                  {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m.trim()}</th>)}
-                  {extraCols2026.map(col => (
-                    <th key={col.name} className="p-2 text-center text-xs bg-blue-50 border-l border-slate-200 whitespace-nowrap text-blue-800">
-                      {col.name}
-                    </th>
-                  ))}
-                  <th className="p-2 text-center text-emerald-700 whitespace-nowrap">مسدد 2026</th>
-                  <th className="p-2 text-center text-rose-700 whitespace-nowrap">الرصيد المتبقي</th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('name')}>
+                    <div className="flex items-center justify-center gap-1">اسم المتدرب <SortIcon sortConfig={sortConfig2025} columnKey="name" /></div>
+                  </th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('batch')}>
+                    <div className="flex items-center justify-center gap-1">الدفعة <SortIcon sortConfig={sortConfig2025} columnKey="batch" /></div>
+                  </th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('specialty')}>
+                    <div className="flex items-center justify-center gap-1">المساق <SortIcon sortConfig={sortConfig2025} columnKey="specialty" /></div>
+                  </th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('fees')}>
+                    <div className="flex items-center justify-center gap-1">الرسوم <SortIcon sortConfig={sortConfig2025} columnKey="fees" /></div>
+                  </th>
+                  {MONTHS_2025.map(m => <th key={m} className="p-1 text-center text-[11px] bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m}</th>)}
+                  <th className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('totalPaid')}>
+                    <div className="flex items-center justify-center gap-1">المسدد <SortIcon sortConfig={sortConfig2025} columnKey="totalPaid" /></div>
+                  </th>
+                  <th className="p-2 text-center text-rose-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2025('remaining')}>
+                    <div className="flex items-center justify-center gap-1">المتبقي <SortIcon sortConfig={sortConfig2025} columnKey="remaining" /></div>
+                  </th>
                   <th className="p-2 text-center whitespace-nowrap">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredRows2026.map((r: any, i: number) => (
-                  <tr key={i} className={`border-t border-slate-200 transition-colors ${getRowHighlightColor(r)}`}>
-                    <td className="p-2 text-center text-slate-500">{i + 1}</td>
-                    
-                    {/* التعديل المباشر للأعمدة الأساسية */}
-                    {renderEditableCell(r, "name", r.name, "p-2 text-center font-semibold text-slate-900", false, undefined, 2026)}
-                    {renderEditableCell(r, "batch", r.batch || "—", "p-2 text-center text-slate-600", false, undefined, 2026)}
-                    {renderEditableCell(r, "specialty", r.specialty || "—", "p-2 text-center text-slate-600", false, undefined, 2026)}
-                    {renderEditableCell(r, "prevDue", fmt(r.prevDue), "p-2 text-center font-mono text-amber-700 bg-amber-50/20 font-bold", false, undefined, 2026)}
-
-                    {/* التعديل المباشر لشهور الدفع */}
-                    {MONTHS_2026.map(m => {
-                      const paid = Number(r.payments?.[m]) || 0;
-                      const displayVal = paid > 0 ? fmt(paid) : "";
-                      return renderEditableCell(r, "payment", displayVal, "p-1 text-center font-mono text-emerald-700 font-bold bg-white/40 border-l border-slate-200", false, m, 2026);
-                    })}
-
-                    {/* التعديل المباشر للأعمدة المخصصة */}
-                    {extraCols2026.map(col => {
-                      if (col.type === 'formula') {
-                        return <td key={col.name} className="p-1 border-l border-slate-200 text-center font-mono font-bold text-indigo-700 bg-white/50">{evaluateFormula(col.formula || "", r)}</td>;
-                      }
-                      return renderEditableCell(r, col.name, r.customData?.[col.name] || "—", "p-1 border-l border-slate-200 text-center text-xs", true, undefined, 2026);
-                    })}
-
-                    <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30">{fmt(r.totalPaid)}</td>
-                    <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30">{fmt(r.remaining)}</td>
-                    
-                    <td className="p-2 text-center whitespace-nowrap flex justify-center gap-1">
-                      <button onClick={() => deleteStudentRow(r.name, 2026)} className="p-1.5 bg-red-50 text-red-600 rounded border border-red-200 hover:bg-red-500 hover:text-white transition-colors" title="حذف الصف">
-                        <Trash className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredRows2025.length === 0 ? (
+                  <tr><td colSpan={9 + MONTHS_2025.length} className="p-6 text-center text-slate-400">لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)</td></tr>
+                ) : (
+                  <>
+                    {filteredRows2025.map((r: any, i: number) => {
+                      const originalIndex = (installments2025 || []).findIndex((orig: any) => orig.name === r.name);
+                      return (
+                      <tr key={i} className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors">
+                        <td className="p-2 text-center text-slate-500 whitespace-nowrap">{i + 1}</td>
+                        <td className="p-2 text-center font-semibold text-slate-900 whitespace-nowrap">{r.name}</td>
+                        <td className="p-2 text-center text-slate-600 whitespace-nowrap">{r.batch || "—"}</td>
+                        <td className="p-2 text-center text-slate-600 whitespace-nowrap">{r.specialty || "—"}</td>
+                        <td className="p-2 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">{fmt(r.fees)}</td>
+                        {MONTHS_2025.map(m => {
+                          const paid = Number(r.payments?.[m]) || 0;
+                          return <td key={m} className="p-1 text-center bg-slate-50/50 border-l border-slate-200 whitespace-nowrap">{paid > 0 ? <span className="text-emerald-700 font-bold font-mono">{fmt(paid)}</span> : <span className="text-slate-300">—</span>}</td>;
+                        })}
+                        <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">{fmt(r.totalPaid)}</td>
+                        <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">{fmt(r.remaining)}</td>
+                        <td className="p-2 text-center whitespace-nowrap flex justify-center gap-1">
+                          <button onClick={() => { setEditRowData(r); setEditRowModal({ year: 2025, row: r, index: originalIndex }); }} className="p-1 bg-amber-50 text-amber-600 rounded border border-amber-200 hover:bg-amber-500 hover:text-white transition-colors" title="تعديل الصف">
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => printStatement(r, 2025)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors" title="طباعة الكشف">
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    )})}
+                  </>
+                )}
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      {/* ========== نافذة التنسيق الشرطي المتعدد ========== */}
-      <Modal title="🎨 التنسيق الشرطي للصفوف (قواعد متعددة)" isOpen={condFormatModal} onClose={() => setCondFormatModal(false)}>
-        <div className="space-y-4">
-          
-          {/* قائمة القواعد الحالية */}
-          {condRules.length > 0 && (
-            <div className="space-y-2 mb-4 max-h-32 overflow-y-auto pr-1">
-              <label className="text-xs font-bold text-slate-700">القواعد المفعلة:</label>
-              {condRules.map((rule, idx) => (
-                <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${rule.color}`}>
-                  <span className="text-sm font-semibold">إذا احتوى الصف على: "{rule.text}"</span>
-                  <button onClick={() => removeCondRule(idx)} className="text-red-600 hover:bg-red-100 p-1 rounded"><Trash className="w-4 h-4"/></button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">إضافة قاعدة جديدة (كلمة للبحث):</label>
-            <input type="text" value={newCondText} onChange={e => setNewCondText(e.target.value)} className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-300 outline-none mb-3" placeholder="مثال: معتمد, منسحب..." />
+      {/* ========== واجهة جدول 2026 ========== */}
+      <div className="w-full bg-gradient-to-b from-purple-50 to-white shadow border border-purple-200 rounded-xl overflow-hidden">
+        <div className="bg-gradient-to-l from-purple-600 to-purple-700 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center flex-wrap gap-2">
+          <div>
+            <h2 className="text-sm sm:text-lg font-bold text-white">📊 سجل أقساط العام الحالي 2026</h2>
+            <p className="text-xs text-purple-100">بيانات المسدد والرصيد المدور لعام 2026</p>
+          </div>
+          <div className="flex gap-2 flex-wrap items-center">
             
-            <label className="block text-xs font-semibold text-slate-700 mb-2">اختر لون التمييز:</label>
-            <div className="flex gap-2 mb-3">
+            {/* [جديد] زر التنسيق الشرطي */}
+            <button onClick={() => setCondFormatModal(true)} className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow transition-colors flex items-center gap-1 ${condFormatParams.text ? 'bg-yellow-400 text-yellow-900 animate-pulse' : 'bg-white/20 text-white hover:bg-white/30'}`} title="تلوين الصفوف حسب نص معين">
+              <Palette className="w-4 h-4" /> 
+              {condFormatParams.text ? `تنسيق نشط (${condFormatParams.text})` : "تنسيق شرطي"}
+            </button>
+
+            <div className="relative">
+              <Search className="w-4 h-4 absolute right-2.5 top-2 text-purple-500" />
+              <input 
+                type="text" 
+                placeholder="بحث (الاسم، الدفعة، المساق)..." 
+                value={search2026}
+                onChange={e => setSearch2026(e.target.value)}
+                className="pl-3 pr-8 py-1.5 rounded-lg text-xs border border-purple-300 outline-none focus:ring-2 focus:ring-purple-300 w-48 text-slate-800 shadow-sm"
+              />
+            </div>
+            
+            <button onClick={() => setNewRowModal2026(true)} className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold shadow hover:bg-blue-200 transition-colors flex items-center gap-1">
+              <Plus className="w-3 h-3" /> طالب جديد
+            </button>
+
+            <button onClick={() => setNewColModal(true)} className="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold shadow hover:bg-amber-200 transition-colors flex items-center gap-1">
+              <Plus className="w-3 h-3" /> عمود جديد
+            </button>
+
+            <button onClick={() => setNewPaymentModal(true)} className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold shadow hover:bg-purple-200 transition-colors">➕ إضافة قسط</button>
+            <label className="px-3 py-1.5 bg-white text-purple-700 rounded-lg text-xs font-bold cursor-pointer shadow hover:bg-purple-50 transition-colors">
+              📥 استيراد <input type="file" accept=".xlsx,.xls" onChange={e => importFile(e, 2026)} className="hidden" />
+            </label>
+            <TabActions
+              title="أقساط العام 2026"
+              rows={(installments || []).map((r: any) => {
+                const customValues: any = { ...r.customData };
+                extraCols2026.forEach(col => {
+                  if (col.type === 'formula') customValues[col.name] = evaluateFormula(col.formula || "", r);
+                });
+                return { ...r, ...customValues };
+              })}
+              columns={[
+                { key: "name", label: "اسم المتدرب" },
+                { key: "batch", label: "الدفعة" },
+                { key: "specialty", label: "المساق" },
+                { key: "prevDue", label: "المتبقي من 2025" },
+                { key: "fees", label: "الرسوم" },
+                { key: "totalPaid", label: "المسدد" },
+                { key: "remaining", label: "المتبقي" },
+                ...extraCols2026.map(c => ({ key: c.name, label: c.name }))
+              ]}
+              fileName="اقساط-2026"
+              numericKeys={["prevDue","fees","totalPaid","remaining"]}
+              onClear={() => clearInstallments()}
+            />
+          </div>
+        </div>
+        <div className="p-3 sm:p-4">
+          <StatsGrid stats={stats2026} columns={3} />
+          <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
+            <table className="w-full text-xs sm:text-sm">
+              <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
+                <tr>
+                  <th className="p-2 text-center whitespace-nowrap">#</th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('name')}>
+                    <div className="flex items-center justify-center gap-1">اسم المتدرب <SortIcon sortConfig={sortConfig2026} columnKey="name" /></div>
+                  </th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('batch')}>
+                    <div className="flex items-center justify-center gap-1">دفعة <SortIcon sortConfig={sortConfig2026} columnKey="batch" /></div>
+                  </th>
+                  <th className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('specialty')}>
+                    <div className="flex items-center justify-center gap-1">المساق <SortIcon sortConfig={sortConfig2026} columnKey="specialty" /></div>
+                  </th>
+                  <th className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap cursor-pointer hover:bg-amber-100" onClick={() => handleSort2026('prevDue')}>
+                    <div className="flex items-center justify-center gap-1">المتبقي من 2025 <SortIcon sortConfig={sortConfig2026} columnKey="prevDue" /></div>
+                  </th>
+                  {MONTHS_2026.map(m => <th key={m} className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap">{m.trim()}</th>)}
+                  
+                  {/* [تحديث] عناوين الأعمدة المخصصة مع زر التعديل */}
+                  {extraCols2026.map(col => (
+                    <th key={col.name} className="p-2 text-center text-xs bg-blue-50 border-l border-slate-200 whitespace-nowrap text-blue-800 group">
+                      <div className="flex items-center justify-center gap-1">
+                        {col.name}
+                        <button 
+                          onClick={() => setEditColModal({ oldName: col.name, name: col.name, type: col.type, options: col.options?.join(',') || "", formula: col.formula || "" })}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 bg-blue-200 hover:bg-blue-500 hover:text-white rounded transition-all"
+                          title="تعديل أو حذف العمود"
+                        >
+                          <Settings className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </th>
+                  ))}
+
+                  <th className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('totalPaid')}>
+                    <div className="flex items-center justify-center gap-1">مسدد 2026 <SortIcon sortConfig={sortConfig2026} columnKey="totalPaid" /></div>
+                  </th>
+                  <th className="p-2 text-center text-rose-700 whitespace-nowrap cursor-pointer hover:bg-slate-200" onClick={() => handleSort2026('remaining')}>
+                    <div className="flex items-center justify-center gap-1">الرصيد المتبقي <SortIcon sortConfig={sortConfig2026} columnKey="remaining" /></div>
+                  </th>
+                  <th className="p-2 text-center whitespace-nowrap">حالة</th>
+                  <th className="p-2 text-center whitespace-nowrap">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows2026.length === 0 ? (
+                  <tr><td colSpan={8 + MONTHS_2026.length + extraCols2026.length} className="p-6 text-center text-slate-400">لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)</td></tr>
+                ) : (
+                  <>
+                    {filteredRows2026.map((r: any, i: number) => {
+                      const status = getStatusText(r.remaining);
+                      const originalIndex = (installments || []).findIndex((orig: any) => orig.name === r.name);
+                      
+                      // [جديد] تطبيق التنسيق الشرطي على الصف
+                      const rowBgClass = isRowHighlighted(r) ? condFormatParams.color : "hover:bg-slate-50/80";
+                      
+                      return (
+                        <tr key={i} className={`border-t border-slate-200 transition-colors ${rowBgClass}`}>
+                          <td className="p-2 text-center text-slate-500 whitespace-nowrap">{i + 1}</td>
+                          <td className="p-2 text-center font-semibold text-slate-900 whitespace-nowrap">{r.name}</td>
+                          <td className="p-2 text-center text-slate-600 whitespace-nowrap">{r.batch || "—"}</td>
+                          <td className="p-2 text-center text-slate-600 whitespace-nowrap">{r.specialty || "—"}</td>
+                          <td className="p-2 text-center font-mono text-amber-700 font-bold bg-amber-50/20 whitespace-nowrap">{fmt(r.prevDue)}</td>
+                          {MONTHS_2026.map(m => {
+                            const paid = Number(r.payments?.[m]) || 0;
+                            const cellId = `${r.name}-${m}`;
+                            return (
+                              <td key={m} className="p-1 text-center relative bg-white/40 border-l border-slate-200 hover:bg-slate-100 cursor-pointer group transition-colors whitespace-nowrap"
+                                onMouseEnter={() => setHoveredCell(cellId)} onMouseLeave={() => setHoveredCell(null)}>
+                                {paid > 0 ? (
+                                  <div className="relative flex justify-center">
+                                    <span className="font-mono text-emerald-700 font-bold">{fmt(paid)}</span>
+                                    {hoveredCell === cellId && (
+                                      <div className="absolute -top-7 right-0 flex gap-0.5 bg-white shadow-xl border rounded px-1 py-1 z-30">
+                                        <button onClick={() => { setEditPaymentModal({ row: r, month: m, amount: paid }); setEditAmount(String(paid)); setHoveredCell(null); }} className="px-1.5 py-0.5 bg-blue-500 text-white rounded text-[10px]">✏️</button>
+                                        <button onClick={() => { deletePayment(r, m); setHoveredCell(null); }} className="px-1.5 py-0.5 bg-red-500 text-white rounded text-[10px]">🗑️</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <button onClick={() => { setPaymentModal({ row: r, month: m }); setPayAmount(""); }} className="text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-full w-5 h-5 flex items-center justify-center font-bold mx-auto">+</button>
+                                )}
+                              </td>
+                            );
+                          })}
+
+                          {/* حقول الأعمدة المخصصة */}
+                          {extraCols2026.map(col => (
+                            <td key={col.name} className="p-1 border-l border-slate-200">
+                              {col.type === 'select' ? (
+                                <select 
+                                  className="w-full text-center bg-transparent outline-none focus:bg-white focus:ring-1 ring-blue-300 rounded px-1 py-1 text-xs"
+                                  value={r.customData?.[col.name] || ""}
+                                  onChange={(e) => updateCustomColValue(originalIndex, col.name, e.target.value)}
+                                >
+                                  <option value="">- اختر -</option>
+                                  {col.options?.map((opt, idx) => (
+                                    <option key={idx} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              ) : col.type === 'formula' ? (
+                                <div className="text-center font-mono text-xs font-bold text-indigo-700 bg-white/50 py-1.5 rounded">
+                                  {evaluateFormula(col.formula || "", r)}
+                                </div>
+                              ) : (
+                                <input 
+                                  type="text"
+                                  className="w-full text-center bg-transparent outline-none focus:bg-white focus:ring-1 ring-blue-300 rounded px-1 py-1 text-xs"
+                                  value={r.customData?.[col.name] || ""}
+                                  onChange={(e) => updateCustomColValue(originalIndex, col.name, e.target.value)}
+                                  placeholder="—"
+                                />
+                              )}
+                            </td>
+                          ))}
+
+                          <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">{fmt(r.totalPaid)}</td>
+                          <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">{fmt(r.remaining)}</td>
+                          <td className="p-2 text-center whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color}`}>{status.text}</span></td>
+                          <td className="p-2 text-center whitespace-nowrap flex justify-center gap-1">
+                            <button onClick={() => { setEditRowData(r); setEditRowModal({ year: 2026, row: r, index: originalIndex }); }} className="p-1 bg-amber-50 text-amber-600 rounded border border-amber-200 hover:bg-amber-500 hover:text-white transition-colors" title="تعديل الصف">
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => printStatement(r, 2026)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors" title="طباعة الكشف">
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* ========== النوافذ المنبثقة ========== */}
+
+      {/* [جديد] نافذة التنسيق الشرطي */}
+      <Modal title="🎨 التنسيق الشرطي للصفوف" isOpen={condFormatModal} onClose={() => setCondFormatModal(false)}>
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500">سيتم تلوين الصف بالكامل إذا كان يحتوي على النص الذي تدخله أدناه في أي عمود (الاسم، المساق، حالة الاعتماد، الخ).</p>
+          
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">النص المطلوب البحث عنه (الشرط)</label>
+            <input 
+              type="text" 
+              value={condFormatParams.text} 
+              onChange={e => setCondFormatParams({...condFormatParams, text: e.target.value})} 
+              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-300 outline-none" 
+              placeholder="مثال: معتمد, منسحب, مجاني..." 
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-2">اختر لون تمييز الصف</label>
+            <div className="flex gap-2">
               {[
                 { name: 'أصفر', class: 'bg-yellow-100 hover:bg-yellow-100' },
-                { name: 'أخضر', class: 'bg-emerald-100 hover:bg-emerald-100' },
-                { name: 'أحمر', class: 'bg-rose-100 hover:bg-rose-100' },
+                { name: 'أخضر', class: 'bg-green-100 hover:bg-green-100' },
+                { name: 'أحمر', class: 'bg-red-100 hover:bg-red-100' },
                 { name: 'أزرق', class: 'bg-blue-100 hover:bg-blue-100' },
                 { name: 'بنفسجي', class: 'bg-purple-100 hover:bg-purple-100' }
               ].map(color => (
-                <button key={color.class} onClick={() => setNewCondColor(color.class)} className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${newCondColor === color.class ? 'border-slate-800 scale-110' : 'border-transparent'} ${color.class}`} title={color.name}>
-                  {newCondColor === color.class && <Check className="w-4 h-4 text-slate-800"/>}
-                </button>
+                <button
+                  key={color.class}
+                  onClick={() => setCondFormatParams({...condFormatParams, color: color.class})}
+                  className={`w-8 h-8 rounded-full border-2 ${condFormatParams.color === color.class ? 'border-slate-800 scale-110' : 'border-transparent'} ${color.class}`}
+                  title={color.name}
+                />
               ))}
             </div>
-            <button onClick={addCondRule} className="w-full py-2 bg-slate-800 text-white rounded-lg text-sm font-bold flex justify-center items-center gap-1"><Plus className="w-4 h-4"/> إضافة القاعدة</button>
           </div>
 
-          <div className="flex justify-end pt-3 border-t mt-4">
-            <button onClick={() => setCondFormatModal(false)} className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold">إغلاق</button>
+          <div className="flex justify-between items-center pt-3 border-t mt-4">
+            <button onClick={() => { setCondFormatParams({ text: "", color: "bg-yellow-100" }); setCondFormatModal(false); }} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100">إلغاء التنسيق تماماً</button>
+            <button onClick={() => setCondFormatModal(false)} className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold">تطبيق وحفظ</button>
           </div>
         </div>
       </Modal>
 
+      {/* [جديد] نافذة تعديل العمود المخصص */}
+      <Modal title={`⚙️ تعديل العمود: ${editColModal?.oldName}`} isOpen={!!editColModal} onClose={() => setEditColModal(null)}>
+        {editColModal && (
+          <form onSubmit={saveCustomColumnEdit} className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">اسم العمود</label>
+              <input type="text" required value={editColModal.name} onChange={e => setEditColModal({...editColModal, name: e.target.value})} className="w-full p-2 border rounded-lg" />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">نوع العمود</label>
+              <select value={editColModal.type} onChange={(e: any) => setEditColModal({...editColModal, type: e.target.value})} className="w-full p-2 border rounded-lg">
+                <option value="text">نص أو رقم حر (إدخال يدوي)</option>
+                <option value="select">قائمة منسدلة (خيارات محددة)</option>
+                <option value="formula">معادلة رياضية دالة (حساب تلقائي)</option>
+              </select>
+            </div>
+
+            {editColModal.type === 'select' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">الخيارات (افصل بينها بفاصلة)</label>
+                <input type="text" required value={editColModal.options} onChange={e => setEditColModal({...editColModal, options: e.target.value})} className="w-full p-2 border rounded-lg" placeholder="مثال: معتمد, غير معتمد" />
+              </div>
+            )}
+
+            {editColModal.type === 'formula' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">المعادلة (استخدم المتغيرات الإنجليزية)</label>
+                <input type="text" required value={editColModal.formula} onChange={e => setEditColModal({...editColModal, formula: e.target.value})} className="w-full p-2 border rounded-lg text-left" dir="ltr" />
+                <p className="text-[10px] text-slate-500 mt-1 text-right">
+                  المتغيرات المتاحة: <code className="bg-slate-100 px-1 rounded text-red-600">fees</code> (الرسوم), <code className="bg-slate-100 px-1 rounded text-red-600">totalPaid</code> (المسدد), <code className="bg-slate-100 px-1 rounded text-red-600">prevDue</code> (المدور), <code className="bg-slate-100 px-1 rounded text-red-600">remaining</code> (المتبقي).
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center pt-3 border-t mt-4">
+              <button type="button" onClick={() => deleteCustomColumn(editColModal.oldName)} className="px-4 py-2 bg-red-100 text-red-700 rounded-lg flex items-center gap-1 font-bold"><Trash className="w-4 h-4"/> حذف العمود</button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setEditColModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold">حفظ التعديل</button>
+              </div>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* باقي النوافذ المنبثقة تبقى كما هي دون تغيير */}
+      <Modal title={`✏️ تعديل بيانات المتدرب (${editRowModal?.year})`} isOpen={!!editRowModal} onClose={() => setEditRowModal(null)}>
+        <form onSubmit={saveRowEdit} className="space-y-3">
+          <div><label className="block text-xs font-semibold text-slate-700 mb-1">اسم المتدرب</label><input type="text" required value={editRowData?.name || ''} onChange={e => setEditRowData({...editRowData, name: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">الدفعة</label><input type="text" value={editRowData?.batch || ''} onChange={e => setEditRowData({...editRowData, batch: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">المساق</label><input type="text" value={editRowData?.specialty || ''} onChange={e => setEditRowData({...editRowData, specialty: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          </div>
+          {editRowModal?.year === 2025 && (
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">الرسوم الكلية</label><input type="number" value={editRowData?.fees || 0} onChange={e => setEditRowData({...editRowData, fees: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          )}
+          {editRowModal?.year === 2026 && (
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">المتبقي من 2025 (المدور)</label><input type="number" value={editRowData?.prevDue || 0} onChange={e => setEditRowData({...editRowData, prevDue: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          )}
+          <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+            <button type="button" onClick={() => setEditRowModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+            <button type="submit" className="px-4 py-2 bg-amber-600 text-white rounded-lg font-bold">حفظ التعديلات</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal title="➕ إضافة عمود جديد (2026)" isOpen={newColModal} onClose={() => setNewColModal(false)}>
+        <form onSubmit={addCustomColumn} className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">اسم العمود</label>
+            <input type="text" required value={newColName} onChange={e => setNewColName(e.target.value)} className="w-full p-2 border rounded-lg" autoFocus placeholder="مثل: حالة الاعتماد، الخصم..." />
+          </div>
+          
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">نوع العمود</label>
+            <select value={newColType} onChange={(e: any) => setNewColType(e.target.value)} className="w-full p-2 border rounded-lg">
+              <option value="text">نص أو رقم حر (إدخال يدوي)</option>
+              <option value="select">قائمة منسدلة (خيارات محددة)</option>
+              <option value="formula">معادلة رياضية دالة (حساب تلقائي)</option>
+            </select>
+          </div>
+
+          {newColType === 'select' && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">الخيارات (افصل بينها بفاصلة)</label>
+              <input type="text" required value={newColOptions} onChange={e => setNewColOptions(e.target.value)} className="w-full p-2 border rounded-lg" placeholder="مثال: معتمد, غير معتمد, قيد المراجعة" />
+            </div>
+          )}
+
+          {newColType === 'formula' && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">المعادلة (استخدم المتغيرات الإنجليزية)</label>
+              <input type="text" required value={newColFormula} onChange={e => setNewColFormula(e.target.value)} className="w-full p-2 border rounded-lg text-left" dir="ltr" placeholder="مثال: fees - totalPaid" />
+              <p className="text-[10px] text-slate-500 mt-1 text-right">
+                المتغيرات المتاحة: <code className="bg-slate-100 px-1 rounded text-red-600">fees</code> (الرسوم), <code className="bg-slate-100 px-1 rounded text-red-600">totalPaid</code> (المسدد), <code className="bg-slate-100 px-1 rounded text-red-600">prevDue</code> (المدور), <code className="bg-slate-100 px-1 rounded text-red-600">remaining</code> (المتبقي).
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+            <button type="button" onClick={() => setNewColModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+            <button type="submit" className="px-4 py-2 bg-amber-600 text-white rounded-lg font-bold">إضافة العمود</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal title="➕ إضافة طالب جديد لعام 2026" isOpen={newRowModal2026} onClose={() => setNewRowModal2026(false)}>
+        <form onSubmit={addNewRow2026} className="space-y-3">
+          <div><label className="block text-xs font-semibold text-slate-700 mb-1">اسم المتدرب *</label><input type="text" required value={newRowData2026.name} onChange={e => setNewRowData2026({...newRowData2026, name: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">الدفعة</label><input type="text" value={newRowData2026.batch} onChange={e => setNewRowData2026({...newRowData2026, batch: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">المساق</label><input type="text" value={newRowData2026.specialty} onChange={e => setNewRowData2026({...newRowData2026, specialty: e.target.value})} className="w-full p-2 border rounded-lg" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">الرسوم الكلية</label><input type="number" value={newRowData2026.fees} onChange={e => setNewRowData2026({...newRowData2026, fees: Number(e.target.value)})} className="w-full p-2 border rounded-lg" /></div>
+            <div><label className="block text-xs font-semibold text-slate-700 mb-1">المتبقي من 2025</label><input type="number" value={newRowData2026.prevDue} onChange={e => setNewRowData2026({...newRowData2026, prevDue: Number(e.target.value)})} className="w-full p-2 border rounded-lg" /></div>
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+            <button type="button" onClick={() => setNewRowModal2026(false)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold">إضافة المتدرب</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal title="➕ إضافة قسط جديد - 2026" isOpen={newPaymentModal} onClose={() => setNewPaymentModal(false)}>
+        <form onSubmit={addNewPayment} className="space-y-3">
+          <div className="relative">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">اسم المتدرب *</label>
+            <input type="text" required placeholder="ابحث عن الاسم" value={newStudentName} onChange={e => handleNameChange(e.target.value)} onFocus={() => newStudentName.length > 0 && setShowSuggestions(true)} className="w-full p-2 border rounded-lg outline-none" />
+            {showSuggestions && nameSuggestions.length > 0 && (
+              <div className="absolute top-full right-0 left-0 bg-white border rounded-b-lg shadow-xl z-50 max-h-32 overflow-y-auto">
+                {nameSuggestions.map((n, idx) => <div key={idx} onClick={() => { setNewStudentName(n); setShowSuggestions(false); }} className="p-2 text-sm hover:bg-purple-50 cursor-pointer text-slate-800">{n}</div>)}
+              </div>
+            )}
+          </div>
+          <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المالي *</label><input type="number" required value={newStudentAmount} onChange={e => setNewStudentAmount(e.target.value)} className="w-full p-2 border rounded-lg" min="0" step="0.01" /></div>
+          <div><label className="block text-xs font-semibold text-slate-700 mb-1">الشهر المستهدف *</label><select required value={newStudentMonth} onChange={e => setNewStudentMonth(e.target.value)} className="w-full p-2 border rounded-lg"><option value="">-- اختر الشهر --</option>{MONTHS_2026.map(m => <option key={m} value={m}>{m.trim()}</option>)}</select></div>
+          <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+            <button type="button" onClick={() => setNewPaymentModal(false)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+            <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold">حفظ</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal title="💵 تسجيل دفعة مالية" isOpen={!!paymentModal} onClose={() => setPaymentModal(null)}>
+        {paymentModal && (
+          <>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-slate-800">
+              <p><b>المتدرب:</b> {paymentModal.row.name}</p>
+              <p><b>شهر:</b> {paymentModal.month}</p>
+            </div>
+            <form onSubmit={addPayment} className="space-y-3 mt-3">
+              <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المدفوع *</label><input type="number" required value={payAmount} onChange={e => setPayAmount(e.target.value)} className="w-full p-2 border rounded-lg" autoFocus min="0" step="0.01" /></div>
+              <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+                <button type="button" onClick={() => setPaymentModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+                <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold">تأكيد التوريد</button>
+              </div>
+            </form>
+          </>
+        )}
+      </Modal>
+
+      <Modal title="✏️ مراجعة وتعديل القسط" isOpen={!!editPaymentModal} onClose={() => setEditPaymentModal(null)}>
+        {editPaymentModal && (
+          <>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-slate-800">
+              <p className="font-bold">{editPaymentModal.row.name}</p>
+              <p>بيان شهر: {editPaymentModal.month}</p>
+            </div>
+            <form onSubmit={editPayment} className="space-y-3 mt-3">
+              <div><label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المعدل *</label><input type="number" required value={editAmount} onChange={e => setEditAmount(e.target.value)} className="w-full p-2 border rounded-lg" min="0" step="0.01" /></div>
+              <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+                <button type="button" onClick={() => setEditPaymentModal(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+                <button type="button" onClick={() => deletePayment(editPaymentModal.row, editPaymentModal.month)} className="px-4 py-2 bg-red-600 text-white rounded-lg">🗑️ حذف القسط</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold">حفظ التعديل</button>
+              </div>
+            </form>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }
