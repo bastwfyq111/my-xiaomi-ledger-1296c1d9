@@ -17,6 +17,9 @@ import {
   Trash,
   Palette,
   Settings,
+  Download,
+  FileSpreadsheet,
+  FileText,
 } from "lucide-react";
 import TabActions from "./TabActions";
 
@@ -147,6 +150,7 @@ export default function InstallmentsTab() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [exportModal, setExportModal] = useState<{ year: number; type: "excel" | "pdf" } | null>(null);
 
   const [search2025, setSearch2025] = useState("");
   const [search2026, setSearch2026] = useState("");
@@ -367,6 +371,230 @@ export default function InstallmentsTab() {
 
   const updateInstallments = (list: any[]) => useStore.setState({ installments: list });
   const updateInstallments2025 = (list: any[]) => useStore.setState({ installments2025: list });
+
+  // دوال التصدير التفصيلية
+  const exportToExcel = (year: number) => {
+    try {
+      const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+      const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
+      const extraCols = year === 2026 ? extraCols2026 : [];
+      
+      const headers = year === 2025 
+        ? ["#", "اسم المتدرب", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
+        : ["#", "اسم المتدرب", "الدفعة", "المساق", "المتبقي من 2025", "الرسوم", ...monthsList, ...extraCols.map(c => c.name), "مسدد 2026", "الرصيد المتبقي", "الحالة"];
+      
+      const data = rows.map((row: any, i: number) => {
+        if (year === 2025) {
+          return [
+            i + 1,
+            row.name || "",
+            row.batch || "",
+            row.specialty || "",
+            row.fees || 0,
+            ...monthsList.map(m => row.payments?.[m] || 0),
+            row.totalPaid || 0,
+            row.remaining || 0,
+          ];
+        } else {
+          const status = row.remaining <= 0 ? "له" : "عليه";
+          return [
+            i + 1,
+            row.name || "",
+            row.batch || "",
+            row.specialty || "",
+            row.prevDue || 0,
+            row.fees || 0,
+            ...monthsList.map(m => row.payments?.[m] || 0),
+            ...extraCols.map(col => {
+              if (col.type === "formula") return evaluateFormula(col.formula || "", row);
+              return row.customData?.[col.name] || "";
+            }),
+            row.totalPaid || 0,
+            row.remaining || 0,
+            status,
+          ];
+        }
+      });
+
+      // إضافة صف الإجماليات
+      if (year === 2025) {
+        const totalRow = [
+          "الإجمالي",
+          "",
+          "",
+          "",
+          totals2025.fees,
+          ...monthsList.map(m => totals2025.months[m] || 0),
+          totals2025.paid,
+          totals2025.remaining,
+        ];
+        data.push(totalRow);
+      } else {
+        const totalRow = [
+          "الإجمالي",
+          "",
+          "",
+          "",
+          totals2026.prevDue,
+          totals2026.fees,
+          ...monthsList.map(m => totals2026.months[m] || 0),
+          ...extraCols.map(() => ""),
+          totals2026.paid,
+          totals2026.remaining,
+          "",
+        ];
+        data.push(totalRow);
+      }
+
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+      
+      // تنسيق الأعمدة
+      ws["!cols"] = headers.map(() => ({ wch: 15 }));
+      
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, `أقساط ${year}`);
+      
+      XLSX.writeFile(wb, `اقساط-${year}-تفصيلي.xlsx`);
+      toast.success(`تم تصدير بيانات ${year} إلى Excel بنجاح`);
+    } catch (error) {
+      toast.error("فشل تصدير الملف");
+    }
+  };
+
+  const exportToPDF = (year: number) => {
+    try {
+      const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+      const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
+      const extraCols = year === 2026 ? extraCols2026 : [];
+      const date = new Date().toLocaleDateString("ar-SA");
+      
+      const generateTableRows = () => {
+        return rows.map((row: any, i: number) => {
+          if (year === 2025) {
+            return `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${row.name || ""}</td>
+                <td>${row.batch || ""}</td>
+                <td>${row.specialty || ""}</td>
+                <td>${fmt(row.fees)}</td>
+                ${monthsList.map(m => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
+                <td>${fmt(row.totalPaid)}</td>
+                <td>${fmt(row.remaining)}</td>
+              </tr>
+            `;
+          } else {
+            const status = row.remaining <= 0 ? "له" : "عليه";
+            const statusColor = row.remaining <= 0 ? "#059669" : "#e11d48";
+            return `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${row.name || ""}</td>
+                <td>${row.batch || ""}</td>
+                <td>${row.specialty || ""}</td>
+                <td>${fmt(row.prevDue)}</td>
+                <td>${fmt(row.fees)}</td>
+                ${monthsList.map(m => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
+                ${extraCols.map(col => {
+                  if (col.type === "formula") return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
+                  return `<td>${row.customData?.[col.name] || "—"}</td>`;
+                }).join("")}
+                <td>${fmt(row.totalPaid)}</td>
+                <td>${fmt(row.remaining)}</td>
+                <td style="color: ${statusColor}; font-weight: bold;">${status}</td>
+              </tr>
+            `;
+          }
+        }).join("");
+      };
+
+      const generateTotalRow = () => {
+        if (year === 2025) {
+          return `
+            <tr style="background: #f1f5f9; font-weight: bold; border-top: 2px solid #64748b;">
+              <td colspan="4">الإجمالي</td>
+              <td>${fmt(totals2025.fees)}</td>
+              ${monthsList.map(m => `<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`).join("")}
+              <td>${fmt(totals2025.paid)}</td>
+              <td>${fmt(totals2025.remaining)}</td>
+            </tr>
+          `;
+        } else {
+          return `
+            <tr style="background: #f1f5f9; font-weight: bold; border-top: 2px solid #64748b;">
+              <td colspan="4">الإجمالي</td>
+              <td>${fmt(totals2026.prevDue)}</td>
+              <td>${fmt(totals2026.fees)}</td>
+              ${monthsList.map(m => `<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`).join("")}
+              ${extraCols.map(() => `<td>—</td>`).join("")}
+              <td>${fmt(totals2026.paid)}</td>
+              <td>${fmt(totals2026.remaining)}</td>
+              <td></td>
+            </tr>
+          `;
+        }
+      };
+
+      const headers = year === 2025 
+        ? ["#", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
+        : ["#", "الاسم", "الدفعة", "المساق", "مدور 2025", "الرسوم", ...monthsList, ...extraCols.map(c => c.name), "المسدد", "المتبقي", "حالة"];
+
+      const html = `
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="utf-8" />
+          <title>تقرير الأقساط ${year}</title>
+          <style>
+            @page { size: A3 landscape; margin: 10mm; }
+            * { box-sizing: border-box; }
+            body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 20px; background: white; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #1e40af; padding-bottom: 15px; }
+            .header h1 { color: #1e40af; margin: 0; font-size: 24px; }
+            .header p { color: #64748b; margin: 5px 0 0; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; }
+            th { background: #1e40af; color: white; padding: 8px 4px; border: 1px solid #1e3a8a; font-weight: bold; text-align: center; }
+            td { padding: 6px 4px; border: 1px solid #e2e8f0; text-align: center; }
+            tr:nth-child(even) { background: #f8fafc; }
+            .footer { margin-top: 20px; text-align: left; font-size: 12px; color: #64748b; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>المجلس اليمني للاختصاصات الطبية</h1>
+            <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
+            <p>تاريخ التقرير: ${date}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                ${headers.map(h => `<th>${h}</th>`).join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${generateTableRows()}
+              ${generateTotalRow()}
+            </tbody>
+          </table>
+          <div class="footer">
+            <p>إجمالي عدد المتدربين: ${rows.length}</p>
+            <p>تم إنشاء التقرير بواسطة نظام المجلس اليمني للاختصاصات الطبية</p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const w = window.open("", "", "width=1200,height=800");
+      if (w) {
+        w.document.write(html);
+        w.document.close();
+        setTimeout(() => w.print(), 500);
+        toast.success("تم فتح التقرير للطباعة");
+      }
+    } catch (error) {
+      toast.error("فشل إنشاء التقرير");
+    }
+  };
 
   const saveRowEdit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -955,6 +1183,22 @@ export default function InstallmentsTab() {
                 className="hidden"
               />
             </label>
+            
+            <div className="flex gap-1">
+              <button
+                onClick={() => exportToExcel(2025)}
+                className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold shadow hover:bg-green-200 transition-colors flex items-center gap-1"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
+              </button>
+              <button
+                onClick={() => exportToPDF(2025)}
+                className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-bold shadow hover:bg-red-200 transition-colors flex items-center gap-1"
+              >
+                <FileText className="w-3.5 h-3.5" /> PDF
+              </button>
+            </div>
+            
             <TabActions
               title="أقساط العام 2025"
               rows={installments2025 || []}
@@ -1122,7 +1366,6 @@ export default function InstallmentsTab() {
                         </tr>
                       );
                     })}
-                    {/* صف الإجماليات لجدول 2025 */}
                     <tr className="border-t-2 border-slate-400 bg-slate-100 font-bold">
                       <td className="p-2 text-center whitespace-nowrap" colSpan={4}>
                         الإجماليات
@@ -1210,6 +1453,22 @@ export default function InstallmentsTab() {
                 className="hidden"
               />
             </label>
+            
+            <div className="flex gap-1">
+              <button
+                onClick={() => exportToExcel(2026)}
+                className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold shadow hover:bg-green-200 transition-colors flex items-center gap-1"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
+              </button>
+              <button
+                onClick={() => exportToPDF(2026)}
+                className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-bold shadow hover:bg-red-200 transition-colors flex items-center gap-1"
+              >
+                <FileText className="w-3.5 h-3.5" /> PDF
+              </button>
+            </div>
+            
             <TabActions
               title="أقساط العام 2026"
               rows={(installments || []).map((r: any) => {
@@ -1516,7 +1775,6 @@ export default function InstallmentsTab() {
                         </tr>
                       );
                     })}
-                    {/* صف الإجماليات لجدول 2026 */}
                     <tr className="border-t-2 border-slate-400 bg-slate-100 font-bold">
                       <td className="p-2 text-center whitespace-nowrap" colSpan={5}>
                         الإجماليات
