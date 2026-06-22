@@ -121,7 +121,6 @@ type State = {
   revenue: RevenueMap;
   customTabs: CustomTab[];
   installmentCustomColumns2026: InstallmentCustomColumn[];
-  installmentHiddenColumns2026: string[];
   installmentConditionalRules2026: InstallmentConditionalRule[];
 
   addTrainee: (t: Trainee) => void;
@@ -151,7 +150,6 @@ type State = {
   clearInstallments: (year?: "2025") => void;
   recalcAllInstallments: () => void;
   setInstallmentCustomColumns2026: (columns: InstallmentCustomColumn[]) => void;
-  setInstallmentHiddenColumns2026: (columns: string[]) => void;
   setInstallmentConditionalRules2026: (rules: InstallmentConditionalRule[]) => void;
 
   setOpeningBalance: (n: number) => void;
@@ -226,10 +224,8 @@ export const useStore = create<State>()(
       revenue: {},
       customTabs: [],
       installmentCustomColumns2026: [],
-      installmentHiddenColumns2026: [],
       installmentConditionalRules2026: [],
 
-      // 🌟 تم تحديث دالة المزامنة لتقوم بتحديث الحسابات والإيرادات في خطوة واحدة (Atomic Update)
       syncHafizaToAccount: (hafiza: Hafiza) => {
         const year = hafiza.date?.split("-")[0];
         if (year !== "2026") return;
@@ -274,7 +270,6 @@ export const useStore = create<State>()(
             expense: 0,
             revenueKey: undefined,
           };
-          // التحديث المدمج لضمان التزامن
           set((state) => {
             const updatedAccounts = [...state.accounts, newAccount];
             return { accounts: updatedAccounts, revenue: recalculateRevenueMap(updatedAccounts) };
@@ -291,7 +286,6 @@ export const useStore = create<State>()(
             existingAccount.hafizaAmount !== mappedData.hafizaAmount ||
             existingAccount.income !== mappedData.income;
           if (hasDiff) {
-            // التحديث المدمج لضمان التزامن
             set((state) => {
               const updatedAccounts = state.accounts.map((acc) =>
                 acc.id === existingAccount!.id
@@ -342,7 +336,6 @@ export const useStore = create<State>()(
           }
           return { hafiza: updated, hafizas: updated };
         }),
-      // 🌟 تطبيق التحديث المدمج على دوال الحذف والمسح للتأكد من حساب الإيرادات بشكل صحيح دائماً
       deleteHafiza: (id) => {
         set((state) => {
           const updatedHafiza = state.hafiza.filter((x) => x.id !== id);
@@ -474,7 +467,6 @@ export const useStore = create<State>()(
           installments2025: s.installments2025.map(recalcInstallment),
         })),
       setInstallmentCustomColumns2026: (columns) => set({ installmentCustomColumns2026: columns }),
-      setInstallmentHiddenColumns2026: (columns) => set({ installmentHiddenColumns2026: columns }),
       setInstallmentConditionalRules2026: (rules) =>
         set({ installmentConditionalRules2026: rules }),
 
@@ -539,8 +531,6 @@ export const useStore = create<State>()(
             openingBalance: d.openingBalance ?? s.openingBalance,
             installmentCustomColumns2026:
               d.installmentCustomColumns2026 ?? s.installmentCustomColumns2026,
-            installmentHiddenColumns2026:
-              d.installmentHiddenColumns2026 ?? s.installmentHiddenColumns2026,
             installmentConditionalRules2026:
               d.installmentConditionalRules2026 ?? s.installmentConditionalRules2026,
           };
@@ -558,7 +548,6 @@ export const useStore = create<State>()(
         revenue: get().revenue,
         customTabs: get().customTabs,
         installmentCustomColumns2026: get().installmentCustomColumns2026,
-        installmentHiddenColumns2026: get().installmentHiddenColumns2026,
         installmentConditionalRules2026: get().installmentConditionalRules2026,
       }),
       clearAll: () =>
