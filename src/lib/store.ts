@@ -24,6 +24,15 @@ export const INSTALLMENT_MONTHS = [
   "ديسمبر",
 ] as const;
 
+export type InstallmentCustomColumn = {
+  name: string;
+  type: "text" | "select" | "formula";
+  options?: string[];
+  formula?: string;
+};
+
+export type InstallmentConditionalRule = { text: string; color: string };
+
 export type Installment = {
   no?: number | null;
   name: string;
@@ -36,6 +45,7 @@ export type Installment = {
   remaining: number;
   notes: string;
   phone: string;
+  customData?: Record<string, string | number>;
 };
 
 export type Hafiza = {
@@ -110,6 +120,9 @@ type State = {
   openingBalance: number;
   revenue: RevenueMap;
   customTabs: CustomTab[];
+  installmentCustomColumns2026: InstallmentCustomColumn[];
+  installmentHiddenColumns2026: string[];
+  installmentConditionalRules2026: InstallmentConditionalRule[];
 
   addTrainee: (t: Trainee) => void;
   updateTrainee: (index: number, t: Trainee) => void;
@@ -137,6 +150,9 @@ type State = {
   deleteInstallment: (index: number, year?: "2025") => void;
   clearInstallments: (year?: "2025") => void;
   recalcAllInstallments: () => void;
+  setInstallmentCustomColumns2026: (columns: InstallmentCustomColumn[]) => void;
+  setInstallmentHiddenColumns2026: (columns: string[]) => void;
+  setInstallmentConditionalRules2026: (rules: InstallmentConditionalRule[]) => void;
 
   setOpeningBalance: (n: number) => void;
   setRevenue: (year: number, month: number, itemKey: string, amount: number) => void;
@@ -209,6 +225,9 @@ export const useStore = create<State>()(
       openingBalance: 811664,
       revenue: {},
       customTabs: [],
+      installmentCustomColumns2026: [],
+      installmentHiddenColumns2026: [],
+      installmentConditionalRules2026: [],
 
       // 🌟 تم تحديث دالة المزامنة لتقوم بتحديث الحسابات والإيرادات في خطوة واحدة (Atomic Update)
       syncHafizaToAccount: (hafiza: Hafiza) => {
@@ -454,6 +473,10 @@ export const useStore = create<State>()(
           installments: s.installments.map(recalcInstallment),
           installments2025: s.installments2025.map(recalcInstallment),
         })),
+      setInstallmentCustomColumns2026: (columns) => set({ installmentCustomColumns2026: columns }),
+      setInstallmentHiddenColumns2026: (columns) => set({ installmentHiddenColumns2026: columns }),
+      setInstallmentConditionalRules2026: (rules) =>
+        set({ installmentConditionalRules2026: rules }),
 
       setOpeningBalance: (n) => set({ openingBalance: n }),
       setRevenue: (year, month, itemKey, amount) =>
@@ -514,6 +537,12 @@ export const useStore = create<State>()(
               ? [...s.installments2025, ...d.installments2025.map(recalcInstallment)]
               : s.installments2025,
             openingBalance: d.openingBalance ?? s.openingBalance,
+            installmentCustomColumns2026:
+              d.installmentCustomColumns2026 ?? s.installmentCustomColumns2026,
+            installmentHiddenColumns2026:
+              d.installmentHiddenColumns2026 ?? s.installmentHiddenColumns2026,
+            installmentConditionalRules2026:
+              d.installmentConditionalRules2026 ?? s.installmentConditionalRules2026,
           };
         }),
 
@@ -528,6 +557,9 @@ export const useStore = create<State>()(
         openingBalance: get().openingBalance,
         revenue: get().revenue,
         customTabs: get().customTabs,
+        installmentCustomColumns2026: get().installmentCustomColumns2026,
+        installmentHiddenColumns2026: get().installmentHiddenColumns2026,
+        installmentConditionalRules2026: get().installmentConditionalRules2026,
       }),
       clearAll: () =>
         set({
