@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { fmt } from "@/lib/format";
 import schema from "@/data/revenueTemplate.json";
@@ -44,7 +44,10 @@ export default function RevenueTab() {
   const [month, setMonth] = useState(new Date().getMonth() + 1);
 
   // دالة مساعدة لجلب المبالغ بأمان من المخزن وتفادي القيم غير المعرفة (Undefined)
-  const get = (y: number, m: number, key: string) => revenue[`${y}-${m}-${key}`] || 0;
+  const get = useCallback(
+    (y: number, m: number, key: string) => revenue[`${y}-${m}-${key}`] || 0,
+    [revenue],
+  );
 
   // 3. عمليات الحسابات التجميعية الفورية (Aggregations) المحسنة بالأداء عبر useMemo
   const data = useMemo(() => {
@@ -103,7 +106,7 @@ export default function RevenueTab() {
     });
 
     return { types, itemsAgg, sectionsAgg, chaptersAgg, grandCur, grandPrev };
-  }, [revenue, year, month]);
+  }, [get, year, month]);
 
   // دالة تنسيق عرض الأرقام المالية مع استبدال الصفر بشرطة مقروءة محاسبياً
   const cellNum = (n: number) => (n ? fmt(n) : "-");
