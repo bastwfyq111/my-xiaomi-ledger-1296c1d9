@@ -54,7 +54,7 @@ export function useTableControls<T extends Record<string, any>>(rows: T[], keys:
       });
     }
     return out;
-  }, [rows, sortKey, sortDir, filters, keys.join("|")]);
+  }, [rows, sortKey, sortDir, filters]);
 
   return { rows: processed, sortKey, sortDir, toggleSort, filters, setFilter, clearFilters };
 }
