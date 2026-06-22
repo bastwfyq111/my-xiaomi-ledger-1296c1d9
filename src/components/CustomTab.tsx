@@ -4,7 +4,15 @@ import { toast } from "sonner";
 
 export default function CustomTab({ tabId }: { tabId: string }) {
   const tab = useStore((s) => s.customTabs.find((t) => t.id === tabId));
-  const { addCustomColumn, removeCustomColumn, addCustomRow, updateCustomRow, deleteCustomRow, renameCustomTab, deleteCustomTab } = useStore();
+  const {
+    addCustomColumn,
+    removeCustomColumn,
+    addCustomRow,
+    updateCustomRow,
+    deleteCustomRow,
+    renameCustomTab,
+    deleteCustomTab,
+  } = useStore();
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [newCol, setNewCol] = useState("");
 
@@ -41,13 +49,24 @@ export default function CustomTab({ tabId }: { tabId: string }) {
             className="px-3 py-2 border rounded-lg bg-input/30 text-sm"
           />
           <button
-            onClick={() => { if (newCol) { addCustomColumn(tab.id, newCol); setNewCol(""); } }}
+            onClick={() => {
+              if (newCol) {
+                addCustomColumn(tab.id, newCol);
+                setNewCol("");
+              }
+            }}
             className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold"
-          >+ عمود</button>
+          >
+            + عمود
+          </button>
           <button
-            onClick={() => { if (confirm("حذف هذا التبويب؟")) deleteCustomTab(tab.id); }}
+            onClick={() => {
+              if (confirm("حذف هذا التبويب؟")) deleteCustomTab(tab.id);
+            }}
             className="px-3 py-2 border border-destructive text-destructive rounded-lg text-sm"
-          >حذف التبويب</button>
+          >
+            حذف التبويب
+          </button>
         </div>
       </div>
 
@@ -58,7 +77,12 @@ export default function CustomTab({ tabId }: { tabId: string }) {
             <div key={c}>
               <label className="text-xs text-muted-foreground flex justify-between">
                 <span>{c}</span>
-                <button onClick={() => removeCustomColumn(tab.id, c)} className="text-destructive text-xs">×</button>
+                <button
+                  onClick={() => removeCustomColumn(tab.id, c)}
+                  className="text-destructive text-xs"
+                >
+                  ×
+                </button>
               </label>
               <input
                 value={draft[c] ?? ""}
@@ -68,7 +92,12 @@ export default function CustomTab({ tabId }: { tabId: string }) {
             </div>
           ))}
         </div>
-        <button onClick={submit} className="mt-3 px-5 py-2 bg-primary text-primary-foreground rounded-lg font-semibold">حفظ</button>
+        <button
+          onClick={submit}
+          className="mt-3 px-5 py-2 bg-primary text-primary-foreground rounded-lg font-semibold"
+        >
+          حفظ
+        </button>
       </div>
 
       <div className="bg-card rounded-xl border p-4 overflow-x-auto">
@@ -76,7 +105,11 @@ export default function CustomTab({ tabId }: { tabId: string }) {
           <thead className="bg-secondary text-secondary-foreground">
             <tr>
               <th className="px-2 py-2 text-right">م</th>
-              {tab.columns.map((c) => <th key={c} className="px-2 py-2 text-right whitespace-nowrap">{c}</th>)}
+              {tab.columns.map((c) => (
+                <th key={c} className="px-2 py-2 text-right whitespace-nowrap">
+                  {c}
+                </th>
+              ))}
               <th className="px-2 py-2 text-right">إجراءات</th>
             </tr>
           </thead>
@@ -94,12 +127,24 @@ export default function CustomTab({ tabId }: { tabId: string }) {
                   </td>
                 ))}
                 <td className="px-2 py-1.5">
-                  <button onClick={() => deleteCustomRow(tab.id, i)} className="text-destructive text-xs">حذف</button>
+                  <button
+                    onClick={() => deleteCustomRow(tab.id, i)}
+                    className="text-destructive text-xs"
+                  >
+                    حذف
+                  </button>
                 </td>
               </tr>
             ))}
             {tab.rows.length === 0 && (
-              <tr><td colSpan={tab.columns.length + 2} className="text-center py-8 text-muted-foreground">لا توجد بيانات</td></tr>
+              <tr>
+                <td
+                  colSpan={tab.columns.length + 2}
+                  className="text-center py-8 text-muted-foreground"
+                >
+                  لا توجد بيانات
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

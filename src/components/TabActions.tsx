@@ -69,7 +69,7 @@ export default function TabActions({
                 isNum ? escapeHtml(fmt(Number(v) || 0)) : escapeHtml(v)
               }</td>`;
             })
-            .join("")}</tr>`
+            .join("")}</tr>`,
       )
       .join("");
     const today = new Date().toLocaleDateString("ar-EG-u-nu-latn");
@@ -92,7 +92,7 @@ export default function TabActions({
       columns.forEach((c) => {
         const v = r[c.key];
         out[c.label] =
-          numericKeys.includes(c.key) || typeof v === "number" ? Number(v) || 0 : v ?? "";
+          numericKeys.includes(c.key) || typeof v === "number" ? Number(v) || 0 : (v ?? "");
       });
       return out;
     });

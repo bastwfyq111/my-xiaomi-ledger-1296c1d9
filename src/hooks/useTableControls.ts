@@ -8,9 +8,20 @@ export function useTableControls<T extends Record<string, any>>(rows: T[], keys:
   const [filters, setFilters] = useState<Record<string, string>>({});
 
   const toggleSort = (k: string) => {
-    if (sortKey !== k) { setSortKey(k); setSortDir("asc"); return; }
-    if (sortDir === "asc") { setSortDir("desc"); return; }
-    if (sortDir === "desc") { setSortKey(null); setSortDir(null); return; }
+    if (sortKey !== k) {
+      setSortKey(k);
+      setSortDir("asc");
+      return;
+    }
+    if (sortDir === "asc") {
+      setSortDir("desc");
+      return;
+    }
+    if (sortDir === "desc") {
+      setSortKey(null);
+      setSortDir(null);
+      return;
+    }
     setSortDir("asc");
   };
 
@@ -23,13 +34,18 @@ export function useTableControls<T extends Record<string, any>>(rows: T[], keys:
     const active = Object.entries(filters).filter(([, v]) => v.trim() !== "");
     if (active.length) {
       out = out.filter((r) =>
-        active.every(([k, v]) => String(r[k] ?? "").toLowerCase().includes(v.trim().toLowerCase()))
+        active.every(([k, v]) =>
+          String(r[k] ?? "")
+            .toLowerCase()
+            .includes(v.trim().toLowerCase()),
+        ),
       );
     }
     if (sortKey && sortDir) {
       const dir = sortDir === "asc" ? 1 : -1;
       out = [...out].sort((a, b) => {
-        const av = a[sortKey]; const bv = b[sortKey];
+        const av = a[sortKey];
+        const bv = b[sortKey];
         if (av == null && bv == null) return 0;
         if (av == null) return -1 * dir;
         if (bv == null) return 1 * dir;
