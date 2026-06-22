@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
+import { useStore, type InstallmentCustomColumn } from "@/lib/store";
 import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -122,7 +122,15 @@ const SortIcon = ({
 };
 
 export default function InstallmentsTab() {
-  const { installments, installments2025, clearInstallments } = useStore() as any;
+  const {
+    installments,
+    installments2025,
+    clearInstallments,
+    installmentCustomColumns2026,
+    installmentConditionalRules2026,
+    setInstallmentCustomColumns2026,
+    setInstallmentConditionalRules2026,
+  } = useStore() as any;
   const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [newPaymentModal, setNewPaymentModal] = useState(false);
@@ -160,14 +168,7 @@ export default function InstallmentsTab() {
   const [editRowData, setEditRowData] = useState<any>({});
 
   // متغيرات الأعمدة المخصصة
-  const [extraCols2026, setExtraCols2026] = useState<
-    Array<{
-      name: string;
-      type: "text" | "select" | "formula";
-      options?: string[];
-      formula?: string;
-    }>
-  >([]);
+  const extraCols2026 = installmentCustomColumns2026 as InstallmentCustomColumn[];
   const [newColModal, setNewColModal] = useState(false);
   const [newColName, setNewColName] = useState("");
   const [newColType, setNewColType] = useState<"text" | "select" | "formula">("text");
@@ -186,10 +187,7 @@ export default function InstallmentsTab() {
   // [جديد] متغيرات التنسيق الشرطي
   const [condFormatModal, setCondFormatModal] = useState(false);
   const [condFormatParams, setCondFormatParams] = useState({ text: "", color: "bg-yellow-100" });
-  const [condFormatRules, setCondFormatRules] = useState<Array<{ text: string; color: string }>>(
-    [],
-  );
-  const [hiddenCols2026, setHiddenCols2026] = useState<string[]>([]);
+  const condFormatRules = installmentConditionalRules2026 as Array<{ text: string; color: string }>;
 
   const [newRowModal2026, setNewRowModal2026] = useState(false);
   const [newRowData2026, setNewRowData2026] = useState({
@@ -218,15 +216,8 @@ export default function InstallmentsTab() {
     "remaining",
   ]);
 
-  const visibleMonths2026 = useMemo(
-    () => MONTHS_2026.filter((m) => !hiddenCols2026.includes(`month:${m}`)),
-    [hiddenCols2026],
-  );
-  const visibleExtraCols2026 = useMemo(
-    () => extraCols2026.filter((c) => !hiddenCols2026.includes(`custom:${c.name}`)),
-    [extraCols2026, hiddenCols2026],
-  );
-  const isBaseColVisible2026 = (key: string) => !hiddenCols2026.includes(`base:${key}`);
+  const visibleMonths2026 = MONTHS_2026;
+  const visibleExtraCols2026 = extraCols2026;
 
   // التحديث: التنسيق الشرطي للصف مع دعم عدة قواعد
   const getConditionalRowClass = (row: any) => {
@@ -252,7 +243,7 @@ export default function InstallmentsTab() {
 
   const addConditionalRule = () => {
     if (!condFormatParams.text.trim()) return toast.error("يرجى إدخال نص الشرط");
-    setCondFormatRules([
+    setInstallmentConditionalRules2026([
       ...condFormatRules,
       { ...condFormatParams, text: condFormatParams.text.trim() },
     ]);
@@ -261,7 +252,7 @@ export default function InstallmentsTab() {
   };
 
   const deleteConditionalRule = (index: number) => {
-    setCondFormatRules(condFormatRules.filter((_, i) => i !== index));
+    setInstallmentConditionalRules2026(condFormatRules.filter((_, i) => i !== index));
   };
 
   const filteredRows2025 = useMemo(() => {
@@ -345,6 +336,9 @@ export default function InstallmentsTab() {
       fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
       paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
       remaining: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
+      months: MONTHS_2025.map((m) =>
+        (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.payments?.[m]), 0),
+      ),
     }),
     [filteredRows2025],
   );
@@ -354,6 +348,9 @@ export default function InstallmentsTab() {
       prevDue: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.prevDue), 0),
       paid: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
       remaining: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
+      months: MONTHS_2026.map((m) =>
+        (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.payments?.[m]), 0),
+      ),
     }),
     [filteredRows2026],
   );
@@ -410,7 +407,7 @@ export default function InstallmentsTab() {
     if (extraCols2026.some((c) => c.name === newColName))
       return toast.error("اسم العمود موجود مسبقاً");
 
-    setExtraCols2026([
+    setInstallmentCustomColumns2026([
       ...extraCols2026,
       {
         name: newColName,
@@ -467,7 +464,7 @@ export default function InstallmentsTab() {
       updateInstallments(list);
     }
 
-    setExtraCols2026(updatedCols);
+    setInstallmentCustomColumns2026(updatedCols);
     setEditColModal(null);
     toast.success("تم تعديل العمود بنجاح");
   };
@@ -475,7 +472,7 @@ export default function InstallmentsTab() {
   // [جديد] حذف العمود المخصص
   const deleteCustomColumn = (colName: string) => {
     if (!confirm(`هل أنت متأكد من حذف العمود "${colName}"؟`)) return;
-    setExtraCols2026(extraCols2026.filter((c) => c.name !== colName));
+    setInstallmentCustomColumns2026(extraCols2026.filter((c) => c.name !== colName));
     setEditColModal(null);
     toast.success("تم حذف العمود");
   };
@@ -549,12 +546,6 @@ export default function InstallmentsTab() {
     row.customData[colName] = value;
     list[rowIndex] = row;
     updateInstallments(list);
-  };
-
-  const hideColumn2026 = (kind: "base" | "month" | "custom", key: string) => {
-    if (!confirm(`هل تريد حذف/إخفاء هذا العمود من جدول 2026: ${key}؟`)) return;
-    setHiddenCols2026((prev) => [...new Set([...prev, `${kind}:${key}`])]);
-    toast.success("تم حذف العمود من العرض");
   };
 
   const deleteRow2026 = (rowIndex: number, name: string) => {
@@ -1143,6 +1134,33 @@ export default function InstallmentsTab() {
                   </>
                 )}
               </tbody>
+              {filteredRows2025.length > 0 && (
+                <tfoot className="bg-teal-50 border-t-2 border-teal-300 font-bold text-slate-900 sticky bottom-0">
+                  <tr>
+                    <td className="p-2 text-center whitespace-nowrap" colSpan={4}>
+                      الإجمالي
+                    </td>
+                    <td className="p-2 text-center font-mono whitespace-nowrap">
+                      {fmt(totals2025.fees)}
+                    </td>
+                    {totals2025.months.map((total, idx) => (
+                      <td
+                        key={MONTHS_2025[idx]}
+                        className="p-1 text-center font-mono text-emerald-800 bg-teal-50 border-l border-teal-200 whitespace-nowrap"
+                      >
+                        {total ? fmt(total) : "—"}
+                      </td>
+                    ))}
+                    <td className="p-2 text-center font-mono text-emerald-800 whitespace-nowrap">
+                      {fmt(totals2025.paid)}
+                    </td>
+                    <td className="p-2 text-center font-mono text-rose-800 whitespace-nowrap">
+                      {fmt(totals2025.remaining)}
+                    </td>
+                    <td className="p-2" />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>
@@ -1241,101 +1259,44 @@ export default function InstallmentsTab() {
               <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
                 <tr>
                   <th className="p-2 text-center whitespace-nowrap">#</th>
-                  {isBaseColVisible2026("name") && (
-                    <th
-                      className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200 group"
-                      onClick={() => handleSort2026("name")}
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        اسم المتدرب <SortIcon sortConfig={sortConfig2026} columnKey="name" />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            hideColumn2026("base", "name");
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700"
-                          title="حذف العمود"
-                        >
-                          <Trash className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </th>
-                  )}
-                  {isBaseColVisible2026("batch") && (
-                    <th
-                      className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200 group"
-                      onClick={() => handleSort2026("batch")}
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        دفعة <SortIcon sortConfig={sortConfig2026} columnKey="batch" />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            hideColumn2026("base", "batch");
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700"
-                          title="حذف العمود"
-                        >
-                          <Trash className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </th>
-                  )}
-                  {isBaseColVisible2026("specialty") && (
-                    <th
-                      className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200 group"
-                      onClick={() => handleSort2026("specialty")}
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        المساق <SortIcon sortConfig={sortConfig2026} columnKey="specialty" />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            hideColumn2026("base", "specialty");
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700"
-                          title="حذف العمود"
-                        >
-                          <Trash className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </th>
-                  )}
-                  {isBaseColVisible2026("prevDue") && (
-                    <th
-                      className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap cursor-pointer hover:bg-amber-100 group"
-                      onClick={() => handleSort2026("prevDue")}
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        المتبقي من 2025 <SortIcon sortConfig={sortConfig2026} columnKey="prevDue" />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            hideColumn2026("base", "prevDue");
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700"
-                          title="حذف العمود"
-                        >
-                          <Trash className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </th>
-                  )}
+                  <th
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200 group"
+                    onClick={() => handleSort2026("name")}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      اسم المتدرب <SortIcon sortConfig={sortConfig2026} columnKey="name" />
+                    </div>
+                  </th>
+                  <th
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200 group"
+                    onClick={() => handleSort2026("batch")}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      دفعة <SortIcon sortConfig={sortConfig2026} columnKey="batch" />
+                    </div>
+                  </th>
+                  <th
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200 group"
+                    onClick={() => handleSort2026("specialty")}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      المساق <SortIcon sortConfig={sortConfig2026} columnKey="specialty" />
+                    </div>
+                  </th>
+                  <th
+                    className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap cursor-pointer hover:bg-amber-100 group"
+                    onClick={() => handleSort2026("prevDue")}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      المتبقي من 2025 <SortIcon sortConfig={sortConfig2026} columnKey="prevDue" />
+                    </div>
+                  </th>
                   {visibleMonths2026.map((m) => (
                     <th
                       key={m}
                       className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap group"
                     >
-                      <div className="flex items-center justify-center gap-1">
-                        {m.trim()}
-                        <button
-                          onClick={() => hideColumn2026("month", m)}
-                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700"
-                          title="حذف العمود"
-                        >
-                          <Trash className="w-3 h-3" />
-                        </button>
-                      </div>
+                      <div className="flex items-center justify-center gap-1">{m.trim()}</div>
                     </th>
                   ))}
 
@@ -1366,47 +1327,22 @@ export default function InstallmentsTab() {
                     </th>
                   ))}
 
-                  {isBaseColVisible2026("totalPaid") && (
-                    <th
-                      className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200 group"
-                      onClick={() => handleSort2026("totalPaid")}
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        مسدد 2026 <SortIcon sortConfig={sortConfig2026} columnKey="totalPaid" />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            hideColumn2026("base", "totalPaid");
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700"
-                          title="حذف العمود"
-                        >
-                          <Trash className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </th>
-                  )}
-                  {isBaseColVisible2026("remaining") && (
-                    <th
-                      className="p-2 text-center text-rose-700 whitespace-nowrap cursor-pointer hover:bg-slate-200 group"
-                      onClick={() => handleSort2026("remaining")}
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        الرصيد المتبقي{" "}
-                        <SortIcon sortConfig={sortConfig2026} columnKey="remaining" />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            hideColumn2026("base", "remaining");
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700"
-                          title="حذف العمود"
-                        >
-                          <Trash className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </th>
-                  )}
+                  <th
+                    className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200 group"
+                    onClick={() => handleSort2026("totalPaid")}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      مسدد 2026 <SortIcon sortConfig={sortConfig2026} columnKey="totalPaid" />
+                    </div>
+                  </th>
+                  <th
+                    className="p-2 text-center text-rose-700 whitespace-nowrap cursor-pointer hover:bg-slate-200 group"
+                    onClick={() => handleSort2026("remaining")}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      الرصيد المتبقي <SortIcon sortConfig={sortConfig2026} columnKey="remaining" />
+                    </div>
+                  </th>
                   <th className="p-2 text-center whitespace-nowrap">حالة</th>
                   <th className="p-2 text-center whitespace-nowrap">إجراءات</th>
                 </tr>
@@ -1415,14 +1351,7 @@ export default function InstallmentsTab() {
                 {filteredRows2026.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={
-                        4 +
-                        ["name", "batch", "specialty", "prevDue", "totalPaid", "remaining"].filter(
-                          isBaseColVisible2026,
-                        ).length +
-                        visibleMonths2026.length +
-                        visibleExtraCols2026.length
-                      }
+                      colSpan={10 + visibleMonths2026.length + visibleExtraCols2026.length}
                       className="p-6 text-center text-slate-400"
                     >
                       لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)
@@ -1447,53 +1376,45 @@ export default function InstallmentsTab() {
                           <td className="p-2 text-center text-slate-500 whitespace-nowrap">
                             {i + 1}
                           </td>
-                          {isBaseColVisible2026("name") && (
-                            <td className="p-1 text-center font-semibold text-slate-900 whitespace-nowrap">
-                              <input
-                                value={r.name || ""}
-                                onChange={(e) =>
-                                  update2026CellValue(originalIndex, "name", e.target.value)
-                                }
-                                className="w-full min-w-32 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
-                              />
-                            </td>
-                          )}
-                          {isBaseColVisible2026("batch") && (
-                            <td className="p-1 text-center text-slate-600 whitespace-nowrap">
-                              <input
-                                value={r.batch || ""}
-                                onChange={(e) =>
-                                  update2026CellValue(originalIndex, "batch", e.target.value)
-                                }
-                                className="w-full min-w-20 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
-                                placeholder="—"
-                              />
-                            </td>
-                          )}
-                          {isBaseColVisible2026("specialty") && (
-                            <td className="p-1 text-center text-slate-600 whitespace-nowrap">
-                              <input
-                                value={r.specialty || ""}
-                                onChange={(e) =>
-                                  update2026CellValue(originalIndex, "specialty", e.target.value)
-                                }
-                                className="w-full min-w-24 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
-                                placeholder="—"
-                              />
-                            </td>
-                          )}
-                          {isBaseColVisible2026("prevDue") && (
-                            <td className="p-1 text-center font-mono text-amber-700 font-bold bg-amber-50/20 whitespace-nowrap">
-                              <input
-                                type="number"
-                                value={r.prevDue || 0}
-                                onChange={(e) =>
-                                  update2026CellValue(originalIndex, "prevDue", e.target.value)
-                                }
-                                className="w-full min-w-20 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
-                              />
-                            </td>
-                          )}
+                          <td className="p-1 text-center font-semibold text-slate-900 whitespace-nowrap">
+                            <input
+                              value={r.name || ""}
+                              onChange={(e) =>
+                                update2026CellValue(originalIndex, "name", e.target.value)
+                              }
+                              className="w-full min-w-32 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                            />
+                          </td>
+                          <td className="p-1 text-center text-slate-600 whitespace-nowrap">
+                            <input
+                              value={r.batch || ""}
+                              onChange={(e) =>
+                                update2026CellValue(originalIndex, "batch", e.target.value)
+                              }
+                              className="w-full min-w-20 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              placeholder="—"
+                            />
+                          </td>
+                          <td className="p-1 text-center text-slate-600 whitespace-nowrap">
+                            <input
+                              value={r.specialty || ""}
+                              onChange={(e) =>
+                                update2026CellValue(originalIndex, "specialty", e.target.value)
+                              }
+                              className="w-full min-w-24 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              placeholder="—"
+                            />
+                          </td>
+                          <td className="p-1 text-center font-mono text-amber-700 font-bold bg-amber-50/20 whitespace-nowrap">
+                            <input
+                              type="number"
+                              value={r.prevDue || 0}
+                              onChange={(e) =>
+                                update2026CellValue(originalIndex, "prevDue", e.target.value)
+                              }
+                              className="w-full min-w-20 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                            />
+                          </td>
                           {visibleMonths2026.map((m) => {
                             const paid = Number(r.payments?.[m]) || 0;
                             const cellId = `${r.name}-${m}`;
@@ -1555,16 +1476,12 @@ export default function InstallmentsTab() {
                             </td>
                           ))}
 
-                          {isBaseColVisible2026("totalPaid") && (
-                            <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">
-                              {fmt(r.totalPaid)}
-                            </td>
-                          )}
-                          {isBaseColVisible2026("remaining") && (
-                            <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">
-                              {fmt(r.remaining)}
-                            </td>
-                          )}
+                          <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">
+                            {fmt(r.totalPaid)}
+                          </td>
+                          <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">
+                            {fmt(r.remaining)}
+                          </td>
                           <td className="p-2 text-center whitespace-nowrap">
                             <span
                               className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color}`}
@@ -1604,6 +1521,55 @@ export default function InstallmentsTab() {
                   </>
                 )}
               </tbody>
+              {filteredRows2026.length > 0 && (
+                <tfoot className="bg-purple-50 border-t-2 border-purple-300 font-bold text-slate-900 sticky bottom-0">
+                  <tr>
+                    <td className="p-2 text-center whitespace-nowrap" colSpan={4}>
+                      الإجمالي
+                    </td>
+                    <td className="p-2 text-center font-mono text-amber-800 whitespace-nowrap">
+                      {fmt(totals2026.prevDue)}
+                    </td>
+                    {totals2026.months.map((total, idx) => (
+                      <td
+                        key={MONTHS_2026[idx]}
+                        className="p-1 text-center font-mono text-emerald-800 bg-purple-50 border-l border-purple-200 whitespace-nowrap"
+                      >
+                        {total ? fmt(total) : "—"}
+                      </td>
+                    ))}
+                    {visibleExtraCols2026.map((col) => {
+                      const total =
+                        col.type === "formula"
+                          ? filteredRows2026.reduce(
+                              (sum: number, row: any) =>
+                                sum + cleanNumber(evaluateFormula(col.formula || "", row)),
+                              0,
+                            )
+                          : filteredRows2026.reduce(
+                              (sum: number, row: any) =>
+                                sum + cleanNumber(row.customData?.[col.name]),
+                              0,
+                            );
+                      return (
+                        <td
+                          key={`total-${col.name}`}
+                          className="p-1 text-center font-mono text-blue-800 bg-blue-50 border-l border-blue-200 whitespace-nowrap"
+                        >
+                          {total ? fmt(total) : "—"}
+                        </td>
+                      );
+                    })}
+                    <td className="p-2 text-center font-mono text-emerald-800 whitespace-nowrap">
+                      {fmt(totals2026.paid)}
+                    </td>
+                    <td className="p-2 text-center font-mono text-rose-800 whitespace-nowrap">
+                      {fmt(totals2026.remaining)}
+                    </td>
+                    <td className="p-2" colSpan={2} />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>
@@ -1682,7 +1648,7 @@ export default function InstallmentsTab() {
             <button
               onClick={() => {
                 setCondFormatParams({ text: "", color: "bg-yellow-100" });
-                setCondFormatRules([]);
+                setInstallmentConditionalRules2026([]);
                 setCondFormatModal(false);
               }}
               className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100"
