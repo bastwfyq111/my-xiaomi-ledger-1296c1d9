@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
+import { useStore, type InstallmentCustomColumn } from "@/lib/store";
 import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -122,7 +122,17 @@ const SortIcon = ({
 };
 
 export default function InstallmentsTab() {
-  const { installments, installments2025, clearInstallments } = useStore() as any;
+  const {
+    installments,
+    installments2025,
+    clearInstallments,
+    installmentCustomColumns2026,
+    installmentHiddenColumns2026,
+    installmentConditionalRules2026,
+    setInstallmentCustomColumns2026,
+    setInstallmentHiddenColumns2026,
+    setInstallmentConditionalRules2026,
+  } = useStore() as any;
   const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [newPaymentModal, setNewPaymentModal] = useState(false);
@@ -160,14 +170,7 @@ export default function InstallmentsTab() {
   const [editRowData, setEditRowData] = useState<any>({});
 
   // متغيرات الأعمدة المخصصة
-  const [extraCols2026, setExtraCols2026] = useState<
-    Array<{
-      name: string;
-      type: "text" | "select" | "formula";
-      options?: string[];
-      formula?: string;
-    }>
-  >([]);
+  const extraCols2026 = installmentCustomColumns2026 as InstallmentCustomColumn[];
   const [newColModal, setNewColModal] = useState(false);
   const [newColName, setNewColName] = useState("");
   const [newColType, setNewColType] = useState<"text" | "select" | "formula">("text");
@@ -186,10 +189,8 @@ export default function InstallmentsTab() {
   // [جديد] متغيرات التنسيق الشرطي
   const [condFormatModal, setCondFormatModal] = useState(false);
   const [condFormatParams, setCondFormatParams] = useState({ text: "", color: "bg-yellow-100" });
-  const [condFormatRules, setCondFormatRules] = useState<Array<{ text: string; color: string }>>(
-    [],
-  );
-  const [hiddenCols2026, setHiddenCols2026] = useState<string[]>([]);
+  const condFormatRules = installmentConditionalRules2026 as Array<{ text: string; color: string }>;
+  const hiddenCols2026 = installmentHiddenColumns2026 as string[];
 
   const [newRowModal2026, setNewRowModal2026] = useState(false);
   const [newRowData2026, setNewRowData2026] = useState({
@@ -252,7 +253,7 @@ export default function InstallmentsTab() {
 
   const addConditionalRule = () => {
     if (!condFormatParams.text.trim()) return toast.error("يرجى إدخال نص الشرط");
-    setCondFormatRules([
+    setInstallmentConditionalRules2026([
       ...condFormatRules,
       { ...condFormatParams, text: condFormatParams.text.trim() },
     ]);
@@ -261,7 +262,7 @@ export default function InstallmentsTab() {
   };
 
   const deleteConditionalRule = (index: number) => {
-    setCondFormatRules(condFormatRules.filter((_, i) => i !== index));
+    setInstallmentConditionalRules2026(condFormatRules.filter((_, i) => i !== index));
   };
 
   const filteredRows2025 = useMemo(() => {
@@ -410,7 +411,7 @@ export default function InstallmentsTab() {
     if (extraCols2026.some((c) => c.name === newColName))
       return toast.error("اسم العمود موجود مسبقاً");
 
-    setExtraCols2026([
+    setInstallmentCustomColumns2026([
       ...extraCols2026,
       {
         name: newColName,
@@ -467,7 +468,7 @@ export default function InstallmentsTab() {
       updateInstallments(list);
     }
 
-    setExtraCols2026(updatedCols);
+    setInstallmentCustomColumns2026(updatedCols);
     setEditColModal(null);
     toast.success("تم تعديل العمود بنجاح");
   };
@@ -475,7 +476,7 @@ export default function InstallmentsTab() {
   // [جديد] حذف العمود المخصص
   const deleteCustomColumn = (colName: string) => {
     if (!confirm(`هل أنت متأكد من حذف العمود "${colName}"؟`)) return;
-    setExtraCols2026(extraCols2026.filter((c) => c.name !== colName));
+    setInstallmentCustomColumns2026(extraCols2026.filter((c) => c.name !== colName));
     setEditColModal(null);
     toast.success("تم حذف العمود");
   };
@@ -553,7 +554,7 @@ export default function InstallmentsTab() {
 
   const hideColumn2026 = (kind: "base" | "month" | "custom", key: string) => {
     if (!confirm(`هل تريد حذف/إخفاء هذا العمود من جدول 2026: ${key}؟`)) return;
-    setHiddenCols2026((prev) => [...new Set([...prev, `${kind}:${key}`])]);
+    setInstallmentHiddenColumns2026([...new Set([...hiddenCols2026, `${kind}:${key}`])]);
     toast.success("تم حذف العمود من العرض");
   };
 
@@ -1682,7 +1683,7 @@ export default function InstallmentsTab() {
             <button
               onClick={() => {
                 setCondFormatParams({ text: "", color: "bg-yellow-100" });
-                setCondFormatRules([]);
+                setInstallmentConditionalRules2026([]);
                 setCondFormatModal(false);
               }}
               className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100"
