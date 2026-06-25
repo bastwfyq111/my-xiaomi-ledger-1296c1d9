@@ -15,13 +15,6 @@ type Props = {
   className?: string;
 };
 
-const escapeHtml = (s: any) =>
-  String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-
 export default function TabActions({
   title,
   rows,
@@ -37,88 +30,144 @@ export default function TabActions({
       toast.error("لا توجد بيانات للطباعة");
       return;
     }
-    
-    // 1. إنشاء عنصر iframe مخفي تماماً في الخلفية
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "none";
-    iframe.style.zIndex = "-9999";
-    
-    document.body.appendChild(iframe);
-    
-    const doc = iframe.contentWindow?.document || iframe.contentDocument;
-    if (!doc) {
-      toast.error("تعذر تهيئة محرك الطباعة الداخلي");
-      document.body.removeChild(iframe);
-      return;
-    }
-    
-    // تنظيف اسم الملف لتجنب أي أخطاء في التسمية أثناء حفظ الـ PDF
-    const cleanTitle = escapeHtml(title.replace(/[/\\?%*:|"<>]/g, ""));
-    
-    const head = `
-      <meta charset="utf-8" />
-      <title>${cleanTitle}</title>
-      <style>
-        @page { size: A4 landscape; margin: 10mm; }
-        * { box-sizing: border-box; }
-        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 16px; color: #0f172a; background: #fff; }
-        h1 { text-align: center; color: #10528e; margin: 0 0 6px; font-size: 22px; }
-        .sub { text-align: center; color: #64748b; margin-bottom: 14px; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: right; }
-        thead th { background: #10528e; color: #fff; font-weight: 700; }
-        tbody tr:nth-child(even) { background: #f1f5f9; }
-        .num { font-family: 'Courier New', monospace; text-align: left; direction: ltr; }
-        .idx { width: 36px; text-align: center; color: #64748b; }
-      </style>
-    `;
-    
-    const head2 = `<tr><th class="idx">م</th>${columns
-      .map((c) => `<th>${escapeHtml(c.label)}</th>`)
-      .join("")}</tr>`;
-      
-    const body2 = rows
-      .map(
-        (r, i) =>
-          `<tr><td class="idx">${i + 1}</td>${columns
-            .map((c) => {
-              const v = r[c.key];
-              const isNum = numericKeys.includes(c.key) || typeof v === "number";
-              return `<td class="${isNum ? "num" : ""}">${
-                isNum ? escapeHtml(fmt(Number(v) || 0)) : escapeHtml(v)
-              }</td>`;
-            })
-            .join("")}</tr>`
-      )
-      .join("");
-      
+
+    // 1. إنشاء حاوية طباعة ديناميكية داخل الصفحة الحالية (نفس أسلوب طباعة المتدرب لتجنب أخطاء الصيغة)
+    const printRoot = document.createElement("div");
+    printRoot.id = "dynamic-print-root";
+
     const today = new Date().toLocaleDateString("ar-EG-u-nu-latn");
-    
-    // 2. كتابة المحتوى داخل الـ Iframe المخفي
-    doc.write(`<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>
-      <h1>${cleanTitle}</h1>
-      <div class="sub">المجلس اليمني للاختصاصات الطبية - صعدة • ${today} • عدد السجلات: ${rows.length}</div>
-      <table><thead>${head2}</thead><tbody>${body2}</tbody></table>
-    </body></html>`);
-    doc.close();
-    
-    // 3. الانتظار نصف ثانية حتى يستقر الجدول تماماً في المتصفح ثم تشغيل الطباعة والحفظ
-    setTimeout(() => {
-      if (iframe.contentWindow) {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
+
+    // 2. بناء الهيكل الداخلي للجدول مع تنسيقات CSS احترافية ومثبتة الألوان
+    printRoot.innerHTML = `
+      <style>
+        @media screen {
+          #dynamic-print-root { display: none !important; }
+        }
+        @media print {
+          /* إخفاء كل عناصر الموقع ما عدا حاوية الطباعة الحالية */
+          body > :not(#dynamic-print-root) {
+            display: none !important;
+          }
+          html, body {
+            background: #fff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            direction: rtl !important;
+          }
+          #dynamic-print-root {
+            display: block !important;
+            width: 100% !important;
+            padding: 20px !important;
+          }
+          @page {
+            size: A4 landscape;
+            margin: 10mm;
+          }
+        }
         
-        // 4. حذف الـ iframe بعد إغلاق نافذة الطباعة/الحفظ للحفاظ على أداء الذاكرة
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 1000);
-      }
-    }, 500);
+        /* تصميم الجدول والمظهر العام ليطابق جودة وشكل النظام */
+        .print-container { 
+          font-family: 'Tajawal', 'Cairo', Tahoma, Arial, sans-serif; 
+          direction: rtl; 
+          text-align: right; 
+        }
+        .print-header { 
+          text-align: center; 
+          margin-bottom: 20px; 
+          border-bottom: 3px solid #10528e; 
+          padding-bottom: 12px; 
+        }
+        .print-header h1 { 
+          color: #10528e; 
+          margin: 0 0 8px 0; 
+          font-size: 24px; 
+          font-weight: bold; 
+        }
+        .print-header .sub-title { 
+          color: #475569; 
+          font-size: 13px; 
+        }
+        
+        .print-table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin-top: 10px; 
+          font-size: 12px; 
+        }
+        .print-table th, .print-table td { 
+          border: 1px solid #cbd5e1; 
+          padding: 8px 10px; 
+          text-align: right; 
+        }
+        
+        /* إجبار المتصفح على طباعة وحفظ الألوان والخلفيات في الـ PDF دون أي خطأ */
+        .print-table th { 
+          background-color: #10528e !important; 
+          color: white !important; 
+          font-weight: bold; 
+          -webkit-print-color-adjust: exact; 
+          print-color-adjust: exact; 
+        }
+        .print-table tr:nth-child(even) { 
+          background-color: #f8fafc !important; 
+          -webkit-print-color-adjust: exact; 
+          print-color-adjust: exact; 
+        }
+        
+        .text-num { 
+          font-family: 'Courier New', monospace; 
+          text-align: left; 
+          direction: ltr; 
+          font-weight: bold; 
+        }
+        .text-idx { 
+          width: 40px; 
+          text-align: center; 
+          color: #64748b; 
+          font-weight: bold; 
+        }
+      </style>
+      
+      <div class="print-container">
+        <div class="print-header">
+          <h1>${title}</h1>
+          <div class="sub-title">المجلس اليمني للاختصاصات الطبية - صعدة • التاريخ: ${today} • إجمالي السجلات: ${rows.length}</div>
+        </div>
+        <table class="print-table">
+          <thead>
+            <tr>
+              <th class="text-idx">م</th>
+              ${columns.map(c => `<th>${c.label}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((r, i) => `
+              <tr>
+                <td class="text-idx">${i + 1}</td>
+                ${columns.map(c => {
+                  const v = r[c.key];
+                  const isNum = numericKeys.includes(c.key) || typeof v === "number";
+                  return `<td class="${isNum ? "text-num" : ""}">${
+                    isNum ? fmt(Number(v) || 0) : (v ?? "—")
+                  }</td>`;
+                }).join("")}
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // 3. إدراج الحاوية في الصفحة الحالية واستدعاء نافذة الطباعة المستقرة للنظام
+    document.body.appendChild(printRoot);
+    
+    // مهلة برمجية صغيرة جداً لتهيئة خطوط الصفحة وتنسيقات الألوان
+    setTimeout(() => {
+      window.print();
+      
+      // 4. إزالة الحاوية فوراً بعد إغلاق أمر الطباعة ليعود الموقع لحالته الطبيعية للمستخدم
+      document.body.removeChild(printRoot);
+    }, 50);
   };
 
   const handleExcel = () => {
@@ -154,7 +203,7 @@ export default function TabActions({
       <button
         onClick={handlePrint}
         className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#10528e] border border-[#10528e]/30 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-50 active:scale-95 transition-all"
-        title="طباعة وحفظ هذا التبويب كـ PDF"
+        title="طباعة وحفظ هذا التبويب كـ PDF بنفس جودة وشكل النظام"
       >
         <Printer className="w-4 h-4" /> طباعة / PDF
       </button>
