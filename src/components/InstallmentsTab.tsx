@@ -1,10 +1,10 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { useTableControls } from "@/hooks/useTableControls";
-import { X, Printer, AlertCircle, CheckSquare, Square } from "lucide-react";
+import { X, Printer, AlertCircle } from "lucide-react";
 import TabActions from "./TabActions";
 
 // مصفوفات الأشهر مطابقة تماماً للمسميات داخل ملفات الإكسيل المرفقة
@@ -47,144 +47,11 @@ const Modal = ({ title, isOpen, onClose, children }: { title: string; isOpen: bo
   return (
     <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
-        <div className="flex justify-between items-center p-4 border-b bg-gradient-to-l from-blue-50 to-slate-50 sticky top-0 z-10">
+        <div className="flex justify-between items-center p-4 border-b bg-gradient-to-l from-blue-50 to-slate-50 sticky top-0">
           <h3 className="font-bold text-base sm:text-lg text-slate-900">{title}</h3>
           <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-lg"><X className="w-5 h-5 text-slate-600" /></button>
         </div>
         <div className="p-4 space-y-3">{children}</div>
-      </div>
-    </div>
-  );
-};
-
-// ==========================================
-// مكون نافذة اختيار الأعمدة للطباعة (2026)
-// ==========================================
-type PrintColumn = { key: string; label: string; isNumeric?: boolean };
-
-const AVAILABLE_COLUMNS_2026: PrintColumn[] = [
-  { key: "name", label: "اسم المتدرب" },
-  { key: "batch", label: "الدفعة" },
-  { key: "specialty", label: "المساق" },
-  { key: "prevDue", label: "مدور 2025", isNumeric: true },
-  { key: "fees", label: "الرسوم", isNumeric: true },
-  ...MONTHS_2026.map(m => ({ key: m, label: m.trim(), isNumeric: true })),
-  { key: "totalPaid", label: "إجمالي المسدد", isNumeric: true },
-  { key: "remaining", label: "الرصيد المتبقي", isNumeric: true }
-];
-
-const TraineePrintModal = ({ isOpen, onClose, traineeData }: { isOpen: boolean; onClose: () => void; traineeData: any }) => {
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (isOpen) {
-      // تحديد الأعمدة الأساسية كافتراضي
-      setSelectedKeys(["name", "batch", "specialty", "prevDue", "totalPaid", "remaining"]);
-    }
-  }, [isOpen, traineeData]);
-
-  if (!isOpen || !traineeData) return null;
-
-  const toggleColumn = (key: string) => setSelectedKeys(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
-  const toggleAll = () => setSelectedKeys(selectedKeys.length === AVAILABLE_COLUMNS_2026.length ? [] : AVAILABLE_COLUMNS_2026.map(c => c.key));
-
-  const executePrint = () => {
-    if (selectedKeys.length === 0) return toast.error("يرجى اختيار عمود واحد على الأقل");
-    const columnsToPrint = AVAILABLE_COLUMNS_2026.filter(col => selectedKeys.includes(col.key));
-    const printRoot = document.createElement("div");
-    printRoot.id = "trainee-dynamic-print-root";
-    const today = new Date().toLocaleDateString("ar-EG-u-nu-latn");
-
-    printRoot.innerHTML = `
-      <style>
-        @media screen { #trainee-dynamic-print-root { display: none !important; } }
-        @media print {
-          body > :not(#trainee-dynamic-print-root) { display: none !important; }
-          html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; direction: rtl !important; }
-          #trainee-dynamic-print-root { display: block !important; width: 100% !important; padding: 20px !important; }
-          @page { size: A4 landscape; margin: 10mm; }
-        }
-        .print-box { font-family: 'Tajawal', 'Cairo', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; }
-        .print-title { text-align: center; margin-bottom: 25px; border-bottom: 3px solid #6b21a8; padding-bottom: 12px; }
-        .print-title h1 { color: #6b21a8; margin: 0 0 6px 0; font-size: 22px; font-weight: bold; }
-        .print-title .meta-info { color: #475569; font-size: 12px; }
-        .p-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 15px; }
-        .p-table th, .p-table td { border: 1px solid #cbd5e1; padding: 10px 8px; text-align: right; }
-        .p-table th { background-color: #6b21a8 !important; color: white !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .p-table tr:nth-child(even) { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .num-style { font-family: 'Courier New', monospace; text-align: left; direction: ltr; font-weight: bold; }
-        .idx-style { width: 35px; text-align: center; color: #64748b; font-weight: bold; }
-      </style>
-      <div class="print-box">
-        <div class="print-title">
-          <h1>كشف سداد الأقساط للمتدرب لعام 2026</h1>
-          <div class="meta-info">المجلس اليمني للاختصاصات الطبية - صعدة • تاريخ التقرير: ${today}</div>
-        </div>
-        <table class="p-table">
-          <thead><tr><th class="idx-style">م</th>${columnsToPrint.map((c) => `<th>${c.label}</th>`).join("")}</tr></thead>
-          <tbody>
-            <tr>
-              <td class="idx-style">1</td>
-              ${columnsToPrint.map((c) => {
-                // جلب القيمة سواء كانت حقل عادي أو قسط شهر من كائن payments
-                let val = MONTHS_2026.includes(c.key) ? (traineeData.payments?.[c.key] || 0) : traineeData[c.key];
-                const isNumber = c.isNumeric || typeof val === "number";
-                return `<td class="${isNumber ? "num-style" : ""}">${isNumber ? fmt(Number(val) || 0) : (val ?? "—")}</td>`;
-              }).join("")}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    `;
-
-    document.body.appendChild(printRoot);
-    setTimeout(() => {
-      window.print();
-      document.body.removeChild(printRoot);
-      onClose();
-    }, 50);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" dir="rtl">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        <div className="bg-gradient-to-l from-purple-800 to-purple-950 px-5 py-4 flex items-center justify-between">
-          <div>
-            <h3 className="font-bold text-white text-base">⚙️ تخصيص كشف المتدرب (2026)</h3>
-            <p className="text-purple-200 text-xs mt-0.5">حدد الأعمدة التي ترغب بظهورها في الكشف المطبوع</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-full text-slate-300 hover:bg-white/10 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
-        </div>
-        <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 text-sm">
-          <span className="text-slate-600 font-medium">المتدرب: <strong className="text-slate-900">{traineeData.name}</strong></span>
-        </div>
-        <div className="p-5 space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <span className="text-xs font-bold text-slate-400">الحقول المتاحة</span>
-            <button type="button" onClick={toggleAll} className="text-xs font-bold text-purple-700 hover:underline">
-              {selectedKeys.length === AVAILABLE_COLUMNS_2026.length ? "إلغاء تحديد الجميع" : "تحديد الجميع"}
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[40vh] overflow-y-auto pr-1">
-            {AVAILABLE_COLUMNS_2026.map((col) => {
-              const isChecked = selectedKeys.includes(col.key);
-              return (
-                <button key={col.key} type="button" onClick={() => toggleColumn(col.key)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-right transition-all
-                    ${isChecked ? "border-purple-500 bg-purple-50 text-purple-900 font-semibold" : "border-slate-200 hover:border-slate-300 text-slate-700 bg-white"}`}>
-                  {isChecked ? <CheckSquare className="w-4 h-4 text-purple-600 shrink-0" /> : <Square className="w-4 h-4 text-slate-300 shrink-0" />}
-                  <span className="text-xs">{col.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div className="bg-slate-50 px-5 py-3.5 border-t border-slate-100 flex gap-3 justify-end">
-          <button onClick={onClose} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-300 transition-colors">إلغاء</button>
-          <button onClick={executePrint} className="px-5 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-sm transition-colors">
-            <Printer className="w-4 h-4" /> تأكيد وطباعة
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -204,10 +71,27 @@ export default function InstallmentsTab() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
-  
-  // حالات فتح نافذة طباعة 2026
-  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [selectedTraineeForPrint, setSelectedTraineeForPrint] = useState<any>(null);
+
+  // === الإضافات الجديدة الخاصة بنافذة إعدادات الطباعة ===
+  const [printModalData, setPrintModalData] = useState<{ row: any; year: number } | null>(null);
+  const [printSettings, setPrintSettings] = useState({
+    showBatch: true,
+    showSpecialty: true,
+    showPhone: true,
+    selectedMonths: [] as string[]
+  });
+
+  const openPrintModal = (row: any, year: number) => {
+    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+    setPrintSettings({
+      showBatch: true,
+      showSpecialty: true,
+      showPhone: true,
+      selectedMonths: [...monthsList]
+    });
+    setPrintModalData({ row, year });
+  };
+  // ====================================================
 
   // ربط أدوات التحكم بالبحث والفلترة
   const controls2026 = useTableControls(installments || [], ["name", "batch", "specialty", "fees", "prevDue", "totalPaid", "remaining"]);
@@ -384,16 +268,18 @@ export default function InstallmentsTab() {
 
   const getStatusText = (rem: number) => rem <= 0 ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" } : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
 
-  const generateAccountStatement = (row: any, year: number) => {
-    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+  // === تم تعديل الدالة لتقبل الإعدادات (settings) ===
+  const generateAccountStatement = (row: any, year: number, settings?: any) => {
+    // استخدم الأشهر المحددة من الإعدادات أو الأشهر الافتراضية
+    const monthsList = settings ? settings.selectedMonths : (year === 2025 ? MONTHS_2025 : MONTHS_2026);
     const fees = cleanNumber(row.fees);
     const prevDue = cleanNumber(row.prevDue);
-    const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
+    const totalPaid = monthsList.reduce((s: number, m: string) => s + (Number(row.payments?.[m]) || 0), 0);
     const dueTotal = year === 2026 ? (prevDue || fees) : fees;
     const remaining = dueTotal - totalPaid;
 
     const paidRows = monthsList
-      .map((m) => {
+      .map((m: string) => {
         const amount = Number(row.payments?.[m]) || 0;
         if (amount <= 0) return "";
         return `<tr><td class="lbl">سداد شهر ${m} (له)</td><td class="num pay">${fmt(amount)}</td></tr>`;
@@ -458,9 +344,9 @@ export default function InstallmentsTab() {
             <div class="divider"></div>
             <div class="grid">
               ${infoCard("الاسم", row.name)}
-              ${infoCard("الدفعة", row.batch)}
-              ${infoCard("المساق", row.specialty)}
-              ${infoCard("رقم الهاتف", row.phone)}
+              ${settings?.showBatch !== false ? infoCard("الدفعة", row.batch) : ""}
+              ${settings?.showSpecialty !== false ? infoCard("المساق", row.specialty) : ""}
+              ${settings?.showPhone !== false ? infoCard("رقم الهاتف", row.phone) : ""}
             </div>
             <table>
               <thead><tr><th style="width:62%">البيان</th><th>المبلغ</th></tr></thead>
@@ -480,8 +366,9 @@ export default function InstallmentsTab() {
     `;
   };
 
-  const printStatement = (row: any, year: number) => {
-    const html = generateAccountStatement(row, year);
+  // === تم تعديل دالة الطباعة لتمرير الإعدادات ===
+  const printStatement = (row: any, year: number, settings?: any) => {
+    const html = generateAccountStatement(row, year, settings);
     const w = window.open("", "", "width=850,height=700");
     if (w) { 
       w.document.write(html); 
@@ -570,7 +457,8 @@ export default function InstallmentsTab() {
                         <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30">{fmt(r.totalPaid)}</td>
                         <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30">{fmt(r.remaining)}</td>
                         <td className="p-2 text-center">
-                          <button onClick={() => printStatement(r, 2025)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors">
+                          {/* === استبدال دالة الطباعة المباشرة بفتح النافذة === */}
+                          <button onClick={() => openPrintModal(r, 2025)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors">
                             <Printer className="w-3.5 h-3.5" />
                           </button>
                         </td>
@@ -684,8 +572,8 @@ export default function InstallmentsTab() {
                           <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30">{fmt(r.remaining)}</td>
                           <td className="p-2 text-center"><span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${status.bg} ${status.color}`}>{status.text}</span></td>
                           <td className="p-2 text-center">
-                            {/* تغيير زر الطباعة هنا ليفتح النافذة الجديدة بدلاً من الطباعة المباشرة */}
-                            <button onClick={() => { setSelectedTraineeForPrint(r); setIsPrintModalOpen(true); }} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-purple-600 hover:text-white transition-colors">
+                            {/* === استبدال دالة الطباعة المباشرة بفتح النافذة === */}
+                            <button onClick={() => openPrintModal(r, 2026)} className="p-1 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-500 hover:text-white transition-colors">
                               <Printer className="w-3.5 h-3.5" />
                             </button>
                           </td>
@@ -712,6 +600,52 @@ export default function InstallmentsTab() {
       </div>
 
       {/* ========== النوافذ المنبثقة ========== */}
+
+      {/* === إضافة نافذة إعدادات الطباعة الجديدة === */}
+      <Modal title="🖨️ إعدادات طباعة كشف الحساب" isOpen={!!printModalData} onClose={() => setPrintModalData(null)}>
+        {printModalData && (
+          <div className="space-y-4 text-slate-800">
+            <div className="space-y-2 border-b pb-3">
+              <h4 className="font-bold text-sm">المعلومات الأساسية (الأعمدة العلوية)</h4>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={printSettings.showBatch} onChange={e => setPrintSettings({...printSettings, showBatch: e.target.checked})} className="rounded text-blue-600" /> إظهار الدفعة
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={printSettings.showSpecialty} onChange={e => setPrintSettings({...printSettings, showSpecialty: e.target.checked})} className="rounded text-blue-600" /> إظهار المساق
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={printSettings.showPhone} onChange={e => setPrintSettings({...printSettings, showPhone: e.target.checked})} className="rounded text-blue-600" /> إظهار رقم الهاتف
+              </label>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-bold text-sm mb-2">الأشهر المضمنة في الكشف</h4>
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1">
+                {(printModalData.year === 2025 ? MONTHS_2025 : MONTHS_2026).map(m => (
+                  <label key={m} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" checked={printSettings.selectedMonths.includes(m)} onChange={e => {
+                      const newMonths = e.target.checked 
+                        ? [...printSettings.selectedMonths, m]
+                        : printSettings.selectedMonths.filter(x => x !== m);
+                      setPrintSettings({...printSettings, selectedMonths: newMonths});
+                    }} className="rounded text-blue-600" /> {m.trim()}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-3 border-t mt-4">
+              <button type="button" onClick={() => setPrintModalData(null)} className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg">إلغاء</button>
+              <button type="button" onClick={() => {
+                  printStatement(printModalData.row, printModalData.year, printSettings);
+                  setPrintModalData(null);
+              }} className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold flex items-center gap-1">
+                <Printer className="w-4 h-4" /> متابعة الطباعة
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+      {/* ==================================================== */}
+
       <Modal title="➕ إضافة قسط جديد - 2026" isOpen={newPaymentModal} onClose={() => setNewPaymentModal(false)}>
         <form onSubmit={addNewPayment} className="space-y-3">
           <div className="relative">
@@ -768,14 +702,6 @@ export default function InstallmentsTab() {
           </>
         )}
       </Modal>
-
-      {/* استدعاء مكون الطباعة المخصص لعام 2026 */}
-      <TraineePrintModal 
-        isOpen={isPrintModalOpen} 
-        onClose={() => { setIsPrintModalOpen(false); setSelectedTraineeForPrint(null); }} 
-        traineeData={selectedTraineeForPrint} 
-      />
-
     </div>
   );
 }
