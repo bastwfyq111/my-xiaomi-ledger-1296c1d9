@@ -31,13 +31,16 @@ export default function TabActions({
   numericKeys = [],
   className = "",
 }: Props) {
+  
   const handlePrint = () => {
     if (!rows.length) {
       toast.error("لا توجد بيانات للطباعة");
       return;
     }
+    
     const w = window.open("", "_blank", "width=1200,height=800");
     if (!w) return;
+    
     const head = `
       <meta charset="utf-8" />
       <title>${escapeHtml(title)}</title>
@@ -55,9 +58,11 @@ export default function TabActions({
         .idx { width: 36px; text-align: center; color: #64748b; }
       </style>
     `;
+    
     const head2 = `<tr><th class="idx">م</th>${columns
       .map((c) => `<th>${escapeHtml(c.label)}</th>`)
       .join("")}</tr>`;
+      
     const body2 = rows
       .map(
         (r, i) =>
@@ -69,16 +74,26 @@ export default function TabActions({
                 isNum ? escapeHtml(fmt(Number(v) || 0)) : escapeHtml(v)
               }</td>`;
             })
-            .join("")}</tr>`,
+            .join("")}</tr>`
       )
       .join("");
+      
     const today = new Date().toLocaleDateString("ar-EG-u-nu-latn");
+    
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>
       <h1>${escapeHtml(title)}</h1>
       <div class="sub">المجلس اليمني للاختصاصات الطبية - صعدة • ${today} • عدد السجلات: ${rows.length}</div>
       <table><thead>${head2}</thead><tbody>${body2}</tbody></table>
-      <script>window.onload=()=>{setTimeout(()=>window.print(),300)}</script>
+      <script>
+        window.addEventListener('DOMContentLoaded', () => {
+          setTimeout(() => {
+            window.print();
+            window.close(); 
+          }, 500);
+        });
+      </script>
     </body></html>`);
+    
     w.document.close();
   };
 
@@ -92,7 +107,7 @@ export default function TabActions({
       columns.forEach((c) => {
         const v = r[c.key];
         out[c.label] =
-          numericKeys.includes(c.key) || typeof v === "number" ? Number(v) || 0 : (v ?? "");
+          numericKeys.includes(c.key) || typeof v === "number" ? Number(v) || 0 : v ?? "";
       });
       return out;
     });
@@ -115,9 +130,9 @@ export default function TabActions({
       <button
         onClick={handlePrint}
         className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#10528e] border border-[#10528e]/30 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-50 active:scale-95 transition-all"
-        title="طباعة هذا التبويب"
+        title="طباعة وحفظ هذا التبويب كـ PDF"
       >
-        <Printer className="w-4 h-4" /> طباعة
+        <Printer className="w-4 h-4" /> طباعة / PDF
       </button>
       <button
         onClick={handleExcel}
