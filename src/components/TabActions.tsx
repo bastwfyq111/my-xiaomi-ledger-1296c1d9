@@ -38,16 +38,35 @@ export default function TabActions({
       return;
     }
     
-    const w = window.open("", "_blank", "width=1200,height=800");
-    if (!w) return;
+    // 1. إنشاء عنصر iframe مخفي تماماً في الخلفية
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    iframe.style.zIndex = "-9999";
+    
+    document.body.appendChild(iframe);
+    
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) {
+      toast.error("تعذر تهيئة محرك الطباعة الداخلي");
+      document.body.removeChild(iframe);
+      return;
+    }
+    
+    // تنظيف اسم الملف لتجنب أي أخطاء في التسمية أثناء حفظ الـ PDF
+    const cleanTitle = escapeHtml(title.replace(/[/\\?%*:|"<>]/g, ""));
     
     const head = `
       <meta charset="utf-8" />
-      <title>${escapeHtml(title)}</title>
+      <title>${cleanTitle}</title>
       <style>
         @page { size: A4 landscape; margin: 10mm; }
         * { box-sizing: border-box; }
-        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 16px; color: #0f172a; }
+        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 16px; color: #0f172a; background: #fff; }
         h1 { text-align: center; color: #10528e; margin: 0 0 6px; font-size: 22px; }
         .sub { text-align: center; color: #64748b; margin-bottom: 14px; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -80,21 +99,26 @@ export default function TabActions({
       
     const today = new Date().toLocaleDateString("ar-EG-u-nu-latn");
     
-    w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>
-      <h1>${escapeHtml(title)}</h1>
+    // 2. كتابة المحتوى داخل الـ Iframe المخفي
+    doc.write(`<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>
+      <h1>${cleanTitle}</h1>
       <div class="sub">المجلس اليمني للاختصاصات الطبية - صعدة • ${today} • عدد السجلات: ${rows.length}</div>
       <table><thead>${head2}</thead><tbody>${body2}</tbody></table>
-      <script>
-        window.addEventListener('DOMContentLoaded', () => {
-          setTimeout(() => {
-            window.print();
-            window.close(); 
-          }, 500);
-        });
-      </script>
     </body></html>`);
+    doc.close();
     
-    w.document.close();
+    // 3. الانتظار نصف ثانية حتى يستقر الجدول تماماً في المتصفح ثم تشغيل الطباعة والحفظ
+    setTimeout(() => {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        
+        // 4. حذف الـ iframe بعد إغلاق نافذة الطباعة/الحفظ للحفاظ على أداء الذاكرة
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }
+    }, 500);
   };
 
   const handleExcel = () => {
