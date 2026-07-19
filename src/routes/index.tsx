@@ -25,8 +25,7 @@ import InstallmentsTab from "@/components/InstallmentsTab";
 import MonthlyStatementTab from "@/components/MonthlyStatementTab";
 import RevenueTab from "@/components/RevenueTab";
 import ExpensesTab from "@/components/ExpensesTab";
-import AppTabs from
-  "@/components/AppTabs";
+import AppTabs from "@/components/AppTabs"; // المكون المضاف الذي يعرض رابط تحميل ملف سجل النفقات العامة
 
 // استيراد وظائف الـ PWA
 import { canInstall, onInstallAvailability, promptInstall } from "@/lib/pwa";
@@ -57,6 +56,7 @@ export const Route = createFileRoute("/")({
   }),
 });
 
+// 1. التوثيق: تم تحديث الـ type ليتضمن المعرّف الخاص بالتبويب الجديد "general-expenses-ledger"
 type Tab =
   | "installments"
   | "hafiza"
@@ -64,7 +64,8 @@ type Tab =
   | "journal"
   | "monthly"
   | "revenue"
-  | "expenses-table";
+  | "expenses-table"
+  | "general-expenses-ledger"; // المعرّف الفريد للتبويب الجديد
 
 function Index() {
   const [activeTab, setActiveTab] = useState<Tab>("installments");
@@ -131,7 +132,7 @@ function Index() {
         onValueChange={(value) => setActiveTab(value as Tab)}
         className="w-full space-y-3 sm:space-y-4"
       >
-        {/* 💡 التعديل الرئيسي هنا: تم تحويل هذه الحاوية إلى sticky وبأعلى أولوية ظهور لتبقى ثابتة دائماً عند التمرير */}
+        {/* الحاوية وبأعلى أولوية ظهور لتبقى ثابتة دائماً عند التمرير */}
         <div className="sticky top-0 z-50 w-full bg-[#f3f7fa] pt-2 pb-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsList className="flex w-max min-w-full bg-[#0b3d6d] p-1 sm:p-1.5 sm:rounded-xl shadow-lg h-auto gap-1.5 sm:gap-2 rounded-none border-b border-white/10 justify-start">
             {/* 1. الأقساط */}
@@ -203,6 +204,16 @@ function Index() {
               <span className="hidden sm:inline">جدول المصروفات</span>
               <span className="sm:hidden">مصروفات</span>
             </TabsTrigger>
+
+            {/* 2. التوثيق: تم إضافة زر التبويب الثامن الجديد "سجل النفقات العامة" بنجاح هنا مع الحفاظ على نفس التصميم والألوان والاتساق الاستجابي للمشروع */}
+            <TabsTrigger
+              value="general-expenses-ledger"
+              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
+            >
+              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">سجل النفقات العامة</span>
+              <span className="sm:hidden">السجل العام</span>
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -228,6 +239,11 @@ function Index() {
           </TabsContent>
           <TabsContent value="expenses-table" className="focus-visible:outline-none mt-0">
             <ExpensesTab />
+          </TabsContent>
+
+          {/* 3. التوثيق: تم إضافة محتوى التبويب الجديد وعرض المكون AppTabs عند اختياره */}
+          <TabsContent value="general-expenses-ledger" className="focus-visible:outline-none mt-0">
+            <AppTabs />
           </TabsContent>
         </div>
       </Tabs>
