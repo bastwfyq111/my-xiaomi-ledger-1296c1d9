@@ -25,21 +25,53 @@ const AppTabs: React.FC = () => {
 
   // بنود الباب الأول الفرعية
   const bab1Columns = [
-    "الفصل الاول", "البند الاول", "المرتبات الاساسية", "اجور تعاقدية", 
-    "البند الثالث", "اجور عمل اضافي", "مكافات", "البند الرابع", 
-    "طبيعة عمل", "بدل ريف", "بدل سكن", "بدل تحديث", "الفصل الثاني", "ح/حكومة", "اصابة عمل"
+    "الفصل الاول",
+    "البند الاول",
+    "المرتبات الاساسية",
+    "اجور تعاقدية",
+    "البند الثالث",
+    "اجور عمل اضافي",
+    "مكافات",
+    "البند الرابع",
+    "طبيعة عمل",
+    "بدل ريف",
+    "بدل سكن",
+    "بدل تحديث",
+    "الفصل الثاني",
+    "ح/حكومة",
+    "اصابة عمل",
   ];
 
   // بنود الباب الثاني الفرعية (تم تمييز التكرار برمجياً لمنع انهيار الواجهة)
   const bab2Columns = [
-    "الفصل الاول_باب2", "مياه", "انارة", "ادوات كتابية", "نشر واعلان", 
-    "اتصالات", "مؤتمرات واحتفالات", "نفقات النظافة", "اخرى", "نقل مهام", 
-    "انتقالات داخلية", "ايجار مباني", "ادوية ومستلزمات طبية", "اغذية وملبوسات", 
-    "الفصل الثاني_باب2", "صيانة مباني", "وقود وزيوت", "قطع غيار وصيانة وسائل النقل", "قطع غيار وصيانة الالات والمعدات والاثاث"
+    "الفصل الاول_باب2",
+    "مياه",
+    "انارة",
+    "ادوات كتابية",
+    "نشر واعلان",
+    "اتصالات",
+    "مؤتمرات واحتفالات",
+    "نفقات النظافة",
+    "اخرى",
+    "نقل مهام",
+    "انتقالات داخلية",
+    "ايجار مباني",
+    "ادوية ومستلزمات طبية",
+    "اغذية وملبوسات",
+    "الفصل الثاني_باب2",
+    "صيانة مباني",
+    "وقود وزيوت",
+    "قطع غيار وصيانة وسائل النقل",
+    "قطع غيار وصيانة الالات والمعدات",
   ];
 
   const bab4Columns = [
-    "مركز صحي قحزة", "وحدة الغسيل الكلوي", "مشروع دعم الكلى", "الصالة والمطبخ", "مركز صحي", "الامانات"
+    "مركز صحي قحزة",
+    "وحدة الغسيل الكلوي",
+    "مشروع دعم الكلى",
+    "الصالة والمطبخ",
+    "مركز صحي",
+    "الامانات",
   ];
 
   // دالة الاستيراد الآمنة والمحسنة لحل مشكلة تعليق المتصفح
@@ -52,41 +84,69 @@ const AppTabs: React.FC = () => {
 
     reader.onload = (event) => {
       try {
-        const target = event.target;
-        if (!target) return;
+        const result = event.target?.result;
+        if (!result) return;
 
-        const binaryString = target.result;
-        // قراءة الملف مع تفعيل خيار الحجم الخفيف للأداء
-        const workbook = XLSX.read(binaryString, { type: "binary", cellDates: true });
+        // اقرأ كـ ArrayBuffer ليتوافق مع أغلب المتصفحات وملفات الإكسل الكبيرة
+        const data = new Uint8Array(result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array", cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        
-        // تحويل المحتوى إلى مصفوفة صفوف خام (سرعة معالجة قصوى)
-        const rawJsonData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
 
-        if (rawJsonData.length > 1) {
-          // استخراج الترويسة من الصف الثاني (الفهرس 1) وتنظيفها
-          const extractedHeaders = rawJsonData[1].map((header: any, idx: number) => {
+        // تحويل المحتوى إلى مصفوفة صفوف خام (سرعة معالجة قصوى)
+        const rawJsonData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, raw: false });
+
+        if (rawJsonData && rawJsonData.length > 0) {
+          // نبحث عن أول صف ترويسة منطقي (يحتوي على نصوص غير فارغة)
+          let headerRowIndex = rawJsonData.findIndex((r) => Array.isArray(r) && r.some((c) => c !== undefined && String(c).trim() !== ""));
+          if (headerRowIndex === -1) headerRowIndex = 0;
+
+          const rawHeaders = rawJsonData[headerRowIndex] as any[];
+
+          // تنظيف الترويسة ومعالجة التكرارات (مثلاً الفصل الاول يظهر مرتين)
+          const seen: Record<string, number> = {};
+          const extractedHeaders = rawHeaders.map((header: any, idx: number) => {
             let name = header !== undefined && header !== null ? String(header).trim() : `عمود_${idx}`;
+
+            // معالجة حالات خاصة: إذا نفس الاسم تكرر نميزه
+            if (seen[name] === undefined) seen[name] = 1;
+            else {
+              seen[name] = seen[name] + 1;
+              name = `${name}_نسخة${seen[name]}`;
+            }
+
+            // حالات قديمة: لو وجد "الفصل الاول" أو "الفصل الثاني" مرتين، نميّز النسخة الثانية ليتطابق مع bab2Columns
             if (name === "الفصل الاول" && idx > 15) name = "الفصل الاول_باب2";
             if (name === "الفصل الثاني" && idx > 15) name = "الفصل الثاني_باب2";
+
             return name;
           });
 
           const temporaryRows: any[] = [];
 
-          // الفلترة الصارمة: تخطي أول صفين ومعالجة الصفوف المحتوية على بيانات فعلية فقط لمنع التعلق
-          for (let i = 2; i < rawJsonData.length; i++) {
+          // نقرأ الصفوف التالية بعد صف الترويسة
+          for (let i = headerRowIndex + 1; i < rawJsonData.length; i++) {
             const row = rawJsonData[i];
             if (!row || row.length === 0) continue;
 
             // التحقق من أن السطر ليس فارغاً وهمياً (يجب أن يحتوي على بيان أو رقم استمارة أو تاريخ أو إجمالي)
-            const hasData = row[0] !== undefined || row[1] !== undefined || row[2] !== undefined || row[3] !== undefined || row[5] !== undefined;
-            if (!hasData) continue; // تخطي الأسطر الفارغة تماماً ومقاطعة الحلقة اللانهائية
+            const hasData = (row[0] !== undefined && String(row[0]).trim() !== "") ||
+                            (row[1] !== undefined && String(row[1]).trim() !== "") ||
+                            (row[2] !== undefined && String(row[2]).trim() !== "") ||
+                            (row[3] !== undefined && String(row[3]).trim() !== "") ||
+                            (row[4] !== undefined && String(row[4]).trim() !== "");
+            if (!hasData) continue;
 
             const rowObj: any = {};
             extractedHeaders.forEach((header: string, index: number) => {
-              rowObj[header] = row[index] !== undefined && row[index] !== null ? row[index] : "";
+              const cell = row[index];
+              // حاول تحويل الأرقام إلى number إن أمكن
+              if (cell !== undefined && cell !== null && cell !== "") {
+                const num = Number(cell);
+                rowObj[header] = !isNaN(num) && String(cell).trim() !== "" ? num : String(cell);
+              } else {
+                rowObj[header] = "";
+              }
             });
             temporaryRows.push(rowObj);
           }
@@ -95,13 +155,17 @@ const AppTabs: React.FC = () => {
           setDataRows(temporaryRows); // حقن البيانات النظيفة دفعة واحدة
           setIsImported(true);
           setTimeout(() => setIsImported(false), 3000);
+        } else {
+          alert("الملف لا يحتوي على بيانات صالحة.");
         }
       } catch (error) {
         console.error("خطأ في معالجة الملف المحاسبي:", error);
         alert("حدث خطأ أثناء قراءة البيانات، يرجى التأكد من سلامة ملف الإكسل.");
       }
     };
-    reader.readAsBinaryString(file);
+
+    // اقرأ الملف كـ ArrayBuffer
+    reader.readAsArrayBuffer(file);
   };
 
   const handleClearTable = () => {
@@ -113,7 +177,8 @@ const AppTabs: React.FC = () => {
 
   // تصفية أسطر النفقات بناءً على مربع البحث
   const filteredRows = dataRows.filter((row) =>
-    mainHeaders.concat(["البيان"]).some((key) => 
+    // ابحث في الأعمدة الرئيسية بالإضافة إلى عمود البيان إن وُجد
+    mainHeaders.concat(["البيان"]).some((key) =>
       String(row[key] || "").toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
@@ -137,7 +202,7 @@ const AppTabs: React.FC = () => {
             type="text"
             placeholder="بحث سريع في السجل المالي المستورد..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-3 pr-9 py-2 bg-white border border-slate-200 rounded-lg text-xs md:text-sm focus:outline-none focus:border-[#10528e] transition-all"
           />
         </div>
@@ -231,7 +296,7 @@ const AppTabs: React.FC = () => {
               <th className="p-2.5 font-bold bg-[#12538c] border-x border-white/5 whitespace-nowrap">اجمالي الباب الثاني</th>
               {expandedGroups.bab2 && bab2Columns.map((col, idx) => (
                 <th key={idx} className="p-2.5 font-normal bg-slate-800/40 border-x border-white/5 text-[11px] whitespace-nowrap">
-                  {col.replace("_bab2", "")}
+                  {col.replace("_باب2", "")}
                 </th>
               ))}
 
