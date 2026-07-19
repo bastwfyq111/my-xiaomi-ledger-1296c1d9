@@ -25,6 +25,8 @@ import InstallmentsTab from "@/components/InstallmentsTab";
 import MonthlyStatementTab from "@/components/MonthlyStatementTab";
 import RevenueTab from "@/components/RevenueTab";
 import ExpensesTab from "@/components/ExpensesTab";
+import AppTabs from
+  "@/components/AppTabs";
 
 // استيراد وظائف الـ PWA
 import { canInstall, onInstallAvailability, promptInstall } from "@/lib/pwa";
