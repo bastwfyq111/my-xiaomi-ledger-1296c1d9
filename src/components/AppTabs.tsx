@@ -1,57 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { FileSpreadsheet, Upload, Search, Trash2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Plus, Download } from "lucide-react";
-import * as XLSX from "xlsx";
+import React, { useEffect, useState, useMemo } from "react";
+import { FileSpreadsheet, Plus, Trash2, CalendarDays } from "lucide-react";
 
-// --- هيكلة البيانات المستوحاة من ملف الإكسل ---
-
+// --- الهيكلة والألوان الأساسية ---
 const mainHeaders = ["رقم الاستمارة", "كشف التسوية", "التاريخ", "البيان"];
 
-// هيكلة الباب الأول
-const bab1Structure = {
-  "الفصل الاول": {
-    "البند الاول": ["المرتبات الاساسية", "اجور تعاقدية"],
-    "البند الثالث": ["اجور عمل اضافي", "مكافات"],
-    "البند الرابع": ["طبيعة عمل", "بدل ريف", "بدل سكن", "بدل تحديث"]
-  },
-  "الفصل الثاني": {
-    "بدون_بند": ["ح/حكومة", "اصابة عمل"]
-  }
-};
-
-// هيكلة الباب الثاني
-const bab2Structure = {
-  "الفصل الاول": ["مياه", "انارة", "ادوات كتابية", "نشر واعلان", "اتصالات", "مؤتمرات واحتفالات", "نفقات النظافة", "اخرى", "نقل مهام", "انتقالات داخلية", "ايجار مباني", "ادوية ومستلزمات طبية", "اغذية وملبوسات", "اخرى_2"],
-  "الفصل الثاني": ["صيانة مباني", "وقود وزيوت", "قطع غيار وصيانة وسائل النقل", "قطع غيار وصيانة الالات والمعدات والاثاث"]
-};
-
-// هيكلة الباب الرابع
-const bab4Columns = ["مركز صحي قحزة", "وحدة الغسيل الكلوي", "مشروع دعم الكلى", "الصالة والمطبخ", "مركز صحي", "الامانات"];
-
-// استخراج جميع حقول الإدخال المسطحة من الهيكلة
-const flattenStructure = () => {
-  const fields: string[] = [];
-  
-  // الباب الأول
-  for (const fasl in bab1Structure) {
-    for (const band in (bab1Structure as any)[fasl]) {
-      fields.push(...(bab1Structure as any)[fasl][band]);
-    }
-  }
-  
-  // الباب الثاني
-  for (const fasl in bab2Structure) {
-    fields.push(...(bab2Structure as any)[fasl]);
-  }
-  
-  // الباب الرابع
-  fields.push(...bab4Columns);
-  
-  return fields;
-};
-
-const inputFields = flattenStructure();
-
-// الألوان المستخرجة من الإكسل لتطبيقها في الجدول
 const COLORS = {
   TOTAL_ALL: "#E5DFEC",   // اجمالي عام
   BAB_TOTAL: "#DBEEF3",   // اجمالي باب
@@ -59,134 +11,205 @@ const COLORS = {
   BAND: "#C6D9F0",        // بند
 };
 
-const ROW_LOAD_CHUNK = 100;
+// قائمة مصفوفة بأسماء جميع الأعمدة المالية بالترتيب (لتسهيل رسم الجدول وحساب المجاميع)
+const dataColumnsOrder = [
+  "اجمالي عام الاستخدامات",
+  "اجمالي الباب الاول",
+  "الفصل الاول_باب1",
+  "المرتبات الاساسية", "اجور تعاقدية", "اجور عمل اضافي", "مكافات", "طبيعة عمل", "بدل ريف", "بدل سكن", "بدل تحديث",
+  "الفصل الثاني_باب1",
+  "ح/حكومة", "اصابة عمل",
+  "اجمالي الباب الثاني",
+  "الفصل الاول_باب2",
+  "مياه", "انارة", "ادوات كتابية", "نشر واعلان", "اتصالات", "مؤتمرات واحتفالات", "نفقات النظافة", "اخرى", "نقل مهام", "انتقالات داخلية", "ايجار مباني", "ادوية ومستلزمات طبية", "اغذية وملبوسات", "اخرى_2",
+  "الفصل الثاني_باب2",
+  "صيانة مباني", "وقود وزيوت", "قطع غيار وصيانة وسائل النقل", "قطع غيار وصيانة الالات والمعدات والاثاث",
+  "اجمالي الباب الرابع",
+  "مركز صحي قحزة", "وحدة الغسيل الكلوي", "مشروع دعم الكلى", "الصالة والمطبخ", "مركز صحي", "الامانات"
+];
 
-const toNumberOrRaw = (val: any): number | string => {
-  if (val === undefined || val === null || String(val).trim() === "") return "";
+// أسماء الأشهر للتبويبات
+const MONTHS = [
+  { id: 1, name: "يناير" }, { id: 2, name: "فبراير" }, { id: 3, name: "مارس" }, { id: 4, name: "أبريل" },
+  { id: 5, name: "مايو" }, { id: 6, name: "يونيو" }, { id: 7, name: "يوليو" }, { id: 8, name: "أغسطس" },
+  { id: 9, name: "سبتمبر" }, { id: 10, name: "أكتوبر" }, { id: 11, name: "نوفمبر" }, { id: 12, name: "ديسمبر" }
+];
+
+// أداة تنسيق الأرقام باللغة الإنجليزية مع الفواصل
+const formatNumberEn = (val: any) => {
+  if (val === "" || val === null || val === undefined) return "";
   const num = Number(val);
-  return !isNaN(num) ? num : String(val);
+  // إذا كان النص ليس رقماً (مثل البيان أو رقم الاستمارة)، نعيده كما هو
+  if (isNaN(num)) return val; 
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(num);
 };
 
+// دالة الجمع الرياضي
 const sumColumns = (row: any, cols: string[]): number =>
   cols.reduce((acc, col) => {
-    const v = row[col];
-    const num = typeof v === "number" ? v : Number(v);
+    const num = Number(row[col]);
     return acc + (isNaN(num) ? 0 : num);
   }, 0);
 
-// دالة إعادة الحساب تحاكي معادلات الإكسل تماماً
+// دالة إعادة الحساب للسطر الواحد
 const recomputeRow = (row: any) => {
   const newRow = { ...row };
 
   // حساب الباب الأول
-  let bab1Total = 0;
-  for (const fasl in bab1Structure) {
-    let faslTotal = 0;
-    for (const band in (bab1Structure as any)[fasl]) {
-      const bandCols = (bab1Structure as any)[fasl][band];
-      const bandTotal = sumColumns(newRow, bandCols);
-      newRow[band] = bandTotal; // حفظ مجموع البند (رغم أننا قد لا نعرضه كخلية مستقلة لكنه مفيد)
-      faslTotal += bandTotal;
-    }
-    newRow[fasl + "_باب1"] = faslTotal;
-    bab1Total += faslTotal;
-  }
-  newRow["اجمالي الباب الاول"] = bab1Total;
+  const fasl1Bab1 = sumColumns(newRow, ["المرتبات الاساسية", "اجور تعاقدية", "اجور عمل اضافي", "مكافات", "طبيعة عمل", "بدل ريف", "بدل سكن", "بدل تحديث"]);
+  const fasl2Bab1 = sumColumns(newRow, ["ح/حكومة", "اصابة عمل"]);
+  newRow["الفصل الاول_باب1"] = fasl1Bab1;
+  newRow["الفصل الثاني_باب1"] = fasl2Bab1;
+  newRow["اجمالي الباب الاول"] = fasl1Bab1 + fasl2Bab1;
 
   // حساب الباب الثاني
-  let bab2Total = 0;
-  for (const fasl in bab2Structure) {
-    const faslCols = (bab2Structure as any)[fasl];
-    const faslTotal = sumColumns(newRow, faslCols);
-    newRow[fasl + "_باب2"] = faslTotal;
-    bab2Total += faslTotal;
-  }
-  newRow["اجمالي الباب الثاني"] = bab2Total;
+  const fasl1Bab2 = sumColumns(newRow, ["مياه", "انارة", "ادوات كتابية", "نشر واعلان", "اتصالات", "مؤتمرات واحتفالات", "نفقات النظافة", "اخرى", "نقل مهام", "انتقالات داخلية", "ايجار مباني", "ادوية ومستلزمات طبية", "اغذية وملبوسات", "اخرى_2"]);
+  const fasl2Bab2 = sumColumns(newRow, ["صيانة مباني", "وقود وزيوت", "قطع غيار وصيانة وسائل النقل", "قطع غيار وصيانة الالات والمعدات والاثاث"]);
+  newRow["الفصل الاول_باب2"] = fasl1Bab2;
+  newRow["الفصل الثاني_باب2"] = fasl2Bab2;
+  newRow["اجمالي الباب الثاني"] = fasl1Bab2 + fasl2Bab2;
 
   // حساب الباب الرابع
-  newRow["اجمالي الباب الرابع"] = sumColumns(newRow, bab4Columns);
+  newRow["اجمالي الباب الرابع"] = sumColumns(newRow, ["مركز صحي قحزة", "وحدة الغسيل الكلوي", "مشروع دعم الكلى", "الصالة والمطبخ", "مركز صحي", "الامانات"]);
 
   // الإجمالي العام
-  newRow["اجمالي عام الاستخدامات"] = bab1Total + bab2Total + (newRow["اجمالي الباب الرابع"] || 0);
+  newRow["اجمالي عام الاستخدامات"] = newRow["اجمالي الباب الاول"] + newRow["اجمالي الباب الثاني"] + newRow["اجمالي الباب الرابع"];
 
   return newRow;
 };
 
-const emptyRow = () => {
-  const row: any = {};
-  mainHeaders.forEach(h => row[h] = "");
-  inputFields.forEach(h => row[h] = "");
-  return recomputeRow(row);
-};
-
+// --- المكون الرئيسي ---
 const AppTabs: React.FC = () => {
+  // جميع البيانات لكل الأشهر محفوظة هنا
   const [dataRows, setDataRows] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [rowsToShow, setRowsToShow] = useState<number>(ROW_LOAD_CHUNK);
+  // حالة التبويب النشط (الشهر الحالي)
+  const [activeMonthId, setActiveMonthId] = useState<number>(1);
 
-  const updateCell = (originalIndex: number, key: string, rawValue: string) => {
+  // تصفية البيانات لعرض بيانات الشهر النشط فقط
+  const currentMonthRows = dataRows.filter(row => row.monthId === activeMonthId);
+
+  // تحديث خلية
+  const updateCell = (rowId: string, key: string, rawValue: string) => {
     setDataRows((prev) => {
-      const newRows = [...prev];
-      const row = { ...newRows[originalIndex] };
-      row[key] = toNumberOrRaw(rawValue);
-      newRows[originalIndex] = recomputeRow(row);
-      return newRows;
+      return prev.map(row => {
+        if (row.id === rowId) {
+          const updatedRow = { ...row, [key]: rawValue };
+          return recomputeRow(updatedRow);
+        }
+        return row;
+      });
     });
   };
 
+  // إضافة سطر جديد يتبع للشهر النشط
   const handleAddRow = () => {
-    setDataRows((prev) => [...prev, emptyRow()]);
+    const newEmptyRow: any = { id: Date.now().toString(), monthId: activeMonthId };
+    mainHeaders.forEach(h => newEmptyRow[h] = "");
+    dataColumnsOrder.forEach(h => newEmptyRow[h] = "");
+    setDataRows((prev) => [...prev, recomputeRow(newEmptyRow)]);
   };
 
-  const handleDeleteRow = (originalIndex: number) => {
+  // حذف سطر
+  const handleDeleteRow = (rowId: string) => {
     if (!window.confirm("هل تريد حذف هذا السطر؟")) return;
-    setDataRows((prev) => prev.filter((_, i) => i !== originalIndex));
+    setDataRows((prev) => prev.filter((row) => row.id !== rowId));
   };
 
-  const fmt = (val: any) => (typeof val === "number" ? val.toLocaleString("ar-YE") : val || "");
+  // --- حساب إجماليات الأشهر ---
+  const totals = useMemo(() => {
+    const previousMonthData = dataRows.filter(r => r.monthId === activeMonthId - 1);
+    const cumulativeData = dataRows.filter(r => r.monthId <= activeMonthId);
 
-  const EditableCell: React.FC<{ originalIndex: number; field: string; value: any }> = ({
-    originalIndex,
-    field,
-    value,
-  }) => (
-    <input
-      type="text"
-      defaultValue={value === "" || value === undefined ? "" : String(value)}
-      key={`${originalIndex}-${field}-${value}`}
-      onBlur={(e) => updateCell(originalIndex, field, e.target.value)}
-      className="w-full bg-transparent focus:bg-amber-50 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 py-0.5 text-center text-xs"
-    />
-  );
+    // دالة مساعدة لجمع عمود محدد من مجموعة بيانات
+    const getSum = (data: any[], col: string) => data.reduce((acc, row) => acc + (Number(row[col]) || 0), 0);
 
-  const FormulaCell: React.FC<{ value: any; color?: string }> = ({ value, color }) => (
-    <div className={`font-bold text-center text-xs`} style={{ color: '#333' }}>
-      {fmt(value)}
+    return {
+      current: (col: string) => getSum(currentMonthRows, col),
+      previous: (col: string) => getSum(previousMonthData, col),
+      cumulative: (col: string) => getSum(cumulativeData, col)
+    };
+  }, [dataRows, activeMonthId, currentMonthRows]);
+
+
+  // --- مكون الخلية القابلة للتحرير المخصص ---
+  const EditableCell: React.FC<{ rowId: string; field: string; value: any }> = ({ rowId, field, value }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [localVal, setLocalVal] = useState(value);
+
+    // تحديث القيمة المحلية عند تغير الخصائص الخارجية
+    useEffect(() => setLocalVal(value), [value]);
+
+    const isDate = field === "التاريخ";
+
+    // إذا كان المستخدم يحرر، نظهر القيمة الأصلية. وإلا ننسقها.
+    const displayValue = isEditing 
+        ? localVal 
+        : isDate 
+            ? localVal 
+            : formatNumberEn(localVal);
+
+    return (
+      <input
+        type={isDate ? "date" : "text"}
+        value={displayValue || ""}
+        onFocus={() => setIsEditing(true)}
+        onBlur={() => {
+          setIsEditing(false);
+          updateCell(rowId, field, localVal);
+        }}
+        onChange={(e) => setLocalVal(e.target.value)}
+        // نستخدم ltr للأرقام لتظهر بالإنجليزية بشكل صحيح
+        dir={isDate || !isNaN(Number(localVal)) ? "ltr" : "rtl"}
+        className="w-full h-full min-w-[70px] bg-transparent focus:bg-amber-50 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 text-center text-[12px] text-slate-800"
+      />
+    );
+  };
+
+  // مكون لعرض المعادلات بشكل جميل (فقط للقراءة)
+  const FormulaCell: React.FC<{ value: any }> = ({ value }) => (
+    <div className="font-bold text-center text-[12px] text-slate-800" dir="ltr">
+      {formatNumberEn(value)}
     </div>
   );
 
   return (
     <div className="space-y-4 font-tajawal text-slate-800 p-2" dir="rtl">
       
-      {/* شريط الأدوات العلوي */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-        <div className="flex items-center gap-2">
-            <FileSpreadsheet className="w-5 h-5 text-blue-800" />
-            <h2 className="text-base font-bold text-blue-900">سجل مفردات الاستخدامات والنفقات العامة</h2>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={handleAddRow} className="flex items-center gap-1 bg-blue-700 hover:bg-blue-800 text-white text-xs px-3 py-1.5 rounded">
+      {/* الترويسة وشريط التبويبات */}
+      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-blue-800" />
+              <h2 className="text-base font-bold text-blue-900">سجل مفردات الاستخدامات والنفقات العامة</h2>
+          </div>
+          <button onClick={handleAddRow} className="flex items-center gap-1 bg-blue-700 hover:bg-blue-800 text-white text-xs px-4 py-2 rounded shadow-sm">
             <Plus className="w-4 h-4" /> إضافة سطر
           </button>
         </div>
+
+        {/* أزرار الأشهر (Tabs) */}
+        <div className="flex flex-wrap gap-1 border-t border-slate-200 pt-3">
+            {MONTHS.map(month => (
+                <button
+                    key={month.id}
+                    onClick={() => setActiveMonthId(month.id)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-t-md transition-colors border-b-2 ${
+                        activeMonthId === month.id 
+                            ? "bg-blue-100 text-blue-800 border-blue-600" 
+                            : "bg-transparent text-slate-500 border-transparent hover:bg-slate-200"
+                    }`}
+                >
+                    {month.name}
+                </button>
+            ))}
+        </div>
       </div>
 
-      {/* حاوية الجدول الأفقي */}
-      <div className="w-full overflow-x-auto border border-slate-300 shadow-sm bg-white" style={{ maxHeight: '75vh' }}>
+      {/* حاوية الجدول */}
+      <div className="w-full overflow-x-auto border border-slate-300 shadow-sm bg-white rounded-b-lg" style={{ maxHeight: '70vh' }}>
         <table className="w-full text-center border-collapse text-[11px] whitespace-nowrap">
-          <thead className="sticky top-0 z-10 bg-white">
-            
-            {/* الصف الأول من الترويسة (الأبواب والإجمالي) */}
+          {/* رأس الجدول (نفس التصميم السابق) */}
+          <thead className="sticky top-0 z-20 bg-white shadow-sm">
             <tr className="border-b border-slate-300">
               <th colSpan={4} className="border border-slate-300 p-1 bg-slate-100">البيانات الأساسية</th>
               <th rowSpan={4} className="border border-slate-300 p-1 font-bold shadow-inner" style={{ backgroundColor: COLORS.TOTAL_ALL }}>
@@ -205,27 +228,22 @@ const AppTabs: React.FC = () => {
               </th>
               <th rowSpan={4} className="border border-slate-300 p-1 bg-slate-100">إجراء</th>
             </tr>
-
-            {/* الصف الثاني من الترويسة (الفصول) */}
             <tr className="border-b border-slate-300">
-              <th rowSpan={3} className="border border-slate-300 p-1">رقم الاستمارة</th>
-              <th rowSpan={3} className="border border-slate-300 p-1">كشف التسوية</th>
-              <th rowSpan={3} className="border border-slate-300 p-1">التاريخ</th>
-              <th rowSpan={3} className="border border-slate-300 p-1 min-w-[150px]">البيان</th>
+              <th rowSpan={3} className="border border-slate-300 p-1 min-w-[70px]">رقم الاستمارة</th>
+              <th rowSpan={3} className="border border-slate-300 p-1 min-w-[70px]">كشف التسوية</th>
+              <th rowSpan={3} className="border border-slate-300 p-1 min-w-[120px]">
+                  <div className="flex items-center justify-center gap-1"><CalendarDays className="w-3 h-3"/> التاريخ</div>
+              </th>
+              <th rowSpan={3} className="border border-slate-300 p-1 min-w-[200px]">البيان</th>
               
-              {/* فصول الباب الأول */}
               <th colSpan={11} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.FASL }}>الفصل الاول</th>
               <th colSpan={2} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.FASL }}>الفصل الثاني</th>
               
-              {/* فصول الباب الثاني */}
               <th colSpan={15} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.FASL }}>الفصل الاول</th>
               <th colSpan={6} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.FASL }}>الفصل الثاني</th>
               
-              {/* الباب الرابع ليس له فصول، ندمج للأسفل */}
               <th rowSpan={3} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.BAB_TOTAL }}>
-                <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto h-16">
-                  الإجمالي
-                </div>
+                <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto h-16">الإجمالي</div>
               </th>
               <th rowSpan={3} className="border border-slate-300 p-1 bg-white">مركز صحي قحزة</th>
               <th rowSpan={3} className="border border-slate-300 p-1 bg-white">وحدة الغسيل الكلوي</th>
@@ -234,10 +252,7 @@ const AppTabs: React.FC = () => {
               <th rowSpan={3} className="border border-slate-300 p-1 bg-white">مركز صحي</th>
               <th rowSpan={3} className="border border-slate-300 p-1 bg-white">الامانات</th>
             </tr>
-
-            {/* الصف الثالث (البنود) - يطبق فقط على الباب الأول والثاني */}
             <tr className="border-b border-slate-300">
-                {/* إجمالي الباب الأول (العمود الخاص بالمجموع) */}
                 <th rowSpan={2} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.BAB_TOTAL }}>
                     <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto h-16">الإجمالي</div>
                 </th>
@@ -252,8 +267,6 @@ const AppTabs: React.FC = () => {
                 </th>
                 <th rowSpan={2} className="border border-slate-300 p-1 bg-white">ح/حكومة</th>
                 <th rowSpan={2} className="border border-slate-300 p-1 bg-white">اصابة عمل</th>
-
-                {/* إجمالي الباب الثاني (العمود الخاص بالمجموع) */}
                 <th rowSpan={2} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.BAB_TOTAL }}>
                     <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }} className="mx-auto h-16">الإجمالي</div>
                 </th>
@@ -282,8 +295,6 @@ const AppTabs: React.FC = () => {
                 <th rowSpan={2} className="border border-slate-300 p-1 bg-white">قطع غيار نقل</th>
                 <th rowSpan={2} className="border border-slate-300 p-1 bg-white">قطع غيار معدات</th>
             </tr>
-
-            {/* الصف الرابع (التفاصيل الدقيقة للبنود) */}
             <tr className="border-b border-slate-300 bg-white">
                 <th className="border border-slate-300 p-1">اساسية</th>
                 <th className="border border-slate-300 p-1">تعاقدية</th>
@@ -296,80 +307,81 @@ const AppTabs: React.FC = () => {
             </tr>
           </thead>
 
+          {/* محتوى الجدول */}
           <tbody>
-            {dataRows.map((row, index) => (
-              <tr key={index} className="hover:bg-slate-50 transition-colors border-b border-slate-200">
-                {/* الأساسية */}
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="رقم الاستمارة" value={row["رقم الاستمارة"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="كشف التسوية" value={row["كشف التسوية"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="التاريخ" value={row["التاريخ"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="البيان" value={row["البيان"]} /></td>
+            {currentMonthRows.map((row) => (
+              <tr key={row.id} className="hover:bg-slate-50 transition-colors border-b border-slate-200">
+                {/* الأعمدة الأساسية */}
+                {mainHeaders.map(header => (
+                  <td key={header} className="border border-slate-200 p-0">
+                    <EditableCell rowId={row.id} field={header} value={row[header]} />
+                  </td>
+                ))}
                 
-                {/* اجمالي عام */}
-                <td className="border border-slate-200 p-1" style={{ backgroundColor: COLORS.TOTAL_ALL }}><FormulaCell value={row["اجمالي عام الاستخدامات"]} /></td>
-                
-                {/* الباب الأول */}
-                <td className="border border-slate-200 p-1" style={{ backgroundColor: COLORS.BAB_TOTAL }}><FormulaCell value={row["اجمالي الباب الاول"]} /></td>
-                <td className="border border-slate-200 p-1" style={{ backgroundColor: COLORS.FASL }}><FormulaCell value={row["الفصل الاول_باب1"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="المرتبات الاساسية" value={row["المرتبات الاساسية"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="اجور تعاقدية" value={row["اجور تعاقدية"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="اجور عمل اضافي" value={row["اجور عمل اضافي"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="مكافات" value={row["مكافات"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="طبيعة عمل" value={row["طبيعة عمل"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="بدل ريف" value={row["بدل ريف"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="بدل سكن" value={row["بدل سكن"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="بدل تحديث" value={row["بدل تحديث"]} /></td>
-                <td className="border border-slate-200 p-1" style={{ backgroundColor: COLORS.FASL }}><FormulaCell value={row["الفصل الثاني_باب1"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="ح/حكومة" value={row["ح/حكومة"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="اصابة عمل" value={row["اصابة عمل"]} /></td>
+                {/* الأعمدة المالية (مدخلات + معادلات) */}
+                {dataColumnsOrder.map(col => {
+                  const isFormula = col.includes("اجمالي") || col.includes("الفصل");
+                  return (
+                    <td key={col} className={`border border-slate-200 p-0 ${isFormula ? 'bg-slate-50/50' : ''}`}
+                        style={{ backgroundColor: col === "اجمالي عام الاستخدامات" ? COLORS.TOTAL_ALL : (col.includes("اجمالي الباب") ? COLORS.BAB_TOTAL : (col.includes("الفصل") ? COLORS.FASL : undefined)) }}
+                    >
+                      {isFormula ? <FormulaCell value={row[col]} /> : <EditableCell rowId={row.id} field={col} value={row[col]} />}
+                    </td>
+                  );
+                })}
 
-                {/* الباب الثاني */}
-                <td className="border border-slate-200 p-1" style={{ backgroundColor: COLORS.BAB_TOTAL }}><FormulaCell value={row["اجمالي الباب الثاني"]} /></td>
-                <td className="border border-slate-200 p-1" style={{ backgroundColor: COLORS.FASL }}><FormulaCell value={row["الفصل الاول_باب2"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="مياه" value={row["مياه"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="انارة" value={row["انارة"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="ادوات كتابية" value={row["ادوات كتابية"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="نشر واعلان" value={row["نشر واعلان"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="اتصالات" value={row["اتصالات"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="مؤتمرات واحتفالات" value={row["مؤتمرات واحتفالات"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="نفقات النظافة" value={row["نفقات النظافة"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="اخرى" value={row["اخرى"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="نقل مهام" value={row["نقل مهام"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="انتقالات داخلية" value={row["انتقالات داخلية"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="ايجار مباني" value={row["ايجار مباني"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="ادوية ومستلزمات طبية" value={row["ادوية ومستلزمات طبية"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="اغذية وملبوسات" value={row["اغذية وملبوسات"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="اخرى_2" value={row["اخرى_2"]} /></td>
-                <td className="border border-slate-200 p-1" style={{ backgroundColor: COLORS.FASL }}><FormulaCell value={row["الفصل الثاني_باب2"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="صيانة مباني" value={row["صيانة مباني"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="وقود وزيوت" value={row["وقود وزيوت"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="قطع غيار وصيانة وسائل النقل" value={row["قطع غيار وصيانة وسائل النقل"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="قطع غيار وصيانة الالات والمعدات والاثاث" value={row["قطع غيار وصيانة الالات والمعدات والاثاث"]} /></td>
-
-                {/* الباب الرابع */}
-                <td className="border border-slate-200 p-1" style={{ backgroundColor: COLORS.BAB_TOTAL }}><FormulaCell value={row["اجمالي الباب الرابع"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="مركز صحي قحزة" value={row["مركز صحي قحزة"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="وحدة الغسيل الكلوي" value={row["وحدة الغسيل الكلوي"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="مشروع دعم الكلى" value={row["مشروع دعم الكلى"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="الصالة والمطبخ" value={row["الصالة والمطبخ"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="مركز صحي" value={row["مركز صحي"]} /></td>
-                <td className="border border-slate-200 p-0"><EditableCell originalIndex={index} field="الامانات" value={row["الامانات"]} /></td>
-
-                <td className="border border-slate-200 p-1 text-center">
-                  <button onClick={() => handleDeleteRow(index)} className="text-red-500 hover:text-red-700">
+                <td className="border border-slate-200 p-1 text-center bg-white">
+                  <button onClick={() => handleDeleteRow(row.id)} className="text-red-500 hover:text-red-700">
                     <Trash2 className="w-4 h-4 mx-auto" />
                   </button>
                 </td>
               </tr>
             ))}
-            {dataRows.length === 0 && (
+            {currentMonthRows.length === 0 && (
               <tr>
-                <td colSpan={45} className="p-8 text-slate-400 text-center">
-                  الجدول فارغ. اضغط على "إضافة سطر" للبدء.
+                <td colSpan={47} className="p-12 text-slate-400 text-center text-sm font-medium">
+                  لا توجد سجلات لشهر {MONTHS.find(m => m.id === activeMonthId)?.name}. اضغط على "إضافة سطر" للبدء.
                 </td>
               </tr>
             )}
           </tbody>
+
+          {/* تذييل الجدول: المجاميع (يظهر بشكل ثابت أسفل الجدول) */}
+          <tfoot className="sticky bottom-0 z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] text-[12px]">
+            {/* إجمالي الشهر السابق */}
+            <tr className="bg-slate-200 border-b border-slate-300">
+              <td colSpan={4} className="border border-slate-300 p-2 font-bold text-slate-700 text-right pr-4">إجمالي الشهر السابق ({activeMonthId > 1 ? MONTHS[activeMonthId-2].name : 'لا يوجد'})</td>
+              {dataColumnsOrder.map(col => (
+                <td key={`prev-${col}`} className="border border-slate-300 p-1 text-slate-700 font-semibold" dir="ltr">
+                  {totals.previous(col) > 0 ? formatNumberEn(totals.previous(col)) : "-"}
+                </td>
+              ))}
+              <td className="border border-slate-300 bg-slate-200"></td>
+            </tr>
+            
+            {/* إجمالي الشهر الحالي */}
+            <tr className="bg-blue-100 border-b border-blue-200">
+              <td colSpan={4} className="border border-blue-300 p-2 font-bold text-blue-900 text-right pr-4">إجمالي الشهر الحالي ({MONTHS.find(m => m.id === activeMonthId)?.name})</td>
+              {dataColumnsOrder.map(col => (
+                <td key={`curr-${col}`} className="border border-blue-300 p-1 text-blue-900 font-bold" dir="ltr">
+                  {totals.current(col) > 0 ? formatNumberEn(totals.current(col)) : "-"}
+                </td>
+              ))}
+              <td className="border border-blue-300 bg-blue-100"></td>
+            </tr>
+
+            {/* الإجمالي العام التراكمي */}
+            <tr className="bg-[#0b3d6d] text-white">
+              <td colSpan={4} className="border border-white/20 p-2 font-bold text-right pr-4">الإجمالي العام (حتى شهر {MONTHS.find(m => m.id === activeMonthId)?.name})</td>
+              {dataColumnsOrder.map(col => (
+                <td key={`cum-${col}`} className="border border-white/20 p-1 font-bold text-amber-300" dir="ltr">
+                  {totals.cumulative(col) > 0 ? formatNumberEn(totals.cumulative(col)) : "-"}
+                </td>
+              ))}
+              <td className="border border-white/20"></td>
+            </tr>
+          </tfoot>
+
         </table>
       </div>
     </div>
