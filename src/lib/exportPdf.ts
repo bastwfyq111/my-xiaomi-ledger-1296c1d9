@@ -255,11 +255,7 @@ export function monthlyStatementPdf(opts: {
     .meta { text-align:center; font-size:11px; color:#475569; }
     .period { font-weight:700; color:#0f172a; margin: 4px 0 8px; }
     table { width:100%; border-collapse: collapse; font-size:10px; table-layout:fixed; }
-    th, td { border:1px solid #475569; padding:3px 4px; text-align:center;
-    white-space: normal;      /* السماح بالالتفاف */  
-    word-break: break-word;  
-    overflow-wrap: anywhere;
-    }
+    th, td { border:1px solid #475569; padding:3px 4px; text-align:center; word-wrap:break-word; }
     thead th { background:#0f766e; color:white; font-weight:700; }
     td.acc { text-align:right; font-weight:600; }
     tr.grp td { background:#fef3c7; color:#0f766e; font-weight:800; text-align:right; }
