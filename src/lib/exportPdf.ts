@@ -21,7 +21,7 @@ export function exportToPdf(opts: {
     body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#0f172a; }
     h1 { text-align:center; font-size:18px; margin: 0 0 12px; }
     table { width:100%; border-collapse: collapse; font-size:${fontSize}px; table-layout: fixed; }
-    th, td { border:1px solid #94a3b8; padding:4px 5px; text-align:center; word-wrap:break-word; overflow-wrap:anywhere; }
+    th, td { border:1px solid #94a3b8; padding:4px 5px; text-align:center; word-wrap:normal; overflow-wrap:anywhere; }
     thead { background:#0f766e; color:white; }
     tr:nth-child(even) td { background:#f1f5f9; }
     .meta { font-size:11px; color:#475569; margin-bottom:8px; text-align:center; }
