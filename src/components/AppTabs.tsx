@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";  
+import React, { useEffect, useState, useRef, useCallback } from "react";  
 import {  
   FileSpreadsheet, Plus, Trash2, Upload, Download, FileText, Printer, Eraser,  
 } from "lucide-react";  
@@ -9,7 +9,6 @@ const mainHeaders = ["رقم الاستمارة", "كشف التسوية", "ال
 const STORAGE_KEY = "app-tabs-usages-v1";  
   
 const COLORS = { TOTAL_ALL: "#E5DFEC", BAB_TOTAL: "#DBEEF3", FASL: "#FDE9D9", BAND: "#C6D9F0" };  
-// نفس الألوان بصيغة ARGB لمكتبة exceljs (بدون #، مع بادئة FF للعتامة الكاملة)  
 const ARGB = { TOTAL_ALL: "FFE5DFEC", BAB_TOTAL: "FFDBEEF3", FASL: "FFFDE9D9", BAND: "FFC6D9F0",  
   DARK: "FF0B3D6D", GOLD: "FFFFD54A", CUR: "FFDBEAFE", PREV: "FFE2E8F0" };  
   
@@ -30,15 +29,10 @@ const dataColumnsOrder = [
 ];  
   
 const allCols = [...mainHeaders, ...dataColumnsOrder];  
-const TOTAL_COLS = allCols.length + 1; // = 47 (مع عمود الإجراء)  
+const TOTAL_COLS = allCols.length + 1; 
   
 const isFormulaCol = (col: string) => col.includes("اجمالي") || col.includes("الفصل");  
   
-// لون خلفية العمود (واجهة + تصدير)  
-const colHex = (col: string) =>  
-  col === "اجمالي عام الاستخدامات" ? COLORS.TOTAL_ALL  
-  : col.includes("اجمالي الباب") ? COLORS.BAB_TOTAL  
-  : col.includes("الفصل") ? COLORS.FASL : undefined;  
 const colArgb = (col: string) =>  
   col === "اجمالي عام الاستخدامات" ? ARGB.TOTAL_ALL  
   : col.includes("اجمالي الباب") ? ARGB.BAB_TOTAL  
@@ -50,7 +44,6 @@ const MONTHS = [
   { id: 9, name: "سبتمبر" }, { id: 10, name: "أكتوبر" }, { id: 11, name: "نوفمبر" }, { id: 12, name: "ديسمبر" },  
 ];  
   
-// تطبيع النص: إزالة الفراغات الزائدة (يحل مشكلة فراغ الخلايا عند الاستيراد)  
 const norm = (s: any) => String(s ?? "").replace(/\s+/g, " ").trim();  
   
 const formatNumberEn = (val: any) => {  
@@ -86,7 +79,6 @@ const recomputeRow = (row: any) => {
   return newRow;  
 };  
   
-// --- خلية قابلة للتحرير (خارج المكوّن الرئيسي لتفادي فقدان التركيز) ---  
 const EditableCell: React.FC<{  
   rowId: string; field: string; value: any;  
   onCommit: (rowId: string, field: string, value: string) => void;  
@@ -111,7 +103,6 @@ const FormulaCell: React.FC<{ value: any }> = React.memo(({ value }) => (
 ));  
 FormulaCell.displayName = "FormulaCell";  
   
-// ====== ترويسة الجدول متعددة المستويات (تُعاد نفسها في الواجهة والطباعة) ======  
 const THEAD_HTML = `  
 <tr>  
   <th rowspan="4">رقم الاستمارة</th><th rowspan="4">كشف التسوية</th>  
@@ -178,7 +169,6 @@ const AppTabs: React.FC = () => {
     return recomputeRow(r);  
   };  
   
-  // زرع صفّين فارغين لكل شهر لا يحتوي على بيانات (عند الإقلاع)  
   useEffect(() => {  
     setDataRows((prev) => {  
       const counts: Record<number, number> = {};  
@@ -187,7 +177,7 @@ const AppTabs: React.FC = () => {
       MONTHS.forEach((m) => { if (!counts[m.id]) additions.push(makeEmptyRow(m.id), makeEmptyRow(m.id)); });  
       return additions.length ? [...prev, ...additions] : prev;  
     });  
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps  
+  }, []); 
   
   const updateCell = useCallback((rowId: string, key: string, rawValue: string) => {  
     setDataRows((prev) =>  
@@ -209,7 +199,6 @@ const AppTabs: React.FC = () => {
     setDataRows(fresh);  
   };  
   
-  // --- إجماليات الشهر بالترتيب المطلوب ---  
   const sumOf = (rows: any[], col: string) =>  
     rows.reduce((acc, row) => acc + (Number(row[col]) || 0), 0);  
   
@@ -224,7 +213,6 @@ const AppTabs: React.FC = () => {
     };  
   };  
   
-  // ================= استيراد Excel (من الورقة المسطّحة) =================  
   const handleImportClick = () => fileInputRef.current?.click();  
   
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {  
@@ -235,13 +223,11 @@ const AppTabs: React.FC = () => {
       try {  
         const data = new Uint8Array(ev.target?.result as ArrayBuffer);  
         const wb = XLSX.read(data, { type: "array" });  
-        // نبحث عن ورقة "بيانات" المسطّحة، وإلا نأخذ أول ورقة  
         const wsName = wb.SheetNames.includes("بيانات") ? "بيانات" : wb.SheetNames[0];  
         const ws = wb.Sheets[wsName];  
         const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });  
   
         const imported = json.map((r) => {  
-          // فهرس مطبّع لرؤوس ملف Excel  
           const lookup: Record<string, any> = {};  
           Object.keys(r).forEach((k) => (lookup[norm(k)] = r[k]));  
           const row: any = {  
@@ -250,7 +236,6 @@ const AppTabs: React.FC = () => {
           };  
           allCols.forEach((c) => {  
             const v = lookup[norm(c)];  
-            // تحويل الأرقام النصية إلى أرقام حتى تُجمع  
             row[c] = v === "" || v === undefined || v === null  
               ? ""  
               : isNaN(Number(v)) ? v : Number(v);  
@@ -258,7 +243,6 @@ const AppTabs: React.FC = () => {
           return recomputeRow(row);  
         });  
   
-        // نستبدل بيانات الأشهر الموجودة في الملف المستورد فقط  
         const importedMonths = new Set(imported.map((r) => r.monthId));  
         setDataRows((prev) => [  
           ...prev.filter((r) => !importedMonths.has(r.monthId)),  
@@ -274,7 +258,6 @@ const AppTabs: React.FC = () => {
     reader.readAsArrayBuffer(file);  
   };  
   
-  // ================= تصدير Excel ملوّن (exceljs) + ورقة مسطّحة =================  
   const border = {  
     top: { style: "thin" as const, color: { argb: "FF94A3B8" } },  
     left: { style: "thin" as const, color: { argb: "FF94A3B8" } },  
@@ -284,18 +267,14 @@ const AppTabs: React.FC = () => {
   
   const handleExportExcel = async () => {  
     const wb = new ExcelJS.Workbook();  
-  
-    // ---------- ورقة العرض المنسّقة بالألوان ----------  
     const disp = wb.addWorksheet("عرض", { views: [{ rightToLeft: true }] });  
   
-    // عنوان  
     disp.mergeCells(1, 1, 1, allCols.length);  
     const title = disp.getCell(1, 1);  
     title.value = "سجل مفردات الاستخدامات والنفقات العامة";  
     title.font = { bold: true, size: 14, color: { argb: ARGB.DARK } };  
     title.alignment = { horizontal: "center", vertical: "middle" };  
   
-    // رؤوس الأعمدة (ملوّنة حسب المجموعة)  
     const hdr = disp.getRow(2);  
     allCols.forEach((c, i) => {  
       const cell = hdr.getCell(i + 1);  
@@ -314,7 +293,6 @@ const AppTabs: React.FC = () => {
       const rows = rowsOfMonth(m.id);  
       const t = monthTotals(m.id);  
   
-      // فاصل الشهر  
       disp.mergeCells(r, 1, r, allCols.length);  
       const mc = disp.getCell(r, 1);  
       mc.value = `شهر ${m.name}`;  
@@ -323,7 +301,6 @@ const AppTabs: React.FC = () => {
       mc.alignment = { horizontal: "right" };  
       r++;  
   
-      // صفوف البيانات  
       rows.forEach((row) => {  
         allCols.forEach((c, i) => {  
           const cell = disp.getCell(r, i + 1);  
@@ -338,7 +315,6 @@ const AppTabs: React.FC = () => {
         r++;  
       });  
   
-      // 1) إجمالي الشهر الحالي  
       const rowCur = (label: string, getter: (c: string) => number, fillArgb: string, fontArgb: string) => {  
         disp.mergeCells(r, 1, r, 4);  
         const lc = disp.getCell(r, 1);  
@@ -361,7 +337,6 @@ const AppTabs: React.FC = () => {
       rowCur(`الإجمالي العام (حتى ${m.name})`, t.cumulative, ARGB.DARK, ARGB.GOLD);  
     });  
   
-    // ---------- ورقة مسطّحة للاستيراد ----------  
     const flat = wb.addWorksheet("بيانات");  
     flat.addRow(["monthId", ...allCols]);  
     MONTHS.forEach((m) =>  
@@ -378,7 +353,6 @@ const AppTabs: React.FC = () => {
     URL.revokeObjectURL(url);  
   };  
   
-  // ================= بناء HTML لكل الأشهر (طباعة + PDF) =================  
   const buildAllMonthsHtml = () => {  
     const numCell = (v: number) => (v > 0 ? formatNumberEn(v) : "-");  
     let body = "";  
@@ -442,13 +416,11 @@ const AppTabs: React.FC = () => {
   };  
   
   const handlePdf = () => {  
-    // نفس نافذة الطباعة؛ يختار المستخدم "حفظ كـ PDF" من وجهة الطباعة  
     handlePrint();  
   };  
   
   return (  
     <div className="space-y-4 font-tajawal text-slate-800 p-2" dir="rtl">  
-      {/* الترويسة وأزرار الأدوات */}  
       <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 shadow-sm space-y-4">  
         <div className="flex flex-wrap items-center justify-between gap-3">  
           <div className="flex items-center gap-2">  
@@ -484,30 +456,101 @@ const AppTabs: React.FC = () => {
         </div>  
       </div>  
   
-      {/* حاوية الجدول */}  
       <div className="w-full overflow-x-auto border border-slate-300 shadow-sm bg-white rounded-b-lg" style={{ maxHeight: "70vh" }}>  
         <table className="w-full text-center border-collapse text-[11px] whitespace-nowrap">  
-          <thead className="sticky top-0 z-10 bg-white">  
-            {/* الصف الأول */}  
-            <tr className="border-b border-slate-300">  
-              <th rowSpan={4} className="border border-slate-300 p-1 bg-white">رقم الاستمارة</th>  
-              <th rowSpan={4} className="border border-slate-300 p-1 bg-white">كشف التسوية</th>  
-              <th rowSpan={4} className="border border-slate-300 p-1 bg-white">التاريخ</th>  
-              <th rowSpan={4} className="border border-slate-300 p-1 bg-white">البيان</th>  
-              <th rowSpan={4} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.TOTAL_ALL }}>  
-                <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }} className="mx-auto h-20">اجمالي عام الاستخدامات</div>  
-              </th>  
-              <th colSpan={13} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.BAB_TOTAL }}>اجمالي الباب الاول</th>  
-              <th colSpan={21} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.BAB_TOTAL }}>اجمالي الباب الثاني</th>  
-              <th colSpan={7} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.BAB_TOTAL }}>اجمالي الباب الرابع</th>  
-              <th rowSpan={4} className="border border-slate-300 p-1 bg-white">إجراء</th>  
-            </tr>  
-            {/* الصف الثاني */}  
-            <tr className="border-b border-slate-300">  
-              <th rowSpan={3} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.BAB_TOTAL }}>  
-                <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }} className="mx-auto h-16">الإجمالي</div>  
-              </th>  
-              <th colSpan={10} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.FASL }}>الفصل الاول</th>  
-              <th colSpan={2} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.FASL }}>الفصل الثاني</th>  
-              <th rowSpan={3} className="border border-slate-300 p-1" style={{ backgroundColor: COLORS.BAB_TOTAL }}>  
-                <div style={{ writingMode: "vertical-rl", transform: "
+          <thead className="sticky top-0 z-10 bg-white" dangerouslySetInnerHTML={{ __html: THEAD_HTML }}>  
+          </thead>  
+          
+          {/* تم استكمال بناء جسم الجدول هنا */}
+          <tbody>
+            {MONTHS.map((m) => {
+              const rows = rowsOfMonth(m.id);
+              const t = monthTotals(m.id);
+
+              return (
+                <React.Fragment key={m.id}>
+                  {/* شريط الشهر */}
+                  <tr className="bg-blue-900 text-yellow-400 font-bold">
+                    <td colSpan={TOTAL_COLS} className="text-right p-2 border border-slate-300">
+                      شهر {m.name}
+                      <button 
+                        onClick={() => handleAddRow(m.id)} 
+                        className="mr-4 bg-blue-700 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs inline-flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> إضافة سطر
+                      </button>
+                    </td>
+                  </tr>
+
+                  {/* صفوف البيانات الخاصة بالشهر */}
+                  {rows.map((row) => (
+                    <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                      {mainHeaders.map((col) => (
+                        <td key={col} className="border border-slate-300 p-0.5 bg-white">
+                          <EditableCell rowId={row.id} field={col} value={row[col]} onCommit={updateCell} />
+                        </td>
+                      ))}
+                      {dataColumnsOrder.map((col) => {
+                        const isFormula = isFormulaCol(col);
+                        return (
+                          <td key={col} className={`border border-slate-300 p-0.5 ${isFormula ? "bg-slate-100" : "bg-white"}`}>
+                            {isFormula ? (
+                              <FormulaCell value={row[col]} />
+                            ) : (
+                              <EditableCell rowId={row.id} field={col} value={row[col]} onCommit={updateCell} />
+                            )}
+                          </td>
+                        );
+                      })}
+                      {/* زر الحذف */}
+                      <td className="border border-slate-300 p-1 bg-white">
+                        <button onClick={() => handleDeleteRow(row.id)} className="text-red-500 hover:text-red-700">
+                          <Trash2 className="w-4 h-4 mx-auto" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {/* صف الإجمالي للشهر الحالي */}
+                  <tr className="bg-blue-100 text-blue-900 font-bold">
+                    <td colSpan={4} className="border border-slate-300 p-1.5 text-right">إجمالي شهر {m.name}</td>
+                    {dataColumnsOrder.map((c) => (
+                      <td key={c} className="border border-slate-300 p-1.5">
+                        <FormulaCell value={t.current(c)} />
+                      </td>
+                    ))}
+                    <td className="border border-slate-300 bg-white"></td>
+                  </tr>
+
+                  {/* صف إجمالي الأشهر السابقة */}
+                  <tr className="bg-slate-200 text-slate-700 font-bold">
+                    <td colSpan={4} className="border border-slate-300 p-1.5 text-right">إجمالي الأشهر السابقة (قبل {m.name})</td>
+                    {dataColumnsOrder.map((c) => (
+                      <td key={c} className="border border-slate-300 p-1.5">
+                        <FormulaCell value={t.before(c)} />
+                      </td>
+                    ))}
+                    <td className="border border-slate-300 bg-white"></td>
+                  </tr>
+
+                  {/* صف الإجمالي العام التراكمي */}
+                  <tr className="bg-blue-900 text-yellow-400 font-bold">
+                    <td colSpan={4} className="border border-slate-300 p-1.5 text-right">الإجمالي العام (حتى {m.name})</td>
+                    {dataColumnsOrder.map((c) => (
+                      <td key={c} className="border border-slate-300 p-1.5">
+                        {formatNumberEn(t.cumulative(c)) || "-"}
+                      </td>
+                    ))}
+                    <td className="border border-slate-300 bg-white"></td>
+                  </tr>
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default AppTabs;
