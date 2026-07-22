@@ -3,7 +3,6 @@ import {
   FileSpreadsheet, Plus, Trash2, Upload, Download, FileText, Printer, Eraser,  
 } from "lucide-react";  
 import * as XLSX from "xlsx";  
-import ExcelJS from "exceljs";  
   
 const mainHeaders = ["رقم الاستمارة", "كشف التسوية", "التاريخ", "البيان"];  
 const STORAGE_KEY = "app-tabs-usages-v1";  
