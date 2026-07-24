@@ -548,12 +548,12 @@ export default function InstallmentsTab() {
             @page { size: A3 landscape; margin: 10mm; }
             * { box-sizing: border-box; }
             body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 20px; background: white; }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #1e40af; padding-bottom: 15px; }
-            .header h1 { color: #1e40af; margin: 0; font-size: 24px; }
-            .header p { color: #64748b; margin: 5px 0 0; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; font-size: 10px; }
-            th { background: #1e40af; color: white; padding: 8px 4px; border: 1px solid #1e3a8a; font-weight: bold; text-align: center; }
-            td { padding: 6px 4px; border: 1px solid #e2e8f0; text-align: center; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+            .header h1 { color: #000; margin: 0; font-size: 24px; }
+            .header p { color: #000; margin: 5px 0 0; font-size: 18px; }
+            table { width: 100%; border-collapse: collapse; font-size: 18px; }
+            th { background: #28white; color:black; padding: 8px 4px; border: 2px solid #000; font-weight: bold; text-align: center; }
+            td { padding: 6px 4px; border: 2px solid #000; text-align: center; }
             tr:nth-child(even) { background: #f8fafc; }
             .footer { margin-top: 20px; text-align: left; font-size: 12px; color: #64748b; }
             @media print { body { padding: 0; } }
