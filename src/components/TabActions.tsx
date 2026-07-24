@@ -45,20 +45,20 @@ export default function TabActions({
       <style>
         @page { size: A4 landscape; margin: 10mm; }
         * { box-sizing: border-box; }
-        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 16px; color: #0f172a; direction: rtl; }
-        h1 { text-align: center; color: #10528e; margin: 0 0 6px; font-size: 22px; }
-        .sub { text-align: center; color: #64748b; margin-bottom: 14px; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 16px; color: #000; direction: rtl; }
+        h1 { text-align: center; color: #000; margin: 0 0 6px; font-size: 22px; }
+        .sub { text-align: center; color: #64748b; margin-bottom: 14px; font-size: 18px; }
+        table { width: 100%; border-collapse: collapse; font-size: 18px; }
         th, td { 
-          border: 1px solid #cbd5e1; 
+          border: 1px solid #0001; 
           padding: 6px 8px; 
-          text-align: right; 
+          text-align: center; 
           white-space: nowrap; 
         }
-        thead th { background: #10528e; color: #fff; font-weight: 700; }
-        tbody tr:nth-child(even) { background: #f1f5f9; }
+        thead th { background: #10528e; color: #000; font-weight: 1000; }
+        tbody tr:nth-child(even) { f: #f1f5f9; }
         .num { font-family: 'Courier New', monospace; text-align: left; direction: ltr; }
-        .idx { width: 36px; text-align: center; color: #64748b; }
+        .idx { width: 36px; text-align: center; color: #000; }
       </style>
     `;
 
