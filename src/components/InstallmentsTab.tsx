@@ -446,116 +446,161 @@ export default function InstallmentsTab() {
         data.push(totalRow);
       }
 
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-      
-      // تنسيق الأعمدة
-      ws["!cols"] = headers.map(() => ({ wch: 15 }));
-      
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, `أقساط ${year}`);
-      
-      XLSX.writeFile(wb, `اقساط-${year}-تفصيلي.xlsx`);
-      toast.success(`تم تصدير بيانات ${year} إلى Excel بنجاح`);
-    } catch (error) {
-      toast.error("فشل تصدير الملف");
-    }
-  };
-
+      // دالة مسؤولة عن إنشاء وتصدير تقرير الأقساط والمدفوعات بصيغة PDF
   const exportToPDF = (year: number) => {
     try {
+      // 1. تحديد البيانات المناسبة بناءً على السنة المحددة (2025 أو 2026)
       const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
       const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
       const extraCols = year === 2026 ? extraCols2026 : [];
+      
+      // جلب تاريخ اليوم لتضمينه في التقرير
       const date = new Date().toLocaleDateString("ar-SA");
       
+      // 2. دالة داخلية لتوليد صفوف المتدربين (HTML)
       const generateTableRows = () => {
         return rows.map((row: any, i: number) => {
+          // إذا كانت السنة 2025، نقوم بتوليد الأعمدة الخاصة بها
           if (year === 2025) {
             return `
               <tr>
-                <td>${i + 1}</td>
+                <!-- تطبيق لون عمود التسلسل -->
+                <td class="bg-index">${i + 1}</td>
                 <td>${row.name || ""}</td>
                 <td>${row.batch || ""}</td>
                 <td>${row.specialty || ""}</td>
                 <td>${fmt(row.fees)}</td>
+                <!-- جلب الدفعات لكل شهر، أو وضع علامة '-' إذا لم توجد -->
                 ${monthsList.map(m => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
                 <td>${fmt(row.totalPaid)}</td>
-                <td>${fmt(row.remaining)}</td>
+                <!-- تطبيق لون عمود المتبقي -->
+                <td class="bg-remaining">${fmt(row.remaining)}</td>
               </tr>
             `;
           } else {
+            // إذا كانت السنة 2026، نحسب حالة المتدرب (له أو عليه)
             const status = row.remaining <= 0 ? "له" : "عليه";
             const statusColor = row.remaining <= 0 ? "#059669" : "#e11d48";
+            
             return `
               <tr>
-                <td>${i + 1}</td>
+                <td class="bg-index">${i + 1}</td>
                 <td>${row.name || ""}</td>
                 <td>${row.batch || ""}</td>
                 <td>${row.specialty || ""}</td>
                 <td>${fmt(row.prevDue)}</td>
                 <td>${fmt(row.fees)}</td>
                 ${monthsList.map(m => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
+                <!-- توليد الأعمدة الإضافية المخصصة لعام 2026 -->
                 ${extraCols.map(col => {
                   if (col.type === "formula") return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
                   return `<td>${row.customData?.[col.name] || "—"}</td>`;
                 }).join("")}
                 <td>${fmt(row.totalPaid)}</td>
-                <td>${fmt(row.remaining)}</td>
+                <td class="bg-remaining">${fmt(row.remaining)}</td>
                 <td style="color: ${statusColor}; font-weight: bold;">${status}</td>
               </tr>
             `;
           }
-        }).join("");
+        }).join(""); // تحويل المصفوفة إلى نص HTML متصل
       };
 
+      // 3. دالة داخلية لتوليد صف الإجماليات في نهاية الجدول
       const generateTotalRow = () => {
         if (year === 2025) {
           return `
-            <tr style="background: #f1f5f9; font-weight: bold; border-top: 2px solid #64748b;">
-              <td colspan="4">الإجمالي</td>
+            <!-- تطبيق لون صف الإجمالي -->
+            <tr class="bg-total">
+              <td colspan="4" class="bg-index">الإجمالي</td>
               <td>${fmt(totals2025.fees)}</td>
               ${monthsList.map(m => `<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`).join("")}
               <td>${fmt(totals2025.paid)}</td>
-              <td>${fmt(totals2025.remaining)}</td>
+              <td class="bg-remaining">${fmt(totals2025.remaining)}</td>
             </tr>
           `;
         } else {
           return `
-            <tr style="background: #f1f5f9; font-weight: bold; border-top: 2px solid #64748b;">
-              <td colspan="4">الإجمالي</td>
+            <tr class="bg-total">
+              <td colspan="4" class="bg-index">الإجمالي</td>
               <td>${fmt(totals2026.prevDue)}</td>
               <td>${fmt(totals2026.fees)}</td>
               ${monthsList.map(m => `<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`).join("")}
               ${extraCols.map(() => `<td>—</td>`).join("")}
               <td>${fmt(totals2026.paid)}</td>
-              <td>${fmt(totals2026.remaining)}</td>
+              <td class="bg-remaining">${fmt(totals2026.remaining)}</td>
               <td></td>
             </tr>
           `;
         }
       };
 
+      // 4. تجهيز العناوين العلوية للجدول
       const headers = year === 2025 
-        ? ["#", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
-        : ["#", "الاسم", "الدفعة", "المساق", "مدور 2025", "الرسوم", ...monthsList, ...extraCols.map(c => c.name), "المسدد", "المتبقي", "حالة"];
+        ? ["م", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
+        : ["م", "الاسم", "الدفعة", "المساق", "مدور 2025", "الرسوم", ...monthsList, ...extraCols.map(c => c.name), "المسدد", "المتبقي", "حالة"];
 
+      // 5. بناء هيكل الصفحة (HTML) مع التنسيقات (CSS)
       const html = `
         <html dir="rtl" lang="ar">
         <head>
           <meta charset="utf-8" />
           <title>تقرير الأقساط ${year}</title>
           <style>
+            /* إعدادات حجم الصفحة للطباعة بالعرض */
             @page { size: A3 landscape; margin: 10mm; }
-            * { box-sizing: border-box; }
+            
+            /* إجبار المتصفح على طباعة الألوان بدقة */
+            * { 
+                box-sizing: border-box; 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
             body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 20px; background: white; }
+            
+            /* تنسيق ترويسة التقرير */
             .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
             .header h1 { color: #000; margin: 0; font-size: 24px; }
             .header p { color: #000; margin: 5px 0 0; font-size: 18px; }
+            
+            /* تنسيق الجدول الأساسي */
             table { width: 100%; border-collapse: collapse; font-size: 18px; }
-            th { background: #28white; color:black; padding: 8px 4px; border: 2px solid #000; font-weight: bold; text-align: center; }
-            td { padding: 6px 4px; border: 2px solid #000; text-align: center; }
+            
+            /* تنسيق رؤوس الأعمدة (أزرق سماوي ومنع التفاف النص) */
+            th { 
+                background-color: #bae6fd !important; 
+                color: #000000 !important; 
+                font-weight: 900 !important; 
+                padding: 8px 4px; 
+                border: 2px solid #000; 
+                text-align: center; 
+                white-space: nowrap; 
+            }
+            
+            /* تنسيق خلايا الجدول العادية (منع التفاف النص) */
+            td { 
+                padding: 6px 4px; 
+                border: 2px solid #000; 
+                text-align: center; 
+                white-space: nowrap; 
+            }
+            
+            /* تلوين الصفوف الزوجية بلون مختلف قليلاً لسهولة القراءة */
             tr:nth-child(even) { background: #f8fafc; }
+            
+            /* فئة لون عمود التسلسل */
+            .bg-index { background-color: #cbd5e1 !important; font-weight: bold; }
+            
+            /* فئة لون عمود المتبقي */
+            .bg-remaining { background-color: #fecdd3 !important; color: #881337 !important; font-weight: bold; }
+            
+            /* فئة لون صف الإجمالي */
+            .bg-total { background-color: #fef08a !important; font-weight: bold; }
+            .bg-total td { border-top: 3px solid #000 !important; }
+
+            /* تنسيق التذييل أسفل الصفحة */
             .footer { margin-top: 20px; text-align: left; font-size: 12px; color: #64748b; }
+            
+            /* إزالة الحواف عند الطباعة الفعلية */
             @media print { body { padding: 0; } }
           </style>
         </head>
@@ -584,17 +629,28 @@ export default function InstallmentsTab() {
         </html>
       `;
 
+      // 6. فتح نافذة جديدة لعرض التقرير وطباعته
       const w = window.open("", "", "width=1200,height=800");
       if (w) {
         w.document.write(html);
         w.document.close();
-        setTimeout(() => w.print(), 500);
+        setTimeout(() => w.print(), 500); // الانتظار نصف ثانية قبل فتح مربع حوار الطباعة
         toast.success("تم فتح التقرير للطباعة");
       }
     } catch (error) {
+      // التعامل مع الأخطاء في حال فشل التصدير
       toast.error("فشل إنشاء التقرير");
     }
   };
+
+
+
+
+  
+                  
+
+
+
 
   const saveRowEdit = (e: React.FormEvent) => {
     e.preventDefault();
