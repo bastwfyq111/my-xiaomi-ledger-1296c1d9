@@ -47,15 +47,15 @@ export default function TabActions({
         * { box-sizing: border-box; }
         body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 16px; color: #000; direction: rtl; }
         h1 { text-align: center; color: #000; margin: 0 0 6px; font-size: 22px; }
-        .sub { text-align: center; color: #64748b; margin-bottom: 14px; font-size: 18px; }
+        .sub { text-align: center; color: #000; margin-bottom: 14px; font-size: 18px; }
         table { width: 100%; border-collapse: collapse; font-size: 18px; }
         th, td { 
-          border: 1px solid #0001; 
+          border: 2px solid #000; 
           padding: 6px 8px; 
           text-align: center; 
           white-space: nowrap; 
         }
-        thead th { background: #10528e; color: #000; font-weight: 1000; }
+        thead th { background: #e2da84; color: #000; font-weight: 1000; }
         tbody tr:nth-child(even) { f: #f1f5f9; }
         .num { font-family: 'Courier New', monospace; text-align: left; direction: ltr; }
         .idx { width: 36px; text-align: center; color: #000; }
