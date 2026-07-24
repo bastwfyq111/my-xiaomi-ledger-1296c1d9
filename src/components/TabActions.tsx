@@ -91,7 +91,6 @@ export default function TabActions({
         window.onload = () => {
           setTimeout(() => {
             window.print();
-            window.close();
           }, 300);
         };
       </script>
