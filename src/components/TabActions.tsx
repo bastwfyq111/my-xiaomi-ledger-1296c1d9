@@ -38,26 +38,34 @@ export default function TabActions({
     }
     const w = window.open("", "_blank", "width=1200,height=800");
     if (!w) return;
+
     const head = `
       <meta charset="utf-8" />
       <title>${escapeHtml(title)}</title>
       <style>
         @page { size: A4 landscape; margin: 10mm; }
         * { box-sizing: border-box; }
-        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 16px; color: #0f172a; }
+        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 16px; color: #0f172a; direction: rtl; }
         h1 { text-align: center; color: #10528e; margin: 0 0 6px; font-size: 22px; }
         .sub { text-align: center; color: #64748b; margin-bottom: 14px; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: right; }
+        th, td { 
+          border: 1px solid #cbd5e1; 
+          padding: 6px 8px; 
+          text-align: right; 
+          white-space: nowrap; 
+        }
         thead th { background: #10528e; color: #fff; font-weight: 700; }
         tbody tr:nth-child(even) { background: #f1f5f9; }
         .num { font-family: 'Courier New', monospace; text-align: left; direction: ltr; }
         .idx { width: 36px; text-align: center; color: #64748b; }
       </style>
     `;
+
     const head2 = `<tr><th class="idx">م</th>${columns
       .map((c) => `<th>${escapeHtml(c.label)}</th>`)
       .join("")}</tr>`;
+
     const body2 = rows
       .map(
         (r, i) =>
@@ -72,12 +80,21 @@ export default function TabActions({
             .join("")}</tr>`
       )
       .join("");
+
     const today = new Date().toLocaleDateString("ar-EG-u-nu-latn");
+
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>
       <h1>${escapeHtml(title)}</h1>
       <div class="sub">المجلس اليمني للاختصاصات الطبية - صعدة • ${today} • عدد السجلات: ${rows.length}</div>
       <table><thead>${head2}</thead><tbody>${body2}</tbody></table>
-      <script>window.onload=()=>{setTimeout(()=>window.print(),300)}</script>
+      <script>
+        window.onload = () => {
+          setTimeout(() => {
+            window.print();
+            window.close();
+          }, 300);
+        };
+      </script>
     </body></html>`);
     w.document.close();
   };
@@ -87,6 +104,7 @@ export default function TabActions({
       toast.error("لا توجد بيانات للتصدير");
       return;
     }
+
     const data = rows.map((r, i) => {
       const out: Record<string, any> = { م: i + 1 };
       columns.forEach((c) => {
@@ -96,7 +114,12 @@ export default function TabActions({
       });
       return out;
     });
+
     const ws = XLSX.utils.json_to_sheet(data);
+
+    if (!ws["!views"]) ws["!views"] = [];
+    ws["!views"].push({ RTL: true });
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, title.slice(0, 30) || "Sheet1");
     XLSX.writeFile(wb, `${fileName}-${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -114,14 +137,14 @@ export default function TabActions({
     <div className={`flex flex-wrap gap-2 ${className}`}>
       <button
         onClick={handlePrint}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#10528e] border border-[#10528e]/30 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-50 active:scale-95 transition-all"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#10528e] border border-[#10528e]/30 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-50 active:scale-95 transition-all cursor-pointer"
         title="طباعة هذا التبويب"
       >
         <Printer className="w-4 h-4" /> طباعة
       </button>
       <button
         onClick={handleExcel}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-emerald-700 active:scale-95 transition-all"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer"
         title="تصدير إلى Excel"
       >
         <FileSpreadsheet className="w-4 h-4" /> تصدير Excel
@@ -129,7 +152,7 @@ export default function TabActions({
       {onClear && (
         <button
           onClick={handleClear}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-rose-700 active:scale-95 transition-all"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-rose-700 active:scale-95 transition-all cursor-pointer"
           title="مسح بيانات هذا التبويب"
         >
           <Trash2 className="w-4 h-4" /> مسح البيانات
