@@ -17,7 +17,6 @@ import {
   Trash,
   Palette,
   Settings,
-  Download,
   FileSpreadsheet,
   FileText,
 } from "lucide-react";
@@ -54,11 +53,13 @@ const MONTHS_2026 = [
   "ديسمبر",
 ];
 
+// دالة تنظيف الأرقام واستخراج القيم العددية
 const cleanNumber = (val: any): number => {
   if (!val || isNaN(Number(String(val).replace(/[^0-9.-]/g, "")))) return 0;
   return Number(String(val).replace(/[^0-9.-]/g, "")) || 0;
 };
 
+// شبكة إحصائيات علوية
 const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) => {
   const colClass = columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3";
   return (
@@ -78,6 +79,7 @@ const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) =
   );
 };
 
+// مكوّن النافذة المنبثقة العامة
 const Modal = ({
   title,
   isOpen,
@@ -108,6 +110,7 @@ const Modal = ({
   );
 };
 
+// أيقونة الفرز للأعمدة
 const SortIcon = ({
   sortConfig,
   columnKey,
@@ -134,6 +137,7 @@ export default function InstallmentsTab() {
     setInstallmentCustomColumns2026,
     setInstallmentConditionalRules2026,
   } = useStore() as any;
+
   const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [newPaymentModal, setNewPaymentModal] = useState(false);
@@ -148,9 +152,8 @@ export default function InstallmentsTab() {
   const [editAmount, setEditAmount] = useState("");
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [hoveredCell, setHoveredCell] = useState<string | null>(null);
+  const [, setHoveredCell] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
-  const [exportModal, setExportModal] = useState<{ year: number; type: "excel" | "pdf" } | null>(null);
 
   const [search2025, setSearch2025] = useState("");
   const [search2026, setSearch2026] = useState("");
@@ -171,7 +174,7 @@ export default function InstallmentsTab() {
   } | null>(null);
   const [editRowData, setEditRowData] = useState<any>({});
 
-  const extraCols2026 = installmentCustomColumns2026 as InstallmentCustomColumn[];
+  const extraCols2026 = (installmentCustomColumns2026 || []) as InstallmentCustomColumn[];
   const [newColModal, setNewColModal] = useState(false);
   const [newColName, setNewColName] = useState("");
   const [newColType, setNewColType] = useState<"text" | "select" | "formula">("text");
@@ -188,7 +191,7 @@ export default function InstallmentsTab() {
 
   const [condFormatModal, setCondFormatModal] = useState(false);
   const [condFormatParams, setCondFormatParams] = useState({ text: "", color: "bg-yellow-100" });
-  const condFormatRules = installmentConditionalRules2026 as Array<{ text: string; color: string }>;
+  const condFormatRules = (installmentConditionalRules2026 || []) as Array<{ text: string; color: string }>;
 
   const [newRowModal2026, setNewRowModal2026] = useState(false);
   const [newRowData2026, setNewRowData2026] = useState({
@@ -216,6 +219,35 @@ export default function InstallmentsTab() {
     "totalPaid",
     "remaining",
   ]);
+
+  const evaluateFormula = (formula: string, row: any) => {
+    if (!formula) return "";
+    try {
+      let parsedFormula = formula;
+      const variables: Record<string, number> = {
+        fees: cleanNumber(row.fees),
+        prevDue: cleanNumber(row.prevDue),
+        totalPaid: cleanNumber(row.totalPaid),
+        remaining: cleanNumber(row.remaining),
+      };
+
+      extraCols2026.forEach((col) => {
+        if (col.type !== "formula") {
+          variables[col.name] = cleanNumber(row.customData?.[col.name]);
+        }
+      });
+
+      Object.keys(variables).forEach((key) => {
+        const regex = new RegExp(`\\b${key}\\b`, "g");
+        parsedFormula = parsedFormula.replace(regex, variables[key].toString());
+      });
+
+      const result = new Function(`return ${parsedFormula}`)();
+      return isNaN(result) ? "خطأ" : Number(result).toFixed(2);
+    } catch (e) {
+      return "صيغة غير صالحة";
+    }
+  };
 
   const getConditionalRowClass = (row: any) => {
     const searchableValues = [
@@ -372,17 +404,30 @@ export default function InstallmentsTab() {
   const updateInstallments = (list: any[]) => useStore.setState({ installments: list });
   const updateInstallments2025 = (list: any[]) => useStore.setState({ installments2025: list });
 
-  // دوال التصدير التفصيلية
+  // تصدير ملف Excel مصحح ومكتمل
   const exportToExcel = (year: number) => {
     try {
       const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
       const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
       const extraCols = year === 2026 ? extraCols2026 : [];
-      
-      const headers = year === 2025 
-        ? ["#", "اسم المتدرب", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
-        : ["#", "اسم المتدرب", "الدفعة", "المساق", "المتبقي من 2025", "الرسوم", ...monthsList, ...extraCols.map(c => c.name), "مسدد 2026", "الرصيد المتبقي", "الحالة"];
-      
+
+      const headers =
+        year === 2025
+          ? ["#", "اسم المتدرب", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
+          : [
+              "#",
+              "اسم المتدرب",
+              "الدفعة",
+              "المساق",
+              "المتبقي من 2025",
+              "الرسوم",
+              ...monthsList,
+              ...extraCols.map((c) => c.name),
+              "مسدد 2026",
+              "الرصيد المتبقي",
+              "الحالة",
+            ];
+
       const data = rows.map((row: any, i: number) => {
         if (year === 2025) {
           return [
@@ -391,7 +436,7 @@ export default function InstallmentsTab() {
             row.batch || "",
             row.specialty || "",
             row.fees || 0,
-            ...monthsList.map(m => row.payments?.[m] || 0),
+            ...monthsList.map((m) => row.payments?.[m] || 0),
             row.totalPaid || 0,
             row.remaining || 0,
           ];
@@ -404,8 +449,8 @@ export default function InstallmentsTab() {
             row.specialty || "",
             row.prevDue || 0,
             row.fees || 0,
-            ...monthsList.map(m => row.payments?.[m] || 0),
-            ...extraCols.map(col => {
+            ...monthsList.map((m) => row.payments?.[m] || 0),
+            ...extraCols.map((col) => {
               if (col.type === "formula") return evaluateFormula(col.formula || "", row);
               return row.customData?.[col.name] || "";
             }),
@@ -418,102 +463,101 @@ export default function InstallmentsTab() {
 
       // إضافة صف الإجماليات
       if (year === 2025) {
-        const totalRow = [
+        data.push([
           "الإجمالي",
           "",
           "",
           "",
           totals2025.fees,
-          ...monthsList.map(m => totals2025.months[m] || 0),
+          ...monthsList.map((m) => totals2025.months[m] || 0),
           totals2025.paid,
           totals2025.remaining,
-        ];
-        data.push(totalRow);
+        ]);
       } else {
-        const totalRow = [
+        data.push([
           "الإجمالي",
           "",
           "",
           "",
           totals2026.prevDue,
           totals2026.fees,
-          ...monthsList.map(m => totals2026.months[m] || 0),
+          ...monthsList.map((m) => totals2026.months[m] || 0),
           ...extraCols.map(() => ""),
           totals2026.paid,
           totals2026.remaining,
           "",
-        ];
-        data.push(totalRow);
+        ]);
       }
 
-      // دالة مسؤولة عن إنشاء وتصدير تقرير الأقساط والمدفوعات بصيغة PDF
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, `أقساط ${year}`);
+      XLSX.writeFile(workbook, `جدول_أقساط_${year}.xlsx`);
+      toast.success("تم تصدير ملف Excel بنجاح");
+    } catch (error) {
+      toast.error("حدث خطأ أثناء تصدير ملف Excel");
+    }
+  };
+
+  // تصدير PDF للجدول
   const exportToPDF = (year: number) => {
     try {
-      // 1. تحديد البيانات المناسبة بناءً على السنة المحددة (2025 أو 2026)
       const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
       const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
       const extraCols = year === 2026 ? extraCols2026 : [];
-      
-      // جلب تاريخ اليوم لتضمينه في التقرير
       const date = new Date().toLocaleDateString("ar-SA");
-      
-      // 2. دالة داخلية لتوليد صفوف المتدربين (HTML)
+
       const generateTableRows = () => {
-        return rows.map((row: any, i: number) => {
-          // إذا كانت السنة 2025، نقوم بتوليد الأعمدة الخاصة بها
-          if (year === 2025) {
-            return `
-              <tr>
-                <!-- تطبيق لون عمود التسلسل -->
-                <td class="bg-index">${i + 1}</td>
-                <td>${row.name || ""}</td>
-                <td>${row.batch || ""}</td>
-                <td>${row.specialty || ""}</td>
-                <td>${fmt(row.fees)}</td>
-                <!-- جلب الدفعات لكل شهر، أو وضع علامة '-' إذا لم توجد -->
-                ${monthsList.map(m => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
-                <td>${fmt(row.totalPaid)}</td>
-                <!-- تطبيق لون عمود المتبقي -->
-                <td class="bg-remaining">${fmt(row.remaining)}</td>
-              </tr>
-            `;
-          } else {
-            // إذا كانت السنة 2026، نحسب حالة المتدرب (له أو عليه)
-            const status = row.remaining <= 0 ? "له" : "عليه";
-            const statusColor = row.remaining <= 0 ? "#059669" : "#e11d48";
-            
-            return `
-              <tr>
-                <td class="bg-index">${i + 1}</td>
-                <td>${row.name || ""}</td>
-                <td>${row.batch || ""}</td>
-                <td>${row.specialty || ""}</td>
-                <td>${fmt(row.prevDue)}</td>
-                <td>${fmt(row.fees)}</td>
-                ${monthsList.map(m => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
-                <!-- توليد الأعمدة الإضافية المخصصة لعام 2026 -->
-                ${extraCols.map(col => {
-                  if (col.type === "formula") return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
-                  return `<td>${row.customData?.[col.name] || "—"}</td>`;
-                }).join("")}
-                <td>${fmt(row.totalPaid)}</td>
-                <td class="bg-remaining">${fmt(row.remaining)}</td>
-                <td style="color: ${statusColor}; font-weight: bold;">${status}</td>
-              </tr>
-            `;
-          }
-        }).join(""); // تحويل المصفوفة إلى نص HTML متصل
+        return rows
+          .map((row: any, i: number) => {
+            if (year === 2025) {
+              return `
+                <tr>
+                  <td class="bg-index">${i + 1}</td>
+                  <td>${row.name || ""}</td>
+                  <td>${row.batch || ""}</td>
+                  <td>${row.specialty || ""}</td>
+                  <td>${fmt(row.fees)}</td>
+                  ${monthsList.map((m) => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
+                  <td>${fmt(row.totalPaid)}</td>
+                  <td class="bg-remaining">${fmt(row.remaining)}</td>
+                </tr>
+              `;
+            } else {
+              const status = row.remaining <= 0 ? "له" : "عليه";
+              const statusColor = row.remaining <= 0 ? "#059669" : "#e11d48";
+              return `
+                <tr>
+                  <td class="bg-index">${i + 1}</td>
+                  <td>${row.name || ""}</td>
+                  <td>${row.batch || ""}</td>
+                  <td>${row.specialty || ""}</td>
+                  <td>${fmt(row.prevDue)}</td>
+                  <td>${fmt(row.fees)}</td>
+                  ${monthsList.map((m) => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
+                  ${extraCols
+                    .map((col) => {
+                      if (col.type === "formula") return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
+                      return `<td>${row.customData?.[col.name] || "—"}</td>`;
+                    })
+                    .join("")}
+                  <td>${fmt(row.totalPaid)}</td>
+                  <td class="bg-remaining">${fmt(row.remaining)}</td>
+                  <td style="color: ${statusColor}; font-weight: bold;">${status}</td>
+                </tr>
+              `;
+            }
+          })
+          .join("");
       };
 
-      // 3. دالة داخلية لتوليد صف الإجماليات في نهاية الجدول
       const generateTotalRow = () => {
         if (year === 2025) {
           return `
-            <!-- تطبيق لون صف الإجمالي -->
             <tr class="bg-total">
               <td colspan="4" class="bg-index">الإجمالي</td>
               <td>${fmt(totals2025.fees)}</td>
-              ${monthsList.map(m => `<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`).join("")}
+              ${monthsList.map((m) => `<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`).join("")}
               <td>${fmt(totals2025.paid)}</td>
               <td class="bg-remaining">${fmt(totals2025.remaining)}</td>
             </tr>
@@ -524,7 +568,7 @@ export default function InstallmentsTab() {
               <td colspan="4" class="bg-index">الإجمالي</td>
               <td>${fmt(totals2026.prevDue)}</td>
               <td>${fmt(totals2026.fees)}</td>
-              ${monthsList.map(m => `<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`).join("")}
+              ${monthsList.map((m) => `<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`).join("")}
               ${extraCols.map(() => `<td>—</td>`).join("")}
               <td>${fmt(totals2026.paid)}</td>
               <td class="bg-remaining">${fmt(totals2026.remaining)}</td>
@@ -534,87 +578,56 @@ export default function InstallmentsTab() {
         }
       };
 
-      // 4. تجهيز العناوين العلوية للجدول
-      const headers = year === 2025 
-        ? ["م", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
-        : ["م", "الاسم", "الدفعة", "المساق", "مدور 2025", "الرسوم", ...monthsList, ...extraCols.map(c => c.name), "المسدد", "المتبقي", "حالة"];
+      const headers =
+        year === 2025
+          ? ["م", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
+          : [
+              "م",
+              "الاسم",
+              "الدفعة",
+              "المساق",
+              "مدور 2025",
+              "الرسوم",
+              ...monthsList,
+              ...extraCols.map((c) => c.name),
+              "المسدد",
+              "المتبقي",
+              "حالة",
+            ];
 
-      // 5. بناء هيكل الصفحة (HTML) مع التنسيقات (CSS)
       const html = `
         <html dir="rtl" lang="ar">
         <head>
           <meta charset="utf-8" />
           <title>تقرير الأقساط ${year}</title>
           <style>
-            /* إعدادات حجم الصفحة للطباعة بالعرض */
             @page { size: A3 landscape; margin: 10mm; }
-            
-            /* إجبار المتصفح على طباعة الألوان بدقة */
-            * { 
-                box-sizing: border-box; 
-                -webkit-print-color-adjust: exact !important; 
-                print-color-adjust: exact !important; 
-            }
+            * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 20px; background: white; }
-            
-            /* تنسيق ترويسة التقرير */
             .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
             .header h1 { color: #000; margin: 0; font-size: 24px; }
             .header p { color: #000; margin: 5px 0 0; font-size: 18px; }
-            
-            /* تنسيق الجدول الأساسي */
             table { width: 100%; border-collapse: collapse; font-size: 18px; }
-            
-            /* تنسيق رؤوس الأعمدة (أزرق سماوي ومنع التفاف النص) */
-            th { 
-                background-color: #bae6fd !important; 
-                color: #000000 !important; 
-                font-weight: 900 !important; 
-                padding: 8px 4px; 
-                border: 2px solid #000; 
-                text-align: center; 
-                white-space: nowrap; 
-            }
-            
-            /* تنسيق خلايا الجدول العادية (منع التفاف النص) */
-            td { 
-                padding: 6px 4px; 
-                border: 2px solid #000; 
-                text-align: center; 
-                white-space: nowrap; 
-            }
-            
-            /* تلوين الصفوف الزوجية بلون مختلف قليلاً لسهولة القراءة */
+            th { background-color: #bae6fd !important; color: #000000 !important; font-weight: 900 !important; padding: 8px 4px; border: 2px solid #000; text-align: center; white-space: nowrap; }
+            td { padding: 6px 4px; border: 2px solid #000; text-align: center; white-space: nowrap; }
             tr:nth-child(even) { background: #f8fafc; }
-            
-            /* فئة لون عمود التسلسل */
             .bg-index { background-color: #cbd5e1 !important; font-weight: bold; }
-            
-            /* فئة لون عمود المتبقي */
             .bg-remaining { background-color: #fecdd3 !important; color: #881337 !important; font-weight: bold; }
-            
-            /* فئة لون صف الإجمالي */
             .bg-total { background-color: #fef08a !important; font-weight: bold; }
             .bg-total td { border-top: 3px solid #000 !important; }
-
-            /* تنسيق التذييل أسفل الصفحة */
             .footer { margin-top: 20px; text-align: left; font-size: 12px; color: #64748b; }
-            
-            /* إزالة الحواف عند الطباعة الفعلية */
             @media print { body { padding: 0; } }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>المجلس اليمني للاختصاصات الطبية</h1>
+            <h1>المجلس اليمني للااختصاصات الطبية</h1>
             <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
             <p>تاريخ التقرير: ${date}</p>
           </div>
           <table>
             <thead>
-              <tr>
-                ${headers.map(h => `<th>${h}</th>`).join("")}
-              </tr>
+              <tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr>
             </thead>
             <tbody>
               ${generateTableRows()}
@@ -629,28 +642,17 @@ export default function InstallmentsTab() {
         </html>
       `;
 
-      // 6. فتح نافذة جديدة لعرض التقرير وطباعته
       const w = window.open("", "", "width=1200,height=800");
       if (w) {
         w.document.write(html);
         w.document.close();
-        setTimeout(() => w.print(), 500); // الانتظار نصف ثانية قبل فتح مربع حوار الطباعة
+        setTimeout(() => w.print(), 500);
         toast.success("تم فتح التقرير للطباعة");
       }
     } catch (error) {
-      // التعامل مع الأخطاء في حال فشل التصدير
       toast.error("فشل إنشاء التقرير");
     }
   };
-
-
-
-
-  
-                  
-
-
-
 
   const saveRowEdit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -754,36 +756,6 @@ export default function InstallmentsTab() {
     toast.success("تم حذف العمود");
   };
 
-  const evaluateFormula = (formula: string, row: any) => {
-    if (!formula) return "";
-    try {
-      let parsedFormula = formula;
-
-      const variables: Record<string, number> = {
-        fees: cleanNumber(row.fees),
-        prevDue: cleanNumber(row.prevDue),
-        totalPaid: cleanNumber(row.totalPaid),
-        remaining: cleanNumber(row.remaining),
-      };
-
-      extraCols2026.forEach((col) => {
-        if (col.type !== "formula") {
-          variables[col.name] = cleanNumber(row.customData?.[col.name]);
-        }
-      });
-
-      Object.keys(variables).forEach((key) => {
-        const regex = new RegExp(`\\b${key}\\b`, "g");
-        parsedFormula = parsedFormula.replace(regex, variables[key].toString());
-      });
-
-      const result = new Function(`return ${parsedFormula}`)();
-      return isNaN(result) ? "خطأ" : Number(result).toFixed(2);
-    } catch (e) {
-      return "صيغة غير صالحة";
-    }
-  };
-
   const recalculate2026Row = (row: any) => {
     const payments = { ...(row.payments || {}) };
     const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
@@ -859,7 +831,7 @@ export default function InstallmentsTab() {
 
   const addPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paymentModal || !payAmount) return toast.error("يرجى إدخل المبلغ");
+    if (!paymentModal || !payAmount) return toast.error("يرجى إدخال المبلغ");
     const amount = Number(payAmount) || 0;
     if (amount <= 0) return toast.error("مبلغ غير صحيح");
     const list = [...(installments || [])];
@@ -1239,7 +1211,7 @@ export default function InstallmentsTab() {
                 className="hidden"
               />
             </label>
-            
+
             <div className="flex gap-1">
               <button
                 onClick={() => exportToExcel(2025)}
@@ -1254,7 +1226,7 @@ export default function InstallmentsTab() {
                 <FileText className="w-3.5 h-3.5" /> PDF
               </button>
             </div>
-            
+
             <TabActions
               title="أقساط العام 2025"
               rows={installments2025 || []}
@@ -1272,12 +1244,14 @@ export default function InstallmentsTab() {
             />
           </div>
         </div>
+
         {importError && (
           <div className="bg-red-50 border-b border-red-200 p-3 flex gap-2">
             <AlertCircle className="w-5 h-5 text-red-600" />
             <p className="text-sm text-red-700">{importError}</p>
           </div>
         )}
+
         <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2025} columns={3} />
           <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
@@ -1462,7 +1436,11 @@ export default function InstallmentsTab() {
           <div className="flex gap-2 flex-wrap items-center">
             <button
               onClick={() => setCondFormatModal(true)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow transition-colors flex items-center gap-1 ${condFormatRules.length ? "bg-yellow-400 text-yellow-900 animate-pulse" : "bg-white/20 text-white hover:bg-white/30"}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow transition-colors flex items-center gap-1 ${
+                condFormatRules.length
+                  ? "bg-yellow-400 text-yellow-900 animate-pulse"
+                  : "bg-white/20 text-white hover:bg-white/30"
+              }`}
               title="تلوين الصفوف حسب نص معين"
             >
               <Palette className="w-4 h-4" />
@@ -1509,7 +1487,7 @@ export default function InstallmentsTab() {
                 className="hidden"
               />
             </label>
-            
+
             <div className="flex gap-1">
               <button
                 onClick={() => exportToExcel(2026)}
@@ -1524,7 +1502,7 @@ export default function InstallmentsTab() {
                 <FileText className="w-3.5 h-3.5" /> PDF
               </button>
             </div>
-            
+
             <TabActions
               title="أقساط العام 2026"
               rows={(installments || []).map((r: any) => {
@@ -1551,6 +1529,7 @@ export default function InstallmentsTab() {
             />
           </div>
         </div>
+
         <div className="p-3 sm:p-4">
           <StatsGrid stats={stats2026} columns={3} />
           <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
@@ -1669,7 +1648,6 @@ export default function InstallmentsTab() {
                       const originalIndex = (installments || []).findIndex(
                         (orig: any) => orig.name === r.name,
                       );
-
                       const rowBgClass = getConditionalRowClass(r);
 
                       return (
@@ -1874,8 +1852,7 @@ export default function InstallmentsTab() {
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-500">
-            سيتم تلوين الصف بالكامل إذا كان يحتوي على النص الذي تدخله أدناه في أي عمود (الاسم،
-            المساق، حالة الاعتماد، الخ).
+            سيتم تلوين الصف بالكامل إذا كان يحتوي على النص الذي تدخله أدناه في أي عمود.
           </p>
 
           <div>
@@ -1906,7 +1883,9 @@ export default function InstallmentsTab() {
                 <button
                   key={color.class}
                   onClick={() => setCondFormatParams({ ...condFormatParams, color: color.class })}
-                  className={`w-8 h-8 rounded-full border-2 ${condFormatParams.color === color.class ? "border-slate-800 scale-110" : "border-transparent"} ${color.class}`}
+                  className={`w-8 h-8 rounded-full border-2 ${
+                    condFormatParams.color === color.class ? "border-slate-800 scale-110" : "border-transparent"
+                  } ${color.class}`}
                   title={color.name}
                 />
               ))}
@@ -2022,15 +2001,6 @@ export default function InstallmentsTab() {
                   className="w-full p-2 border rounded-lg text-left"
                   dir="ltr"
                 />
-                <p className="text-[10px] text-slate-500 mt-1 text-right">
-                  المتغيرات المتاحة:{" "}
-                  <code className="bg-slate-100 px-1 rounded text-red-600">fees</code> (الرسوم),{" "}
-                  <code className="bg-slate-100 px-1 rounded text-red-600">totalPaid</code>{" "}
-                  (المسدد), <code className="bg-slate-100 px-1 rounded text-red-600">prevDue</code>{" "}
-                  (المدور),{" "}
-                  <code className="bg-slate-100 px-1 rounded text-red-600">remaining</code>{" "}
-                  (المتبقي).
-                </p>
               </div>
             )}
 
@@ -2100,9 +2070,7 @@ export default function InstallmentsTab() {
           </div>
           {editRowModal?.year === 2025 && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                الرسوم الكلية
-              </label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">الرسوم الكلية</label>
               <input
                 type="number"
                 value={editRowData?.fees || 0}
@@ -2204,13 +2172,6 @@ export default function InstallmentsTab() {
                 dir="ltr"
                 placeholder="مثال: fees - totalPaid"
               />
-              <p className="text-[10px] text-slate-500 mt-1 text-right">
-                المتغيرات المتاحة:{" "}
-                <code className="bg-slate-100 px-1 rounded text-red-600">fees</code> (الرسوم),{" "}
-                <code className="bg-slate-100 px-1 rounded text-red-600">totalPaid</code> (المسدد),{" "}
-                <code className="bg-slate-100 px-1 rounded text-red-600">prevDue</code> (المدور),{" "}
-                <code className="bg-slate-100 px-1 rounded text-red-600">remaining</code> (المتبقي).
-              </p>
             </div>
           )}
 
@@ -2272,9 +2233,7 @@ export default function InstallmentsTab() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                الرسوم الكلية
-              </label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">الرسوم الكلية</label>
               <input
                 type="number"
                 value={newRowData2026.fees}
@@ -2348,9 +2307,7 @@ export default function InstallmentsTab() {
             )}
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              المبلغ المالي *
-            </label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المالي *</label>
             <input
               type="number"
               required
@@ -2362,9 +2319,7 @@ export default function InstallmentsTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              الشهر المستهدف *
-            </label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">الشهر المستهدف *</label>
             <select
               required
               value={newStudentMonth}
@@ -2461,9 +2416,7 @@ export default function InstallmentsTab() {
             </div>
             <form onSubmit={editPayment} className="space-y-3 mt-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  المبلغ المعدل *
-                </label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المعدل *</label>
                 <input
                   type="number"
                   required
