@@ -674,8 +674,8 @@ export default function AccountsTab() {
             )}
             <TabActions
               title="كشف الحساب الجاري"
-              rows={accounts}
-              columns={COLS}
+              rows={filteredWithBalance}
+              columns={COLS.filter((c) => c.key !== "revenueKey")}
               fileName="الحساب-الجاري"
               numericKeys={["hafizaAmount", "income", "expense", "balance"]}
               onClear={clearAccounts}
