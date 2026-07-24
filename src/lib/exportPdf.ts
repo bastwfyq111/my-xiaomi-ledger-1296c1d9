@@ -18,11 +18,11 @@ export function exportToPdf(opts: {
   const head = `<meta charset="utf-8"><title>${opts.title}</title>
   <style>
     @page { size: A4 ${orient}; margin: 8mm; }
-    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#0f172a; }
+    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#000; }
     h1 { text-align:center; font-size:18px; margin: 0 0 12px; }
     table { width:100%; border-collapse: collapse; font-size:${fontSize}px; table-layout: fixed; }
     th, td { 
-      border:1px solid #94a3b8; 
+      border:2px solid #000; 
       padding:4px 5px; 
       text-align:center; 
       white-space: normal; /* السماح بالتفاف النص */
@@ -30,9 +30,9 @@ export function exportToPdf(opts: {
       overflow-wrap: break-word; 
       word-break: break-word; /* كسر الكلمات الطويلة لتناسب الخلية */
     }
-    thead { background:#0f766e; color:white; }
+    thead { background:#28baff; color:black; }
     tr:nth-child(even) td { background:#f1f5f9; }
-    .meta { font-size:11px; color:#475569; margin-bottom:8px; text-align:center; }
+    .meta { font-size:14px; color:#475569; margin-bottom:8px; text-align:center; }
   </style>`;
   const body = `<h1>${opts.title}</h1>
   <div class="meta">المجلس اليمني للاختصاصات الطبية — ${new Date().toLocaleDateString("ar-EG-u-nu-latn")}</div>
@@ -258,13 +258,13 @@ export function monthlyStatementPdf(opts: {
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap">
   <style>
     @page { size: A4 landscape; margin: 8mm; }
-    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#0f172a; margin:0; padding:8px; }
-    h1 { text-align:center; font-size:18px; margin: 0 0 4px; color:#0f766e; }
-    .meta { text-align:center; font-size:11px; color:#475569; }
-    .period { font-weight:700; color:#0f172a; margin: 4px 0 8px; }
+    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#000; margin:0; padding:8px; }
+    h1 { text-align:center; font-size:18px; margin: 0 0 4px; color:#000; }
+    .meta { text-align:center; font-size:14px; color:#000; }
+    .period { font-weight:1000; color:#0f172a; margin: 4px 0 8px; }
     table { width:100%; border-collapse: collapse; font-size:10px; table-layout:fixed; }
     th, td { 
-      border:1px solid #475569; 
+      border:2px solid #000; 
       padding:3px 4px; 
       text-align:center; 
       white-space: normal; /* السماح بالتفاف النص */
@@ -272,10 +272,10 @@ export function monthlyStatementPdf(opts: {
       overflow-wrap: break-word; 
       word-break: break-word; 
     }
-    thead th { background:#0f766e; color:white; font-weight:700; }
-    td.acc { text-align:right; font-weight:600; }
-    tr.grp td { background:#fef3c7; color:#0f766e; font-weight:800; text-align:right; }
-    tr.sub td { background:#e2e8f0; font-weight:700; }
+    thead th { background:#28baff; color:black; font-weight:1000; }
+    td.acc { text-align:center; font-weight:1000; }
+    tr.grp td { background:#fef3c7; color:#0f766e; font-weight:800; text-align:center; }
+    tr.sub td { background:#e2e8f0; font-weight:1000; }
     tr.tot td { background:#0f766e; color:white; font-weight:800; }
     @media print { button { display:none; } }
   </style>`;
