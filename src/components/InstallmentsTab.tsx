@@ -1184,9 +1184,9 @@ export default function InstallmentsTab() {
     try {
       const html = generateAccountStatement(row, year);
       const safeName = safePdfFileName(row.name);
+      // إرسال الاسم بدون امتداد، الدالة ستتعامل معه
       const fileName = `كشف_حساب_${safeName}_${year}.pdf`;
       
-      // محاولة حفظ الملف تلقائياً كـ PDF
       await exportHtmlToPdf(html, fileName);
       toast.success(`تم حفظ الملف: ${fileName}`);
     } catch (error) {

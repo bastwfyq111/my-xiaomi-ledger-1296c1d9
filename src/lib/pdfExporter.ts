@@ -1,97 +1,60 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 /**
- * حفظ محتوى HTML كملف PDF مع دعم اللغة العربية والخطوط المخصصة
- * @param htmlContent محتوى HTML المراد تحويله إلى PDF
- * @param fileName اسم الملف المراد حفظه
+ * تصدير محتوى HTML إلى PDF باستخدام html2pdf.js
+ * هذه المكتبة هي الأكثر استقراراً للتعامل مع CSS المعقد والخطوط العربية
  */
 export async function exportHtmlToPdf(htmlContent: string, fileName: string): Promise<void> {
-  try {
-    // إنشاء عنصر div مؤقت لتحميل المحتوى
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent;
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.top = '-9999px';
-    tempDiv.style.width = '210mm'; // عرض A4
-    document.body.appendChild(tempDiv);
-
-    // انتظار تحميل الخطوط
-    await new Promise(resolve => {
-      if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(resolve).catch(resolve);
-      } else {
-        setTimeout(resolve, 1000);
-      }
-    });
-
-    // تحويل HTML إلى Canvas
-    const canvas = await html2canvas(tempDiv, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      allowTaint: true,
-    });
-
-    // إنشاء PDF من Canvas
-    const imgData = canvas.toDataURL('image/jpeg', 0.98);
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    });
-
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = pageWidth - 20; // مع هوامش
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    let heightLeft = imgHeight;
-    let position = 10;
-
-    // إضافة الصور إلى PDF (في حالة المحتوى الطويل)
-    pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight - 20;
-
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight - 20;
+  // تنظيف اسم الملف من أي رموز قد تسبب مشاكل في نظام التشغيل
+  const cleanFileName = fileName.replace(/[^\u0600-\u06FFa-zA-Z0-9._-]/g, '_');
+  
+  const element = document.createElement('div');
+  element.innerHTML = htmlContent;
+  element.style.width = '210mm'; // عرض A4
+  
+  const opt = {
+    margin: [10, 10, 10, 10],
+    filename: cleanFileName,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { 
+      scale: 2, 
+      useCORS: true, 
+      letterRendering: true,
+      scrollX: 0,
+      scrollY: 0
+    },
+    jsPDF: { 
+      unit: 'mm', 
+      format: 'a4', 
+      orientation: 'portrait' 
     }
+  };
 
-    // حفظ الملف
-    pdf.save(fileName);
-
-    // تنظيف
-    document.body.removeChild(tempDiv);
+  try {
+    // تنفيذ عملية التحويل والحفظ
+    await html2pdf().set(opt).from(element).save();
   } catch (error) {
-    console.error('خطأ في تحويل HTML إلى PDF:', error);
+    console.error('Error exporting PDF:', error);
     throw error;
   }
 }
 
 /**
- * طباعة محتوى HTML في نافذة جديدة مع خيار الحفظ كـ PDF
- * @param htmlContent محتوى HTML المراد طباعته
- * @param fileName اسم الملف (اختياري)
+ * خيار بديل للطباعة المباشرة في حال فشل المكتبة
  */
-export function printHtmlContent(htmlContent: string, fileName?: string): void {
+export function printHtmlContent(htmlContent: string): void {
   const w = window.open('', '_blank', 'width=850,height=700');
-  if (!w) {
-    throw new Error('فشل فتح النافذة المنبثقة. يرجى السماح بالنوافذ المنبثقة.');
-  }
-
+  if (!w) return;
+  
   w.document.open();
   w.document.write(htmlContent);
   w.document.close();
-
-  // انتظار تحميل الصفحة ثم فتح نافذة الطباعة
-  w.addEventListener('load', () => {
+  
+  w.onload = () => {
     setTimeout(() => {
       w.print();
+      // لا نغلق النافذة للسماح للمستخدم بالتحكم في الطباعة
     }, 500);
-  });
+  };
 }
