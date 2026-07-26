@@ -59,6 +59,20 @@ const cleanNumber = (val: any): number => {
   return Number(String(val).replace(/[^0-9.-]/g, "")) || 0;
 };
 
+const escapeHtml = (value: any): string =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const safePdfFileName = (value: any): string =>
+  String(value || "متدرب")
+    .replace(/[\\/:*?"<>|]/g, "-")
+    .replace(/\s+/g, "_")
+    .trim() || "متدرب";
+
 // شبكة إحصائيات علوية
 const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) => {
   const colClass = columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3";
@@ -191,7 +205,10 @@ export default function InstallmentsTab() {
 
   const [condFormatModal, setCondFormatModal] = useState(false);
   const [condFormatParams, setCondFormatParams] = useState({ text: "", color: "bg-yellow-100" });
-  const condFormatRules = (installmentConditionalRules2026 || []) as Array<{ text: string; color: string }>;
+  const condFormatRules = (installmentConditionalRules2026 || []) as Array<{
+    text: string;
+    color: string;
+  }>;
 
   const [newRowModal2026, setNewRowModal2026] = useState(false);
   const [newRowData2026, setNewRowData2026] = useState({
@@ -365,10 +382,13 @@ export default function InstallmentsTab() {
       fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
       paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
       remaining: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
-      months: MONTHS_2025.reduce((acc, m) => {
-        acc[m] = (filteredRows2025 || []).reduce((s, r) => s + (Number(r.payments?.[m]) || 0), 0);
-        return acc;
-      }, {} as Record<string, number>),
+      months: MONTHS_2025.reduce(
+        (acc, m) => {
+          acc[m] = (filteredRows2025 || []).reduce((s, r) => s + (Number(r.payments?.[m]) || 0), 0);
+          return acc;
+        },
+        {} as Record<string, number>,
+      ),
     }),
     [filteredRows2025],
   );
@@ -379,10 +399,13 @@ export default function InstallmentsTab() {
       fees: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
       paid: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
       remaining: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
-      months: MONTHS_2026.reduce((acc, m) => {
-        acc[m] = (filteredRows2026 || []).reduce((s, r) => s + (Number(r.payments?.[m]) || 0), 0);
-        return acc;
-      }, {} as Record<string, number>),
+      months: MONTHS_2026.reduce(
+        (acc, m) => {
+          acc[m] = (filteredRows2026 || []).reduce((s, r) => s + (Number(r.payments?.[m]) || 0), 0);
+          return acc;
+        },
+        {} as Record<string, number>,
+      ),
     }),
     [filteredRows2026],
   );
@@ -537,7 +560,8 @@ export default function InstallmentsTab() {
                   ${monthsList.map((m) => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
                   ${extraCols
                     .map((col) => {
-                      if (col.type === "formula") return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
+                      if (col.type === "formula")
+                        return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
                       return `<td>${row.customData?.[col.name] || "—"}</td>`;
                     })
                     .join("")}
@@ -605,8 +629,9 @@ export default function InstallmentsTab() {
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
           <style>
             @page { size: A3 landscape; margin: 10mm; }
+            @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
             * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 20px; background: white; }
+            body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 20px; background: white; }
             .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
             .header h1 { color: #000; margin: 0; font-size: 24px; }
             .header p { color: #000; margin: 5px 0 0; font-size: 18px; }
@@ -1036,8 +1061,8 @@ export default function InstallmentsTab() {
     const dueTotal = year === 2026 ? prevDue || fees : fees;
     const remaining = dueTotal - totalPaid;
 
-    // استخراج اسم نظيف لملف الـ PDF الافتراضي
-    const safeName = row.name ? row.name.replace(/\s+/g, '_') : 'متدرب';
+    // استخراج اسم آمن ليستخدمه المتصفح كاسم افتراضي عند الحفظ PDF
+    const safeName = safePdfFileName(row.name);
 
     const paidRows = monthsList
       .map((m) => {
@@ -1045,23 +1070,23 @@ export default function InstallmentsTab() {
         if (amount <= 0) return "";
         return `
           <tr>
-            <td class="lbl">سداد شهر ${m}</td>
-            <td class="num">${fmt(amount)}</td>
+            <td class="lbl">سداد شهر ${escapeHtml(m)}</td>
+            <td class="num">${escapeHtml(fmt(amount))}</td>
           </tr>`;
       })
       .join("");
 
     const infoCard = (label: string, value: string) =>
       `<div class="info-box">
-        <div class="info-lbl">${label}</div>
-        <div class="info-val">${value || "—"}</div>
+        <div class="info-lbl">${escapeHtml(label)}</div>
+        <div class="info-val">${escapeHtml(value || "—")}</div>
       </div>`;
 
     const prevRow =
       year === 2026
         ? `<tr class="row-due-old">
           <td class="lbl">متبقي من العام 2025 (مدور)</td>
-          <td class="num">${fmt(prevDue)}</td>
+          <td class="num">${escapeHtml(fmt(prevDue))}</td>
         </tr>`
         : "";
 
@@ -1077,14 +1102,13 @@ export default function InstallmentsTab() {
       <html dir="rtl" lang="ar">
       <head>
         <meta charset="utf-8" />
-        <title>كشف_حساب_${safeName}_${year}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
+        <title>${escapeHtml(`كشف_حساب_${safeName}_${year}`)}</title>
         <style>
-          @page { size: A4; margin: 0; }
+          @page { size: A4; margin: 10mm; }
+          @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
           * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; }
-          .container { width: 210mm; min-height: 297mm; background: white; padding: 15mm; }
+          body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; }
+          .container { width: 100%; max-width: 190mm; min-height: 277mm; background: white; padding: 8mm; }
           .header { background: #15803d !important; color: white; padding: 25px; border-radius: 8px; text-align: center; margin-bottom: 25px; border: 1px solid #000; }
           .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
           .header p { margin: 10px 0 0; font-size: 18px; opacity: 1; }
@@ -1129,20 +1153,25 @@ export default function InstallmentsTab() {
               </tr>
             </thead>
             <tbody>
-              <tr><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${fmt(fees)}</td></tr>
+              <tr><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${escapeHtml(fmt(fees))}</td></tr>
               ${prevRow}
-              <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${fmt(dueTotal)}</td></tr>
+              <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${escapeHtml(fmt(dueTotal))}</td></tr>
               ${paidRows}
-              <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${fmt(totalPaid)}</td></tr>
-              <tr class="row-final"><td class="lbl">${remainingLabel}</td><td class="num">${fmt(Math.abs(remaining))}</td></tr>
+              <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${escapeHtml(fmt(totalPaid))}</td></tr>
+              <tr class="row-final"><td class="lbl">${escapeHtml(remainingLabel)}</td><td class="num">${escapeHtml(fmt(Math.abs(remaining)))}</td></tr>
             </tbody>
           </table>
         </div>
         <script>
-          // ننتظر تحميل الخطوط العربية (Cairo) لضمان توافق PDF
-          document.fonts.ready.then(function() {
-            window.print();
-          });
+          function printWhenReady() {
+            window.focus();
+            setTimeout(function() { window.print(); }, 250);
+          }
+          if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(printWhenReady).catch(printWhenReady);
+          } else {
+            window.onload = printWhenReady;
+          }
         </script>
       </body>
       </html>
@@ -1430,7 +1459,10 @@ export default function InstallmentsTab() {
                         {fmt(totals2025.fees)}
                       </td>
                       {MONTHS_2025.map((m) => (
-                        <td key={m} className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap">
+                        <td
+                          key={m}
+                          className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap"
+                        >
                           {totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}
                         </td>
                       ))}
@@ -1649,8 +1681,7 @@ export default function InstallmentsTab() {
                     onClick={() => handleSort2026("remaining")}
                   >
                     <div className="flex items-center justify-center gap-1">
-                      الرصيد المتبقي{" "}
-                      <SortIcon sortConfig={sortConfig2026} columnKey="remaining" />
+                      الرصيد المتبقي <SortIcon sortConfig={sortConfig2026} columnKey="remaining" />
                     </div>
                   </th>
                   <th className="p-2 text-center whitespace-nowrap">حالة</th>
@@ -1843,12 +1874,18 @@ export default function InstallmentsTab() {
                         {fmt(totals2026.fees)}
                       </td>
                       {MONTHS_2026.map((m) => (
-                        <td key={m} className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap">
+                        <td
+                          key={m}
+                          className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap"
+                        >
                           {totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}
                         </td>
                       ))}
                       {extraCols2026.map((col) => (
-                        <td key={col.name} className="p-1 text-center border-l border-slate-200 whitespace-nowrap">
+                        <td
+                          key={col.name}
+                          className="p-1 text-center border-l border-slate-200 whitespace-nowrap"
+                        >
                           —
                         </td>
                       ))}
@@ -1910,7 +1947,9 @@ export default function InstallmentsTab() {
                   key={color.class}
                   onClick={() => setCondFormatParams({ ...condFormatParams, color: color.class })}
                   className={`w-8 h-8 rounded-full border-2 ${
-                    condFormatParams.color === color.class ? "border-slate-800 scale-110" : "border-transparent"
+                    condFormatParams.color === color.class
+                      ? "border-slate-800 scale-110"
+                      : "border-transparent"
                   } ${color.class}`}
                   title={color.name}
                 />
@@ -2096,7 +2135,9 @@ export default function InstallmentsTab() {
           </div>
           {editRowModal?.year === 2025 && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">الرسوم الكلية</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                الرسوم الكلية
+              </label>
               <input
                 type="number"
                 value={editRowData?.fees || 0}
@@ -2259,7 +2300,9 @@ export default function InstallmentsTab() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">الرسوم الكلية</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                الرسوم الكلية
+              </label>
               <input
                 type="number"
                 value={newRowData2026.fees}
@@ -2333,7 +2376,9 @@ export default function InstallmentsTab() {
             )}
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المالي *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              المبلغ المالي *
+            </label>
             <input
               type="number"
               required
@@ -2345,7 +2390,9 @@ export default function InstallmentsTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">الشهر المستهدف *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              الشهر المستهدف *
+            </label>
             <select
               required
               value={newStudentMonth}
@@ -2442,7 +2489,9 @@ export default function InstallmentsTab() {
             </div>
             <form onSubmit={editPayment} className="space-y-3 mt-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المعدل *</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  المبلغ المعدل *
+                </label>
                 <input
                   type="number"
                   required
