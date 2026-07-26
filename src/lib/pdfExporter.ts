@@ -25,17 +25,17 @@ export async function exportStudentStatementPdf(row: any, year: number): Promise
   doc.setFontSize(18);
   doc.text("المجلس اليمني للاختصاصات الطبية", 105, 15, { align: 'center' });
   doc.setFontSize(14);
-  doc.text(`كشف حساب رسمي - العام ${year}م`, 105, 22, { align: 'center' });
+  doc.text(`كشف حساب رسمي - للعام ${year}م`, 105, 22, { align: 'center' });
 
   // معلومات المتدرب
   doc.setFontSize(10);
   doc.rect(10, 30, 190, 25); // إطار المعلومات
   
   const infoY = 37;
-  doc.text(`اسم المتدرب: ${row.name}`, 195, infoY, { align: 'right' });
-  doc.text(`الدفعة: ${row.batch || '—'}`, 100, infoY, { align: 'right' });
-  doc.text(`المساق: ${row.specialty || '—'}`, 195, infoY + 8, { align: 'right' });
-  doc.text(`رقم الهاتف: ${row.phone || '—'}`, 100, infoY + 8, { align: 'right' });
+  doc.text(`اسم المتدرب: ${row.name}`, 195, infoY, { align: 'center ' });
+  doc.text(`الدفعة: ${row.batch || '—'}`, 100, infoY, { align: 'center ' });
+  doc.text(`المساق: ${row.specialty || '—'}`, 195, infoY + 8, { align: 'center ' });
+  doc.text(`رقم الهاتف: ${row.phone || '—'}`, 100, infoY + 8, { align: 'center ' });
 
   // البيانات المالية
   const monthsList = year === 2025 ? 
@@ -71,7 +71,7 @@ export async function exportStudentStatementPdf(row: any, year: number): Promise
     startY: 60,
     head: [['البيان', 'المبلغ']],
     body: tableRows,
-    styles: { font: 'helvetica', halign: 'right', fontSize: 12 },
+    styles: { font: 'helvetica', halign: 'center ', fontSize: 12 },
     headStyles: { fillStyle: 'F', fillColor: [21, 128, 61], textColor: 255, halign: 'center' },
     columnStyles: {
       0: { cellWidth: 140 },
