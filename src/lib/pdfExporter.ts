@@ -24,13 +24,14 @@ export async function exportHtmlToImage(htmlContent: string, fileName: string): 
 
   try {
     const canvas = await html2canvas(element, {
-      scale: 3, // دقة عالية جداً
+      scale: 2, // دقة متوازنة لسرعة أفضل
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
+      removeContainer: true, // تنظيف تلقائي
     });
 
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/jpeg', 0.8); // استخدام jpeg بضغط خفيف للسرعة وتقليل الحجم
     const link = document.createElement('a');
     link.href = imgData;
     link.download = cleanFileName;
@@ -67,11 +68,9 @@ export async function exportHtmlToPdf(htmlContent: string, fileName: string): Pr
     filename: cleanFileName,
     image: { type: 'jpeg', quality: 1.0 },
     html2canvas: { 
-      scale: 2, 
+      scale: 1.5, // تقليل بسيط للدقة لتسريع الـ PDF
       useCORS: true, 
       letterRendering: true,
-      width: 794, // 210mm بيكسل تقريباً
-      height: 1123 // 297mm بيكسل تقريباً
     },
     jsPDF: { 
       unit: 'mm', 

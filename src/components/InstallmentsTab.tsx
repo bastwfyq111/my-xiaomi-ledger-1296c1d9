@@ -1110,7 +1110,7 @@ export default function InstallmentsTab() {
           @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
           * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; width: 100%; }
-          .container { width: 210mm; height: 297mm; background: white; padding: 10mm; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; }
+          .container { width: 210mm; background: white; padding: 10mm; box-sizing: border-box; display: flex; flex-direction: column; }
           .header { background: #15803d !important; color: white; padding: 15px; border-radius: 6px; text-align: center; margin-bottom: 15px; border: 1px solid #000; }
           .header h1 { margin: 0; font-size: 22px; font-weight: 800; }
           .header p { margin: 5px 0 0; font-size: 16px; opacity: 1; }
