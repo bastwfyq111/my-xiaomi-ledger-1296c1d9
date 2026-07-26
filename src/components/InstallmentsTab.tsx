@@ -19,9 +19,10 @@ import {
   Settings,
   FileSpreadsheet,
   FileText,
+  Image as ImageIcon,
 } from "lucide-react";
 import TabActions from "./TabActions";
-import { exportHtmlToPdf, printHtmlContent } from "@/lib/pdfExporter";
+import { exportHtmlToPdf, exportHtmlToImage, printHtmlContent } from "@/lib/pdfExporter";
 
 const MONTHS_2025 = [
   "يونيو 2024",
@@ -1179,6 +1180,21 @@ export default function InstallmentsTab() {
     `;
   };
 
+  // دالة تصدير كشف الحساب كصورة طويلة
+  const exportAsImage = async (row: any, year: number) => {
+    try {
+      const html = generateAccountStatement(row, year);
+      const safeName = safePdfFileName(row.name);
+      const fileName = `كشف_حساب_${safeName}_${year}.png`;
+      
+      toast.info("جاري تجهيز كشف الحساب كصورة...");
+      await exportHtmlToImage(html, fileName);
+      toast.success(`تم تنزيل الصورة: ${fileName}`);
+    } catch (error) {
+      toast.error("فشل تصدير كشف الحساب كصورة");
+    }
+  };
+
   // تم التعديل لحفظ PDF تلقائياً باستخدام html2canvas و jsPDF
   const printStatement = async (row: any, year: number) => {
     try {
@@ -1458,11 +1474,11 @@ export default function InstallmentsTab() {
                               <Printer className="w-3.5 h-3.5" />
                             </button>
                                 <button
-                                  onClick={() => printStatement(r, 2025)}
+                                  onClick={() => exportAsImage(r, 2025)}
                                   className="p-1 bg-emerald-50 text-emerald-600 rounded border border-emerald-200 hover:bg-emerald-500 hover:text-white transition-colors"
-                                  title="تصدير PDF للمشاركة"
+                                  title="تصدير كصورة للمشاركة"
                                 >
-                                  <FileText className="w-3.5 h-3.5" />
+                                  <ImageIcon className="w-3.5 h-3.5" />
                                 </button>
                           </td>
                         </tr>
@@ -1873,11 +1889,11 @@ export default function InstallmentsTab() {
                               <Printer className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => printStatement(r, 2026)}
+                              onClick={() => exportAsImage(r, 2026)}
                               className="p-1 bg-emerald-50 text-emerald-600 rounded border border-emerald-200 hover:bg-emerald-500 hover:text-white transition-colors"
-                              title="تصدير PDF للمشاركة"
+                              title="تصدير كصورة للمشاركة"
                             >
-                              <FileText className="w-3.5 h-3.5" />
+                              <ImageIcon className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => deleteRow2026(originalIndex, r.name)}

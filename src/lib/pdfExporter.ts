@@ -1,5 +1,49 @@
 // @ts-ignore
+// @ts-ignore
 import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
+
+/**
+ * تصدير محتوى HTML كصورة طويلة عالية الجودة
+ */
+export async function exportHtmlToImage(htmlContent: string, fileName: string): Promise<void> {
+  // تنظيف اسم الملف وضمان وجود امتداد .png
+  let cleanFileName = fileName.replace(/[^\u0600-\u06FFa-zA-Z0-9._-]/g, '_');
+  if (cleanFileName.toLowerCase().endsWith('.pdf')) {
+    cleanFileName = cleanFileName.slice(0, -4);
+  }
+  if (!cleanFileName.toLowerCase().endsWith('.png')) {
+    cleanFileName += '.png';
+  }
+
+  const element = document.createElement('div');
+  element.innerHTML = htmlContent;
+  element.style.width = '210mm';
+  element.style.background = 'white';
+  document.body.appendChild(element);
+
+  try {
+    const canvas = await html2canvas(element, {
+      scale: 3, // دقة عالية جداً
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = imgData;
+    link.download = cleanFileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error('فشل تصدير الصورة:', error);
+    throw error;
+  } finally {
+    document.body.removeChild(element);
+  }
+}
 
 /**
  * تصدير محتوى HTML إلى PDF وبدء تنزيل حقيقي عبر المتصفح
