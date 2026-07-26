@@ -499,7 +499,7 @@ export default function InstallmentsTab() {
     }
   };
 
-  // تصدير PDF للجدول
+  // تصدير PDF للجدول (تم التعديل لضمان التوافق مع الطباعة والحفظ الصحيح)
   const exportToPDF = (year: number) => {
     try {
       const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
@@ -595,11 +595,14 @@ export default function InstallmentsTab() {
               "حالة",
             ];
 
-      const html = `
+      // إضافة DOCTYPE واسم مناسب في title
+      const html = `<!DOCTYPE html>
         <html dir="rtl" lang="ar">
         <head>
           <meta charset="utf-8" />
-          <title>تقرير الأقساط ${year}</title>
+          <title>تقرير_الأقساط_${year}</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
           <style>
             @page { size: A3 landscape; margin: 10mm; }
             * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -621,7 +624,7 @@ export default function InstallmentsTab() {
         </head>
         <body>
           <div class="header">
-            <h1>المجلس اليمني للااختصاصات الطبية</h1>
+            <h1>المجلس اليمني للاختصاصات الطبية</h1>
             <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
             <p>تاريخ التقرير: ${date}</p>
           </div>
@@ -638,16 +641,24 @@ export default function InstallmentsTab() {
             <p>إجمالي عدد المتدربين: ${rows.length}</p>
             <p>تم إنشاء التقرير بواسطة نظام المجلس اليمني للاختصاصات الطبية</p>
           </div>
+          <script>
+            // ننتظر تحميل الخطوط العربية لضمان توافق PDF
+            document.fonts.ready.then(function() {
+              window.print();
+            });
+          </script>
         </body>
         </html>
       `;
 
       const w = window.open("", "", "width=1200,height=800");
       if (w) {
+        w.document.open();
         w.document.write(html);
         w.document.close();
-        setTimeout(() => w.print(), 500);
         toast.success("تم فتح التقرير للطباعة");
+      } else {
+        toast.error("يرجى السماح بالنوافذ المنبثقة");
       }
     } catch (error) {
       toast.error("فشل إنشاء التقرير");
@@ -1016,6 +1027,7 @@ export default function InstallmentsTab() {
       ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" }
       : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
 
+  // تم تعديل هذه الدالة لتتوافق بشكل أفضل مع صيغة حفظ PDF واللغة العربية
   const generateAccountStatement = (row: any, year: number) => {
     const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
     const fees = cleanNumber(row.fees);
@@ -1023,6 +1035,9 @@ export default function InstallmentsTab() {
     const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
     const dueTotal = year === 2026 ? prevDue || fees : fees;
     const remaining = dueTotal - totalPaid;
+
+    // استخراج اسم نظيف لملف الـ PDF الافتراضي
+    const safeName = row.name ? row.name.replace(/\s+/g, '_') : 'متدرب';
 
     const paidRows = monthsList
       .map((m) => {
@@ -1057,11 +1072,12 @@ export default function InstallmentsTab() {
           ? "الرصيد الإضافي (له)"
           : "الحالة: تم السداد بالكامل";
 
-    return `
+    // إضافة <!DOCTYPE html> واسم <title> ليستخدم كاسم افتراضي للملف
+    return `<!DOCTYPE html>
       <html dir="rtl" lang="ar">
       <head>
         <meta charset="utf-8" />
-        <title>كشف حساب - ${row.name}</title>
+        <title>كشف_حساب_${safeName}_${year}</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
         <style>
@@ -1122,18 +1138,28 @@ export default function InstallmentsTab() {
             </tbody>
           </table>
         </div>
+        <script>
+          // ننتظر تحميل الخطوط العربية (Cairo) لضمان توافق PDF
+          document.fonts.ready.then(function() {
+            window.print();
+          });
+        </script>
       </body>
       </html>
     `;
   };
 
+  // تم التعديل لضمان فتح الكشف بطريقة تدعم الحفظ الصحيح
   const printStatement = (row: any, year: number) => {
     const html = generateAccountStatement(row, year);
-    const w = window.open("", "", "width=850,height=700");
+    const w = window.open("", "_blank", "width=850,height=700");
     if (w) {
+      w.document.open();
       w.document.write(html);
       w.document.close();
-      setTimeout(() => w.print(), 500);
+      // ملاحظة: إغلاق المتصفح أو الطباعة تتم الآن من داخل الكود المولد (script) لضمان تحميل الخط
+    } else {
+      toast.error("الرجاء السماح بالنوافذ المنبثقة (Pop-ups) لعرض الكشف");
     }
   };
 
