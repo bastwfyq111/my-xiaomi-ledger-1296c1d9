@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useStore, type InstallmentCustomColumn } from "@/lib/store";
 import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
 import { toast } from "sonner";
 import { useTableControls } from "@/hooks/useTableControls";
 import {
@@ -58,6 +59,31 @@ const cleanNumber = (val: any): number => {
   if (!val || isNaN(Number(String(val).replace(/[^0-9.-]/g, "")))) return 0;
   return Number(String(val).replace(/[^0-9.-]/g, "")) || 0;
 };
+
+const bufferToBase64 = (buffer: ArrayBuffer): string => {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+};
+
+const loadCairoFont = async (doc: jsPDF) => {
+  const font = await fetch("/Cairo-Regular.ttf");
+  if (!font.ok) throw new Error("تعذر تحميل خط Cairo لإنشاء ملف PDF");
+  const fontBase64 = bufferToBase64(await font.arrayBuffer());
+  doc.addFileToVFS("Cairo-Regular.ttf", fontBase64);
+  doc.addFont("Cairo-Regular.ttf", "Cairo", "normal");
+  doc.setFont("Cairo", "normal");
+};
+
+const safePdfFileName = (value: any): string =>
+  String(value || "متدرب")
+    .replace(/[\\/:*?"<>|]/g, "-")
+    .replace(/\s+/g, "_")
+    .trim() || "متدرب";
 
 // شبكة إحصائيات علوية
 const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) => {
@@ -191,7 +217,10 @@ export default function InstallmentsTab() {
 
   const [condFormatModal, setCondFormatModal] = useState(false);
   const [condFormatParams, setCondFormatParams] = useState({ text: "", color: "bg-yellow-100" });
-  const condFormatRules = (installmentConditionalRules2026 || []) as Array<{ text: string; color: string }>;
+  const condFormatRules = (installmentConditionalRules2026 || []) as Array<{
+    text: string;
+    color: string;
+  }>;
 
   const [newRowModal2026, setNewRowModal2026] = useState(false);
   const [newRowData2026, setNewRowData2026] = useState({
@@ -365,10 +394,13 @@ export default function InstallmentsTab() {
       fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
       paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
       remaining: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
-      months: MONTHS_2025.reduce((acc, m) => {
-        acc[m] = (filteredRows2025 || []).reduce((s, r) => s + (Number(r.payments?.[m]) || 0), 0);
-        return acc;
-      }, {} as Record<string, number>),
+      months: MONTHS_2025.reduce(
+        (acc, m) => {
+          acc[m] = (filteredRows2025 || []).reduce((s, r) => s + (Number(r.payments?.[m]) || 0), 0);
+          return acc;
+        },
+        {} as Record<string, number>,
+      ),
     }),
     [filteredRows2025],
   );
@@ -379,10 +411,13 @@ export default function InstallmentsTab() {
       fees: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
       paid: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
       remaining: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
-      months: MONTHS_2026.reduce((acc, m) => {
-        acc[m] = (filteredRows2026 || []).reduce((s, r) => s + (Number(r.payments?.[m]) || 0), 0);
-        return acc;
-      }, {} as Record<string, number>),
+      months: MONTHS_2026.reduce(
+        (acc, m) => {
+          acc[m] = (filteredRows2026 || []).reduce((s, r) => s + (Number(r.payments?.[m]) || 0), 0);
+          return acc;
+        },
+        {} as Record<string, number>,
+      ),
     }),
     [filteredRows2026],
   );
@@ -537,7 +572,8 @@ export default function InstallmentsTab() {
                   ${monthsList.map((m) => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
                   ${extraCols
                     .map((col) => {
-                      if (col.type === "formula") return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
+                      if (col.type === "formula")
+                        return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
                       return `<td>${row.customData?.[col.name] || "—"}</td>`;
                     })
                     .join("")}
@@ -605,8 +641,9 @@ export default function InstallmentsTab() {
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
           <style>
             @page { size: A3 landscape; margin: 10mm; }
+            @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
             * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 20px; background: white; }
+            body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 20px; background: white; }
             .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
             .header h1 { color: #000; margin: 0; font-size: 24px; }
             .header p { color: #000; margin: 5px 0 0; font-size: 18px; }
@@ -1027,44 +1064,16 @@ export default function InstallmentsTab() {
       ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" }
       : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
 
-  // تم تعديل هذه الدالة لتتوافق بشكل أفضل مع صيغة حفظ PDF واللغة العربية
-  const generateAccountStatement = (row: any, year: number) => {
+  const exportAccountStatementPdf = async (row: any, year: number) => {
     const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
     const fees = cleanNumber(row.fees);
     const prevDue = cleanNumber(row.prevDue);
-    const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
+    const payments = monthsList
+      .map((month) => ({ month, amount: Number(row.payments?.[month]) || 0 }))
+      .filter((payment) => payment.amount > 0);
+    const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
     const dueTotal = year === 2026 ? prevDue || fees : fees;
     const remaining = dueTotal - totalPaid;
-
-    // استخراج اسم نظيف لملف الـ PDF الافتراضي
-    const safeName = row.name ? row.name.replace(/\s+/g, '_') : 'متدرب';
-
-    const paidRows = monthsList
-      .map((m) => {
-        const amount = Number(row.payments?.[m]) || 0;
-        if (amount <= 0) return "";
-        return `
-          <tr>
-            <td class="lbl">سداد شهر ${m}</td>
-            <td class="num">${fmt(amount)}</td>
-          </tr>`;
-      })
-      .join("");
-
-    const infoCard = (label: string, value: string) =>
-      `<div class="info-box">
-        <div class="info-lbl">${label}</div>
-        <div class="info-val">${value || "—"}</div>
-      </div>`;
-
-    const prevRow =
-      year === 2026
-        ? `<tr class="row-due-old">
-          <td class="lbl">متبقي من العام 2025 (مدور)</td>
-          <td class="num">${fmt(prevDue)}</td>
-        </tr>`
-        : "";
-
     const remainingLabel =
       remaining > 0
         ? "الرصيد المتبقي (عليه)"
@@ -1072,94 +1081,86 @@ export default function InstallmentsTab() {
           ? "الرصيد الإضافي (له)"
           : "الحالة: تم السداد بالكامل";
 
-    // إضافة <!DOCTYPE html> واسم <title> ليستخدم كاسم افتراضي للملف
-    return `<!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-      <head>
-        <meta charset="utf-8" />
-        <title>كشف_حساب_${safeName}_${year}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
-        <style>
-          @page { size: A4; margin: 0; }
-          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; }
-          .container { width: 210mm; min-height: 297mm; background: white; padding: 15mm; }
-          .header { background: #15803d !important; color: white; padding: 25px; border-radius: 8px; text-align: center; margin-bottom: 25px; border: 1px solid #000; }
-          .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
-          .header p { margin: 10px 0 0; font-size: 18px; opacity: 1; }
-          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-          .info-box { border: 1px solid #000; padding: 12px; border-radius: 8px; text-align: center; }
-          .info-lbl { font-size: 14px; color: #1e293b; font-weight: 800; }
-          .info-val { font-size: 18px; color: #000; font-weight: 800; margin-top: 5px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th { background-color: #166534 !important; color: #ffffff !important; padding: 12px; font-size: 18px; border: 1px solid #000; text-align: center; font-weight: 800; }
-          td { padding: 12px; border: 1px solid #000; text-align: center; font-size: 18px; }
-          .lbl { text-align: right; padding-right: 15px; font-weight: 800; color: #000; }
-          .num { text-align: left; padding-left: 15px; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
-          .row-due-old { background-color: #f1f5f9 !important; }
-          .row-total-due { background-color: #e2e8f0 !important; }
-          .row-total-paid { background-color: #f0fdf4 !important; }
-          .row-final { background-color: #fef2f2 !important; font-size: 22px; border: 2px solid #000 !important; }
-          @media print { 
-            body { background: white; } 
-            .container { box-shadow: none; padding: 10mm; width: 100%; }
-            .header { background: #15803d !important; -webkit-print-color-adjust: exact; }
-            th { background-color: #166534 !important; color: #ffffff !important; -webkit-print-color-adjust: exact; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>المجلس اليمني للاختصاصات الطبية</h1>
-            <p>كشف حساب رسمي - العام ${year}م</p>
-          </div>
-          <div class="info-grid">
-            ${infoCard("اسم المتدرب", row.name)}
-            ${infoCard("الدفعة", row.batch)}
-            ${infoCard("المساق", row.specialty)}
-            ${infoCard("رقم الهاتف", row.phone)}
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 60%">البيان</th>
-                <th style="width: 40%">المبلغ</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${fmt(fees)}</td></tr>
-              ${prevRow}
-              <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${fmt(dueTotal)}</td></tr>
-              ${paidRows}
-              <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${fmt(totalPaid)}</td></tr>
-              <tr class="row-final"><td class="lbl">${remainingLabel}</td><td class="num">${fmt(Math.abs(remaining))}</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <script>
-          // ننتظر تحميل الخطوط العربية (Cairo) لضمان توافق PDF
-          document.fonts.ready.then(function() {
-            window.print();
-          });
-        </script>
-      </body>
-      </html>
-    `;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    await loadCairoFont(doc);
+    doc.setR2L(true);
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 14;
+    let y = 16;
+
+    const text = (
+      value: string,
+      x: number,
+      yy: number,
+      size = 12,
+      align: "left" | "center" | "right" = "right",
+    ) => {
+      doc.setFontSize(size);
+      doc.text(value, x, yy, { align });
+    };
+
+    const addRow = (
+      label: string,
+      value: string,
+      options: { fill?: [number, number, number]; bold?: boolean } = {},
+    ) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 16;
+      }
+      if (options.fill) {
+        doc.setFillColor(...options.fill);
+        doc.rect(margin, y - 6, pageWidth - margin * 2, 10, "F");
+      }
+      doc.setDrawColor(0);
+      doc.rect(margin, y - 6, pageWidth - margin * 2, 10);
+      doc.line(pageWidth / 2, y - 6, pageWidth / 2, y + 4);
+      text(label, pageWidth - margin - 4, y, options.bold ? 13 : 12);
+      text(value, margin + 4, y, options.bold ? 13 : 12, "left");
+      y += 10;
+    };
+
+    doc.setFillColor(21, 128, 61);
+    doc.rect(margin, y, pageWidth - margin * 2, 22, "F");
+    doc.setTextColor(255, 255, 255);
+    text("المجلس اليمني للاختصاصات الطبية", pageWidth / 2, y + 9, 18, "center");
+    text(`كشف حساب رسمي - العام ${year}م`, pageWidth / 2, y + 17, 13, "center");
+    doc.setTextColor(0, 0, 0);
+    y += 32;
+
+    addRow("اسم المتدرب", String(row.name || "—"));
+    addRow("الدفعة", String(row.batch || "—"));
+    addRow("المساق", String(row.specialty || "—"));
+    addRow("رقم الهاتف", String(row.phone || "—"));
+
+    y += 6;
+    doc.setFillColor(22, 101, 52);
+    doc.rect(margin, y - 7, pageWidth - margin * 2, 11, "F");
+    doc.setTextColor(255, 255, 255);
+    text("البيان", pageWidth - margin - 4, y, 13);
+    text("المبلغ", margin + 4, y, 13, "left");
+    doc.setTextColor(0, 0, 0);
+    y += 11;
+
+    addRow("إجمالي الرسوم المستحقة", fmt(fees));
+    if (year === 2026)
+      addRow("متبقي من العام 2025 (مدور)", fmt(prevDue), { fill: [241, 245, 249] });
+    addRow("إجمالي المبلغ المطلوب", fmt(dueTotal), { fill: [226, 232, 240], bold: true });
+    payments.forEach((payment) => addRow(`سداد شهر ${payment.month}`, fmt(payment.amount)));
+    addRow("إجمالي المسدد (له)", fmt(totalPaid), { fill: [240, 253, 244], bold: true });
+    addRow(remainingLabel, fmt(Math.abs(remaining)), { fill: [254, 242, 242], bold: true });
+
+    doc.save(`كشف_حساب_${safePdfFileName(row.name)}_${year}.pdf`);
   };
 
-  // تم التعديل لضمان فتح الكشف بطريقة تدعم الحفظ الصحيح
-  const printStatement = (row: any, year: number) => {
-    const html = generateAccountStatement(row, year);
-    const w = window.open("", "_blank", "width=850,height=700");
-    if (w) {
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
-      // ملاحظة: إغلاق المتصفح أو الطباعة تتم الآن من داخل الكود المولد (script) لضمان تحميل الخط
-    } else {
-      toast.error("الرجاء السماح بالنوافذ المنبثقة (Pop-ups) لعرض الكشف");
+  const printStatement = async (row: any, year: number) => {
+    try {
+      await exportAccountStatementPdf(row, year);
+      toast.success("تم حفظ كشف الحساب كملف PDF");
+    } catch (error) {
+      console.error(error);
+      toast.error("فشل حفظ كشف الحساب كملف PDF");
     }
   };
 
@@ -1430,7 +1431,10 @@ export default function InstallmentsTab() {
                         {fmt(totals2025.fees)}
                       </td>
                       {MONTHS_2025.map((m) => (
-                        <td key={m} className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap">
+                        <td
+                          key={m}
+                          className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap"
+                        >
                           {totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}
                         </td>
                       ))}
@@ -1649,8 +1653,7 @@ export default function InstallmentsTab() {
                     onClick={() => handleSort2026("remaining")}
                   >
                     <div className="flex items-center justify-center gap-1">
-                      الرصيد المتبقي{" "}
-                      <SortIcon sortConfig={sortConfig2026} columnKey="remaining" />
+                      الرصيد المتبقي <SortIcon sortConfig={sortConfig2026} columnKey="remaining" />
                     </div>
                   </th>
                   <th className="p-2 text-center whitespace-nowrap">حالة</th>
@@ -1843,12 +1846,18 @@ export default function InstallmentsTab() {
                         {fmt(totals2026.fees)}
                       </td>
                       {MONTHS_2026.map((m) => (
-                        <td key={m} className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap">
+                        <td
+                          key={m}
+                          className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap"
+                        >
                           {totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}
                         </td>
                       ))}
                       {extraCols2026.map((col) => (
-                        <td key={col.name} className="p-1 text-center border-l border-slate-200 whitespace-nowrap">
+                        <td
+                          key={col.name}
+                          className="p-1 text-center border-l border-slate-200 whitespace-nowrap"
+                        >
                           —
                         </td>
                       ))}
@@ -1910,7 +1919,9 @@ export default function InstallmentsTab() {
                   key={color.class}
                   onClick={() => setCondFormatParams({ ...condFormatParams, color: color.class })}
                   className={`w-8 h-8 rounded-full border-2 ${
-                    condFormatParams.color === color.class ? "border-slate-800 scale-110" : "border-transparent"
+                    condFormatParams.color === color.class
+                      ? "border-slate-800 scale-110"
+                      : "border-transparent"
                   } ${color.class}`}
                   title={color.name}
                 />
@@ -2096,7 +2107,9 @@ export default function InstallmentsTab() {
           </div>
           {editRowModal?.year === 2025 && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">الرسوم الكلية</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                الرسوم الكلية
+              </label>
               <input
                 type="number"
                 value={editRowData?.fees || 0}
@@ -2259,7 +2272,9 @@ export default function InstallmentsTab() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">الرسوم الكلية</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                الرسوم الكلية
+              </label>
               <input
                 type="number"
                 value={newRowData2026.fees}
@@ -2333,7 +2348,9 @@ export default function InstallmentsTab() {
             )}
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المالي *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              المبلغ المالي *
+            </label>
             <input
               type="number"
               required
@@ -2345,7 +2362,9 @@ export default function InstallmentsTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">الشهر المستهدف *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              الشهر المستهدف *
+            </label>
             <select
               required
               value={newStudentMonth}
@@ -2442,7 +2461,9 @@ export default function InstallmentsTab() {
             </div>
             <form onSubmit={editPayment} className="space-y-3 mt-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">المبلغ المعدل *</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  المبلغ المعدل *
+                </label>
                 <input
                   type="number"
                   required
