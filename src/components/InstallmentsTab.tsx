@@ -22,7 +22,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import TabActions from "./TabActions";
-import { exportHtmlToPdf, exportHtmlToImage, printHtmlContent } from "@/lib/pdfExporter";
+import { exportStudentStatementPdf, printHtmlContent } from "@/lib/pdfExporter";
 
 const MONTHS_2025 = [
   "يونيو 2024",
@@ -1180,42 +1180,24 @@ export default function InstallmentsTab() {
     `;
   };
 
-  // دالة تصدير كشف الحساب كصورة طويلة
-  const exportAsImage = async (row: any, year: number) => {
+  // تصدير PDF متوافق مع هواتف شاومي وأندرويد
+  const handleExportPdf = async (row: any, year: number) => {
     try {
-      const html = generateAccountStatement(row, year);
-      const safeName = safePdfFileName(row.name);
-      const fileName = `كشف_حساب_${safeName}_${year}.png`;
-      
-      toast.info("جاري تجهيز كشف الحساب كصورة...");
-      await exportHtmlToImage(html, fileName);
-      toast.success(`تم تنزيل الصورة: ${fileName}`);
+      toast.info("جاري إنشاء ملف PDF...");
+      await exportStudentStatementPdf(row, year);
+      toast.success("تم بدء تنزيل الملف");
     } catch (error) {
-      toast.error("فشل تصدير كشف الحساب كصورة");
+      console.error("PDF Export Error:", error);
+      toast.error("فشل إنشاء ملف PDF، سيتم فتح نافذة الطباعة كبديل");
+      const html = generateAccountStatement(row, year);
+      printHtmlContent(html);
     }
   };
 
-  // تم التعديل لحفظ PDF تلقائياً باستخدام html2canvas و jsPDF
-  const printStatement = async (row: any, year: number) => {
-    try {
-      const html = generateAccountStatement(row, year);
-      const safeName = safePdfFileName(row.name);
-      // إرسال الاسم بدون امتداد، الدالة ستتعامل معه
-      const fileName = `كشف_حساب_${safeName}_${year}.pdf`;
-      
-      toast.info("جاري تجهيز ملف PDF للتنزيل...");
-      await exportHtmlToPdf(html, fileName);
-      toast.success(`بدأ تنزيل الملف: ${fileName}`);
-    } catch (error) {
-      // في حالة الفشل، استخدم نافذة الطباعة العادية
-      console.warn('فشل حفظ PDF تلقائياً، سيتم فتح نافذة الطباعة:', error);
-      const html = generateAccountStatement(row, year);
-      try {
-        printHtmlContent(html);
-      } catch (printError) {
-        toast.error("الرجاء السماح بالنوافذ المنبثقة (Pop-ups) لعرض الكشف");
-      }
-    }
+  // وظيفة الطباعة التقليدية
+  const printStatement = (row: any, year: number) => {
+    const html = generateAccountStatement(row, year);
+    printHtmlContent(html);
   };
 
   const stats2025 = [
@@ -1474,11 +1456,11 @@ export default function InstallmentsTab() {
                               <Printer className="w-3.5 h-3.5" />
                             </button>
                                 <button
-                                  onClick={() => exportAsImage(r, 2025)}
+                                  onClick={() => handleExportPdf(r, 2025)}
                                   className="p-1 bg-emerald-50 text-emerald-600 rounded border border-emerald-200 hover:bg-emerald-500 hover:text-white transition-colors"
-                                  title="تصدير كصورة للمشاركة"
+                                  title="تنزيل PDF (متوافق مع شاومي)"
                                 >
-                                  <ImageIcon className="w-3.5 h-3.5" />
+                                  <FileText className="w-3.5 h-3.5" />
                                 </button>
                           </td>
                         </tr>
@@ -1889,11 +1871,11 @@ export default function InstallmentsTab() {
                               <Printer className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => exportAsImage(r, 2026)}
+                              onClick={() => handleExportPdf(r, 2026)}
                               className="p-1 bg-emerald-50 text-emerald-600 rounded border border-emerald-200 hover:bg-emerald-500 hover:text-white transition-colors"
-                              title="تصدير كصورة للمشاركة"
+                              title="تنزيل PDF (متوافق مع شاومي)"
                             >
-                              <ImageIcon className="w-3.5 h-3.5" />
+                              <FileText className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => deleteRow2026(originalIndex, r.name)}

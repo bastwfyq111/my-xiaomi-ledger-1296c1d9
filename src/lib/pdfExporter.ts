@@ -1,114 +1,99 @@
-// @ts-ignore
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
-import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { fmt } from './format';
 
 /**
- * تصدير محتوى HTML كصورة طويلة عالية الجودة
+ * تصدير كشف حساب المتدرب كملف PDF متوافق تماماً مع هواتف شاومي وأندرويد
+ * يستخدم التوليد البرمجي المباشر لضمان السرعة وعدم تعليق الجهاز
  */
-export async function exportHtmlToImage(htmlContent: string, fileName: string): Promise<void> {
-  // تنظيف اسم الملف وضمان وجود امتداد .png
-  let cleanFileName = fileName.replace(/[^\u0600-\u06FFa-zA-Z0-9._-]/g, '_');
-  if (cleanFileName.toLowerCase().endsWith('.pdf')) {
-    cleanFileName = cleanFileName.slice(0, -4);
-  }
-  if (!cleanFileName.toLowerCase().endsWith('.png')) {
-    cleanFileName += '.png';
-  }
+export async function exportStudentStatementPdf(row: any, year: number): Promise<void> {
+  const safeName = (row.name || 'متدرب').replace(/[^\u0600-\u06FFa-zA-Z0-9._-]/g, '_');
+  const fileName = `كشف_حساب_${safeName}_${year}.pdf`;
 
-  const element = document.createElement('div');
-  element.innerHTML = htmlContent;
-  element.style.width = '210mm';
-  element.style.background = 'white';
-  document.body.appendChild(element);
+  // إنشاء مستند PDF جديد
+  const doc = new jsPDF({
+    orientation: 'p',
+    unit: 'mm',
+    format: 'a4',
+    putOnlyUsedFonts: true
+  });
 
-  try {
-    const canvas = await html2canvas(element, {
-      scale: 2, // دقة متوازنة لسرعة أفضل
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      removeContainer: true, // تنظيف تلقائي
-    });
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.8); // استخدام jpeg بضغط خفيف للسرعة وتقليل الحجم
-    const link = document.createElement('a');
-    link.href = imgData;
-    link.download = cleanFileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } catch (error) {
-    console.error('فشل تصدير الصورة:', error);
-    throw error;
-  } finally {
-    document.body.removeChild(element);
-  }
-}
-
-/**
- * تصدير محتوى HTML إلى PDF وبدء تنزيل حقيقي عبر المتصفح
- */
-export async function exportHtmlToPdf(htmlContent: string, fileName: string): Promise<void> {
-  // تنظيف اسم الملف وضمان وجود امتداد .pdf
-  let cleanFileName = fileName.replace(/[^\u0600-\u06FFa-zA-Z0-9._-]/g, '_');
-  if (!cleanFileName.toLowerCase().endsWith('.pdf')) {
-    cleanFileName += '.pdf';
-  }
+  // إعدادات الخطوط العربية (استخدام الخط الافتراضي مع دعم RTL)
+  doc.setR2L(true);
   
-  const element = document.createElement('div');
-  element.innerHTML = htmlContent;
-  // تأمين العرض والارتفاع ليتناسب مع A4
-  element.style.width = '210mm';
-  element.style.height = '297mm';
-  element.style.overflow = 'hidden';
+  // العنوان الرئيسي
+  doc.setFontSize(18);
+  doc.text("المجلس اليمني للاختصاصات الطبية", 105, 15, { align: 'center' });
+  doc.setFontSize(14);
+  doc.text(`كشف حساب رسمي - العام ${year}م`, 105, 22, { align: 'center' });
+
+  // معلومات المتدرب
+  doc.setFontSize(10);
+  doc.rect(10, 30, 190, 25); // إطار المعلومات
   
-  const opt = {
-    margin: 0, // الهوامش محددة داخل الـ HTML لضمان الدقة
-    filename: cleanFileName,
-    image: { type: 'jpeg', quality: 1.0 },
-    html2canvas: { 
-      scale: 1.5, // تقليل بسيط للدقة لتسريع الـ PDF
-      useCORS: true, 
-      letterRendering: true,
-    },
-    jsPDF: { 
-      unit: 'mm', 
-      format: 'a4', 
-      orientation: 'portrait',
-      compress: true
+  const infoY = 37;
+  doc.text(`اسم المتدرب: ${row.name}`, 195, infoY, { align: 'right' });
+  doc.text(`الدفعة: ${row.batch || '—'}`, 100, infoY, { align: 'right' });
+  doc.text(`المساق: ${row.specialty || '—'}`, 195, infoY + 8, { align: 'right' });
+  doc.text(`رقم الهاتف: ${row.phone || '—'}`, 100, infoY + 8, { align: 'right' });
+
+  // البيانات المالية
+  const monthsList = year === 2025 ? 
+    ["يونيو 2024", "يوليو 2024", "أغسطس 2024", "مارس 2025", "ابريل 2025", "مايو 2025", "يونيو 2025", "يوليو 2025", "أغسطس 2025", "سبتمبر 2025", "أكتوبر 2025", "نوفمبر2025", "ديسمبر2025"] : 
+    ["يناير", "فبراير", "مارس", "ابريل", "مايو", "يونيو", "يوليو", "اغسطس", "سبتمبر", "اكتوبر ", "نوفمبر", "ديسمبر"];
+
+  const fees = Number(String(row.fees || 0).replace(/[^0-9.-]/g, "")) || 0;
+  const prevDue = Number(String(row.prevDue || 0).replace(/[^0-9.-]/g, "")) || 0;
+  const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
+  const dueTotal = year === 2026 ? prevDue || fees : fees;
+  const remaining = dueTotal - totalPaid;
+
+  const tableRows = [];
+  tableRows.push(["إجمالي الرسوم المستحقة", fmt(fees)]);
+  if (year === 2026) {
+    tableRows.push(["متبقي من العام 2025 (مدور)", fmt(prevDue)]);
+  }
+  tableRows.push(["إجمالي المبلغ المطلوب", fmt(dueTotal)]);
+  
+  // تفاصيل السداد
+  monthsList.forEach(m => {
+    const val = Number(row.payments?.[m]) || 0;
+    if (val > 0) {
+      tableRows.push([`سداد شهر ${m}`, fmt(val)]);
     }
-  };
+  });
 
-  try {
-    // الحصول على ملف الـ PDF كـ Blob (كتلة بيانات)
-    // ثم استخدام رابط وهمي لبدء تنزيل حقيقي يراه المتصفح
-    const worker = html2pdf().set(opt).from(element).toPdf();
-    const pdfBlob = await worker.output('blob');
-    
-    // إنشاء رابط تنزيل حقيقي
-    const url = URL.createObjectURL(pdfBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = cleanFileName;
-    
-    // إضافة الرابط للمستند، النقر عليه، ثم إزالته
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // تحرير الذاكرة
-    setTimeout(() => URL.revokeObjectURL(url), 100);
-    
-  } catch (error) {
-    console.error('فشل تنزيل PDF:', error);
-    throw error;
-  }
+  tableRows.push(["إجمالي المسدد (له)", fmt(totalPaid)]);
+  tableRows.push([remaining > 0 ? "الرصيد المتبقي (عليه)" : "الرصيد الإضافي (له)", fmt(Math.abs(remaining))]);
+
+  // إنشاء الجدول برمجياً (سريع جداً)
+  (doc as any).autoTable({
+    startY: 60,
+    head: [['البيان', 'المبلغ']],
+    body: tableRows,
+    styles: { font: 'helvetica', halign: 'right', fontSize: 12 },
+    headStyles: { fillStyle: 'F', fillColor: [21, 128, 61], textColor: 255, halign: 'center' },
+    columnStyles: {
+      0: { cellWidth: 140 },
+      1: { cellWidth: 50, halign: 'center', fontStyle: 'bold' }
+    },
+    theme: 'grid'
+  });
+
+  // الحل السحري لشاومي: استخدام Data URI بدلاً من Blob
+  // هذا يفتح الملف مباشرة أو يبدأ تنزيله دون تعليق
+  const pdfData = doc.output('datauristring');
+  
+  // إنشاء رابط مخفي والنقر عليه
+  const link = document.createElement('a');
+  link.href = pdfData;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
-/**
- * وظيفة الطباعة التقليدية كخيار احتياطي
- */
+// الدوال القديمة للطباعة فقط
 export function printHtmlContent(htmlContent: string): void {
   const w = window.open('', '_blank');
   if (!w) return;
