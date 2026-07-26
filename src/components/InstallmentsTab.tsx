@@ -21,6 +21,7 @@ import {
   FileText,
 } from "lucide-react";
 import TabActions from "./TabActions";
+import { exportHtmlToPdf, printHtmlContent } from "@/lib/pdfExporter";
 
 const MONTHS_2025 = [
   "يونيو 2024",
@@ -1178,17 +1179,25 @@ export default function InstallmentsTab() {
     `;
   };
 
-  // تم التعديل لضمان فتح الكشف بطريقة تدعم الحفظ الصحيح
-  const printStatement = (row: any, year: number) => {
-    const html = generateAccountStatement(row, year);
-    const w = window.open("", "_blank", "width=850,height=700");
-    if (w) {
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
-      // ملاحظة: إغلاق المتصفح أو الطباعة تتم الآن من داخل الكود المولد (script) لضمان تحميل الخط
-    } else {
-      toast.error("الرجاء السماح بالنوافذ المنبثقة (Pop-ups) لعرض الكشف");
+  // تم التعديل لحفظ PDF تلقائياً باستخدام html2canvas و jsPDF
+  const printStatement = async (row: any, year: number) => {
+    try {
+      const html = generateAccountStatement(row, year);
+      const safeName = safePdfFileName(row.name);
+      const fileName = `كشف_حساب_${safeName}_${year}.pdf`;
+      
+      // محاولة حفظ الملف تلقائياً كـ PDF
+      await exportHtmlToPdf(html, fileName);
+      toast.success(`تم حفظ الملف: ${fileName}`);
+    } catch (error) {
+      // في حالة الفشل، استخدم نافذة الطباعة العادية
+      console.warn('فشل حفظ PDF تلقائياً، سيتم فتح نافذة الطباعة:', error);
+      const html = generateAccountStatement(row, year);
+      try {
+        printHtmlContent(html);
+      } catch (printError) {
+        toast.error("الرجاء السماح بالنوافذ المنبثقة (Pop-ups) لعرض الكشف");
+      }
     }
   };
 
