@@ -1187,8 +1187,9 @@ export default function InstallmentsTab() {
       // إرسال الاسم بدون امتداد، الدالة ستتعامل معه
       const fileName = `كشف_حساب_${safeName}_${year}.pdf`;
       
+      toast.info("جاري تجهيز ملف PDF للتنزيل...");
       await exportHtmlToPdf(html, fileName);
-      toast.success(`تم حفظ الملف: ${fileName}`);
+      toast.success(`بدأ تنزيل الملف: ${fileName}`);
     } catch (error) {
       // في حالة الفشل، استخدم نافذة الطباعة العادية
       console.warn('فشل حفظ PDF تلقائياً، سيتم فتح نافذة الطباعة:', error);

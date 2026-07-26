@@ -2,17 +2,19 @@
 import html2pdf from 'html2pdf.js';
 
 /**
- * تصدير محتوى HTML إلى PDF باستخدام html2pdf.js
- * هذه المكتبة هي الأكثر استقراراً للتعامل مع CSS المعقد والخطوط العربية
+ * تصدير محتوى HTML إلى PDF وبدء تنزيل حقيقي عبر المتصفح
  */
 export async function exportHtmlToPdf(htmlContent: string, fileName: string): Promise<void> {
-  // تنظيف اسم الملف من أي رموز قد تسبب مشاكل في نظام التشغيل
-  const cleanFileName = fileName.replace(/[^\u0600-\u06FFa-zA-Z0-9._-]/g, '_');
+  // تنظيف اسم الملف وضمان وجود امتداد .pdf
+  let cleanFileName = fileName.replace(/[^\u0600-\u06FFa-zA-Z0-9._-]/g, '_');
+  if (!cleanFileName.toLowerCase().endsWith('.pdf')) {
+    cleanFileName += '.pdf';
+  }
   
   const element = document.createElement('div');
   element.innerHTML = htmlContent;
-  element.style.width = '210mm'; // عرض A4
   
+  // إعدادات html2pdf
   const opt = {
     margin: [10, 10, 10, 10],
     filename: cleanFileName,
@@ -20,9 +22,7 @@ export async function exportHtmlToPdf(htmlContent: string, fileName: string): Pr
     html2canvas: { 
       scale: 2, 
       useCORS: true, 
-      letterRendering: true,
-      scrollX: 0,
-      scrollY: 0
+      letterRendering: true 
     },
     jsPDF: { 
       unit: 'mm', 
@@ -32,29 +32,42 @@ export async function exportHtmlToPdf(htmlContent: string, fileName: string): Pr
   };
 
   try {
-    // تنفيذ عملية التحويل والحفظ
-    await html2pdf().set(opt).from(element).save();
+    // الحصول على ملف الـ PDF كـ Blob (كتلة بيانات)
+    // ثم استخدام رابط وهمي لبدء تنزيل حقيقي يراه المتصفح
+    const worker = html2pdf().set(opt).from(element).toPdf();
+    const pdfBlob = await worker.output('blob');
+    
+    // إنشاء رابط تنزيل حقيقي
+    const url = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = cleanFileName;
+    
+    // إضافة الرابط للمستند، النقر عليه، ثم إزالته
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // تحرير الذاكرة
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+    
   } catch (error) {
-    console.error('Error exporting PDF:', error);
+    console.error('فشل تنزيل PDF:', error);
     throw error;
   }
 }
 
 /**
- * خيار بديل للطباعة المباشرة في حال فشل المكتبة
+ * وظيفة الطباعة التقليدية كخيار احتياطي
  */
 export function printHtmlContent(htmlContent: string): void {
-  const w = window.open('', '_blank', 'width=850,height=700');
+  const w = window.open('', '_blank');
   if (!w) return;
-  
-  w.document.open();
   w.document.write(htmlContent);
   w.document.close();
-  
   w.onload = () => {
     setTimeout(() => {
       w.print();
-      // لا نغلق النافذة للسماح للمستخدم بالتحكم في الطباعة
     }, 500);
   };
 }
