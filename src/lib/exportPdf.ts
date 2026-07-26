@@ -17,13 +17,13 @@ export function exportToPdf(opts: {
   const fontSize = opts.columns.length > 12 ? 9 : opts.columns.length > 8 ? 10 : 11;
   const head = `<meta charset="utf-8"><title>${opts.title}</title>
   <style>
-    @page { size: A4 ${orient}; margin: 8mm; }
+    @page { size: A4 ${orient}; margin: 0mm; }
     body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#000; }
-    h1 { text-align:center; font-size:18px; margin: 0 0 12px; }
+    h1 { text-align:center; font-size:18px; margin: 0 0 2px; }
     table { width:100%; border-collapse: collapse; font-size:${fontSize}px; table-layout: fixed; }
     th, td { 
       border:2px solid #000; 
-      padding:4px 5px; 
+      padding:2px 2px; 
       text-align:center; 
       white-space: normal; /* السماح بالتفاف النص */
       word-wrap: break-word; 
@@ -257,7 +257,7 @@ export function monthlyStatementPdf(opts: {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap">
   <style>
-    @page { size: A4 landscape; margin: 8mm; }
+    @page { size: A4 landscape; margin: 0mm; }
     body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#000; margin:0; padding:8px; }
     h1 { text-align:center; font-size:18px; margin: 0 0 4px; color:#000; }
     .meta { text-align:center; font-size:14px; color:#000; }
@@ -399,15 +399,15 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap">
   <style>
-    @page { size: A4 landscape; margin: 10mm; }
-    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#0f172a; margin:0; padding:8px; }
-    h1 { text-align:center; font-size:18px; margin: 0 0 4px; color:#0f766e; }
+    @page { size: A4 landscape; margin: 0mm; }
+    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#0f172a; margin:0; padding:2px; }
+    h1 { text-align:center; font-size:18px; margin: 0 0 2px; color:#0f766e; }
     .meta { text-align:center; font-size:11px; color:#475569; }
-    .period { font-weight:700; color:#0f172a; margin: 4px 0 8px; }
+    .period { font-weight:700; color:#0f172a; margin: 2px 0 2px; }
     table { width:100%; border-collapse: collapse; font-size:11px; table-layout:fixed; }
     th, td { 
       border:1px solid #475569; 
-      padding:4px 6px; 
+      padding:2px 2px; 
       text-align:center; 
       white-space: normal; /* السماح بالتفاف النص */
       word-wrap: break-word; 
@@ -415,9 +415,9 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
       word-break: break-word; 
     }
     thead th { background:#0f766e; color:white; font-weight:700; }
-    td.acc { text-align:right; font-weight:600; }
-    tr.grp td { background:#fef3c7; color:#0f766e; font-weight:800; }
-    tr.sub td { background:#e2e8f0; font-weight:700; }
+    td.acc { text-align:center; font-weight: 1000; }
+    tr.grp td { background:#fef3c7; color:#0f766e; font-weight:1000; }
+    tr.sub td { background:#e2e8f0; font-weight:1000; }
     tr.sub2 td { background:#f1f5f9; }
     tr.tot td { background:#0f766e; color:white; font-weight:800; }
     @media print { button { display:none; } }
