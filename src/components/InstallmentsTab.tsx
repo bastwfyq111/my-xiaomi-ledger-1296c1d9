@@ -1118,11 +1118,11 @@ export default function InstallmentsTab() {
           .info-box { border: 1px solid #000; padding: 8px; border-radius: 6px; text-align: center; }
           .info-lbl { font-size: 12px; color: #1e293b; font-weight: 800; }
           .info-val { font-size: 15px; color: #000; font-weight: 800; margin-top: 2px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
-          th { background-color: #166534 !important; color: #ffffff !important; padding: 8px; font-size: 15px; border: 1px solid #000; text-align: center; font-weight: 800; }
-          td { padding: 8px; border: 1px solid #000; text-align: center; font-size: 15px; overflow: hidden; word-wrap: break-word; }
-          .lbl { text-align: right; padding-right: 15px; font-weight: 800; color: #000; }
-          .num { text-align: left; padding-left: 15px; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 3px; table-layout: fixed; }
+          th { background-color: #166534 !important; color: #ffffff !important; paddingtextx; font-size: 15px; border: 1px solid #000; text-px: center; font-weight: 800; }
+          td {padding:3px; border: 1px solid #000; text-align: center; font-size: 15px; overflow: hidden; word-wrap: break-word; }
+          .lbl { text-align: right; padding-right: 3px;  font-weight: 800; color: #000; }
+          .num { text-align: center ; padding-left: 3px; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
           .row-due-old { background-color: #f1f5f9 !important; }
           .row-total-due { background-color: #e2e8f0 !important; }
           .row-total-paid { background-color: #f0fdf4 !important; }
