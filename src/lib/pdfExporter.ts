@@ -13,21 +13,27 @@ export async function exportHtmlToPdf(htmlContent: string, fileName: string): Pr
   
   const element = document.createElement('div');
   element.innerHTML = htmlContent;
+  // تأمين العرض والارتفاع ليتناسب مع A4
+  element.style.width = '210mm';
+  element.style.height = '297mm';
+  element.style.overflow = 'hidden';
   
-  // إعدادات html2pdf
   const opt = {
-    margin: [10, 10, 10, 10],
+    margin: 0, // الهوامش محددة داخل الـ HTML لضمان الدقة
     filename: cleanFileName,
-    image: { type: 'jpeg', quality: 0.98 },
+    image: { type: 'jpeg', quality: 1.0 },
     html2canvas: { 
       scale: 2, 
       useCORS: true, 
-      letterRendering: true 
+      letterRendering: true,
+      width: 794, // 210mm بيكسل تقريباً
+      height: 1123 // 297mm بيكسل تقريباً
     },
     jsPDF: { 
       unit: 'mm', 
       format: 'a4', 
-      orientation: 'portrait' 
+      orientation: 'portrait',
+      compress: true
     }
   };
 

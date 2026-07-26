@@ -1105,21 +1105,21 @@ export default function InstallmentsTab() {
         <meta charset="utf-8" />
         <title>${escapeHtml(`كشف_حساب_${safeName}_${year}`)}</title>
         <style>
-          @page { size: A4; margin: 10mm; }
+          @page { size: A4 portrait; margin: 5mm; }
           @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
           * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; }
-          .container { width: 100%; max-width: 190mm; min-height: 277mm; background: white; padding: 8mm; }
-          .header { background: #15803d !important; color: white; padding: 25px; border-radius: 8px; text-align: center; margin-bottom: 25px; border: 1px solid #000; }
-          .header h1 { margin: 0; font-size: 28px; font-weight: 800; }
-          .header p { margin: 10px 0 0; font-size: 18px; opacity: 1; }
-          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-          .info-box { border: 1px solid #000; padding: 12px; border-radius: 8px; text-align: center; }
-          .info-lbl { font-size: 14px; color: #1e293b; font-weight: 800; }
-          .info-val { font-size: 18px; color: #000; font-weight: 800; margin-top: 5px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th { background-color: #166534 !important; color: #ffffff !important; padding: 12px; font-size: 18px; border: 1px solid #000; text-align: center; font-weight: 800; }
-          td { padding: 12px; border: 1px solid #000; text-align: center; font-size: 18px; }
+          body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; width: 100%; }
+          .container { width: 210mm; height: 297mm; background: white; padding: 10mm; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; }
+          .header { background: #15803d !important; color: white; padding: 15px; border-radius: 6px; text-align: center; margin-bottom: 15px; border: 1px solid #000; }
+          .header h1 { margin: 0; font-size: 22px; font-weight: 800; }
+          .header p { margin: 5px 0 0; font-size: 16px; opacity: 1; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+          .info-box { border: 1px solid #000; padding: 8px; border-radius: 6px; text-align: center; }
+          .info-lbl { font-size: 12px; color: #1e293b; font-weight: 800; }
+          .info-val { font-size: 15px; color: #000; font-weight: 800; margin-top: 2px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+          th { background-color: #166534 !important; color: #ffffff !important; padding: 8px; font-size: 15px; border: 1px solid #000; text-align: center; font-weight: 800; }
+          td { padding: 8px; border: 1px solid #000; text-align: center; font-size: 15px; overflow: hidden; word-wrap: break-word; }
           .lbl { text-align: right; padding-right: 15px; font-weight: 800; color: #000; }
           .num { text-align: left; padding-left: 15px; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
           .row-due-old { background-color: #f1f5f9 !important; }
