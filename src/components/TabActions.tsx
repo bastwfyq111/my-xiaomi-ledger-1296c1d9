@@ -43,21 +43,21 @@ export default function TabActions({
       <meta charset="utf-8" />
       <title>${escapeHtml(title)}</title>
       <style>
-        @page { size: A4 landscape; margin: 10mm; }
+        @page { size: A4 landscape; margin: 0mm; }
         * { box-sizing: border-box; }
         body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 16px; color: #000; direction: rtl; }
-        h1 { text-align: center; color: #000; margin: 0 0 6px; font-size: 22px; }
-        .sub { text-align: center; color: #000; margin-bottom: 14px; font-size: 18px; }
+        h1 { text-align: center; color: #000; margin: 0 0 2px; font-size: 22px; }
+        .sub { text-align: center; color: #000; margin-bottom: 3px; font-size: 18px; }
         table { width: 100%; border-collapse: collapse; font-size: 18px; }
         th, td { 
           border: 2px solid #000; 
-          padding: 6px 8px; 
+          padding: 2px 2px; 
           text-align: center; 
           white-space: nowrap; 
         }
         thead th { background: #e2da84; color: #000; font-weight: 1000; }
         tbody tr:nth-child(even) { f: #f1f5f9; }
-        .num { font-family: 'Courier New', monospace; text-align: left; direction: ltr; }
+        .num { font-family: 'Courier New', monospace; text-align: center; direction: ltr; }
         .idx { width: 36px; text-align: center; color: #000; }
       </style>
     `;
