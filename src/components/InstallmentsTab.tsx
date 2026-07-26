@@ -1179,60 +1179,6 @@ export default function InstallmentsTab() {
     `;
   };
 
-  // دالة تصدير كشف حساب فردي كملف Excel لفتحه في WPS أو مشاركته
-  const exportIndividualExcel = (row: any, year: number) => {
-    try {
-      const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-      const fees = cleanNumber(row.fees);
-      const prevDue = cleanNumber(row.prevDue);
-      const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
-      const dueTotal = year === 2026 ? prevDue || fees : fees;
-      const remaining = dueTotal - totalPaid;
-
-      const data = [
-        ["المجلس اليمني للاختصاصات الطبية"],
-        [`كشف حساب رسمي - العام ${year}م`],
-        [],
-        ["معلومات المتدرب"],
-        ["اسم المتدرب", row.name],
-        ["الدفعة", row.batch],
-        ["المساق", row.specialty],
-        ["رقم الهاتف", row.phone],
-        [],
-        ["البيان", "المبلغ"],
-        ["إجمالي الرسوم المستحقة", fees],
-      ];
-
-      if (year === 2026) {
-        data.push(["متبقي من العام 2025 (مدور)", prevDue]);
-      }
-
-      data.push(["إجمالي المبلغ المطلوب", dueTotal]);
-      data.push([]);
-      data.push(["تفاصيل السداد"]);
-
-      monthsList.forEach((m) => {
-        const amount = Number(row.payments?.[m]) || 0;
-        if (amount > 0) {
-          data.push([`سداد شهر ${m}`, amount]);
-        }
-      });
-
-      data.push([]);
-      data.push(["إجمالي المسدد (له)", totalPaid]);
-      data.push([remaining > 0 ? "الرصيد المتبقي (عليه)" : "الرصيد الإضافي (له)", Math.abs(remaining)]);
-
-      const worksheet = XLSX.utils.aoa_to_sheet(data);
-      const workbook = XLSX.utils.book_new();
-      const safeName = safePdfFileName(row.name);
-      XLSX.utils.book_append_sheet(workbook, worksheet, "كشف الحساب");
-      XLSX.writeFile(workbook, `كشف_حساب_${safeName}_${year}.xlsx`);
-      toast.success("تم تصدير كشف الحساب كملف Excel");
-    } catch (error) {
-      toast.error("فشل تصدير ملف Excel");
-    }
-  };
-
   // تم التعديل لحفظ PDF تلقائياً باستخدام html2canvas و jsPDF
   const printStatement = async (row: any, year: number) => {
     try {
@@ -1511,13 +1457,13 @@ export default function InstallmentsTab() {
                             >
                               <Printer className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => exportIndividualExcel(r, 2025)}
-                              className="p-1 bg-emerald-50 text-emerald-600 rounded border border-emerald-200 hover:bg-emerald-500 hover:text-white transition-colors"
-                              title="مشاركة/تصدير Excel (لـ WPS)"
-                            >
-                              <FileSpreadsheet className="w-3.5 h-3.5" />
-                            </button>
+                                <button
+                                  onClick={() => printStatement(r, 2025)}
+                                  className="p-1 bg-emerald-50 text-emerald-600 rounded border border-emerald-200 hover:bg-emerald-500 hover:text-white transition-colors"
+                                  title="تصدير PDF للمشاركة"
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                </button>
                           </td>
                         </tr>
                       );
@@ -1927,11 +1873,11 @@ export default function InstallmentsTab() {
                               <Printer className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => exportIndividualExcel(r, 2026)}
+                              onClick={() => printStatement(r, 2026)}
                               className="p-1 bg-emerald-50 text-emerald-600 rounded border border-emerald-200 hover:bg-emerald-500 hover:text-white transition-colors"
-                              title="مشاركة/تصدير Excel (لـ WPS)"
+                              title="تصدير PDF للمشاركة"
                             >
-                              <FileSpreadsheet className="w-3.5 h-3.5" />
+                              <FileText className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => deleteRow2026(originalIndex, r.name)}
