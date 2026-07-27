@@ -630,23 +630,24 @@ export default function InstallmentsTab() {
           <link rel="preconnect" href="https://fonts.googleapis.com">
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
           <style>
-            @page { size: A3 landscape; margin: 10mm; }
+            * { margin: 0; padding: 0; }
+            @page { size: A4 landscape; margin: 0mm; padding: 0; }
+            html { margin: 0; padding: 0; }
             @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
-            * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 20px; background: white; }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 15px; }
-            .header h1 { color: #000; margin: 0; font-size: 24px; }
-            .header p { color: #000; margin: 5px 0 0; font-size: 18px; }
-            table { width: 100%; border-collapse: collapse; font-size: 18px; }
-            th { background-color: #bae6fd !important; color: #000000 !important; font-weight: 900 !important; padding: 8px 4px; border: 2px solid #000; text-align: center; white-space: nowrap; }
-            td { padding: 6px 4px; border: 2px solid #000; text-align: center; white-space: nowrap; }
+            body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 8px; background: white; width: 100%; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 8px; }
+            .header h1 { color: #000; margin: 0; font-size: 18px; }
+            .header p { color: #000; margin: 3px 0 0; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            th { background-color: #bae6fd !important; color: #000000 !important; font-weight: 900 !important; padding: 4px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; }
+            td { padding: 3px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; }
             tr:nth-child(even) { background: #f8fafc; }
             .bg-index { background-color: #cbd5e1 !important; font-weight: bold; }
             .bg-remaining { background-color: #fecdd3 !important; color: #881337 !important; font-weight: bold; }
             .bg-total { background-color: #fef08a !important; font-weight: bold; }
             .bg-total td { border-top: 3px solid #000 !important; }
-            .footer { margin-top: 20px; text-align: left; font-size: 12px; color: #64748b; }
-            @media print { body { padding: 0; } }
+            .footer { margin-top: 10px; text-align: left; font-size: 10px; color: #64748b; }
+            @media print { * { margin: 0; padding: 0; } body { margin: 0; padding: 8px; } }
           </style>
         </head>
         <body>
@@ -1106,11 +1107,12 @@ export default function InstallmentsTab() {
         <meta charset="utf-8" />
         <title>${escapeHtml(`كشف_حساب_${safeName}_${year}`)}</title>
         <style>
-          @page { size: A4 portrait; margin: 5mm; }
+          * { margin: 0; padding: 0; }
+          @page { size: A4 portrait; margin: 0mm; padding: 0; }
+          html { margin: 0; padding: 0; }
           @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
-          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 0; background-color: white; display: flex; justify-content: center; width: 100%; }
-          .container { width: 210mm; background: white; padding: 10mm; box-sizing: border-box; display: flex; flex-direction: column; }
+          body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 8px; background-color: white; width: 100%; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          .container { width: 100%; background: white; padding: 0; box-sizing: border-box; display: flex; flex-direction: column; }
           .header { background: #15803d !important; color: white; padding: 15px; border-radius: 6px; text-align: center; margin-bottom: 15px; border: 1px solid #000; }
           .header h1 { margin: 0; font-size: 22px; font-weight: 800; }
           .header p { margin: 5px 0 0; font-size: 16px; opacity: 1; }
@@ -1128,8 +1130,9 @@ export default function InstallmentsTab() {
           .row-total-paid { background-color: #f0fdf4 !important; }
           .row-final { background-color: #fef2f2 !important; font-size: 22px; border: 2px solid #000 !important; }
           @media print { 
-            body { background: white; } 
-            .container { box-shadow: none; padding: 10mm; width: 100%; }
+            * { margin: 0; padding: 0; }
+            body { background: white; margin: 0; padding: 8px; } 
+            .container { box-shadow: none; padding: 0; width: 100%; margin: 0; }
             .header { background: #15803d !important; -webkit-print-color-adjust: exact; }
             th { background-color: #166534 !important; color: #ffffff !important; -webkit-print-color-adjust: exact; }
           }

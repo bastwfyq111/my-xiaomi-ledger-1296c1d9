@@ -43,9 +43,10 @@ export default function TabActions({
       <meta charset="utf-8" />
       <title>${escapeHtml(title)}</title>
       <style>
-        @page { size: A4 landscape; margin: 0mm; }
-        * { box-sizing: border-box; }
-        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 16px; color: #000; direction: rtl; }
+        * { margin: 0; padding: 0; }
+        @page { size: A4 landscape; margin: 0mm; padding: 0; }
+        html { margin: 0; padding: 0; }
+        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 8px; color: #000; direction: rtl; margin: 0; width: 100%; box-sizing: border-box; }
         h1 { text-align: center; color: #000; margin: 0 0 2px; font-size: 22px; }
         .sub { text-align: center; color: #000; margin-bottom: 3px; font-size: 18px; }
         table { width: 100%; border-collapse: collapse; font-size: 18px; }
@@ -56,9 +57,10 @@ export default function TabActions({
           white-space: nowrap; 
         }
         thead th { background: #e2da84; color: #000; font-weight: 1000; }
-        tbody tr:nth-child(even) { f: #f1f5f9; }
+        tbody tr:nth-child(even) { background: #f1f5f9; }
         .num { font-family: 'Courier New', monospace; text-align: center; direction: ltr; }
         .idx { width: 36px; text-align: center; color: #000; }
+        @media print { * { margin: 0; padding: 0; } body { margin: 0; padding: 8px; } }
       </style>
     `;
 
