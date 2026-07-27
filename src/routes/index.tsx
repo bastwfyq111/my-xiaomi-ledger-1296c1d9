@@ -14,9 +14,6 @@ import {
   DownloadCloud,
 } from "lucide-react";
 
-// استيراد مكونات التبويبات من مكتبة الواجهات UI
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-
 // استيراد ملفات التبويبات الفرعية المكونة للنظام
 import HafizaTab from "@/components/HafizaTab";
 import AccountTab from "@/components/AccountTab";
@@ -25,7 +22,7 @@ import InstallmentsTab from "@/components/InstallmentsTab";
 import MonthlyStatementTab from "@/components/MonthlyStatementTab";
 import RevenueTab from "@/components/RevenueTab";
 import ExpensesTab from "@/components/ExpensesTab";
-import AppTabs from "@/components/AppTabs"; // المكون المضاف الذي يعرض رابط تحميل ملف سجل النفقات العامة
+import AppTabs from "@/components/AppTabs";
 
 // استيراد وظائف الـ PWA
 import { canInstall, onInstallAvailability, promptInstall } from "@/lib/pwa";
@@ -56,7 +53,6 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-// 1. التوثيق: تم تحديث الـ type ليتضمن المعرّف الخاص بالتبويب الجديد "general-expenses-ledger"
 type Tab =
   | "installments"
   | "hafiza"
@@ -65,7 +61,59 @@ type Tab =
   | "monthly"
   | "revenue"
   | "expenses-table"
-  | "general-expenses-ledger"; // المعرّف الفريد للتبويب الجديد
+  | "general-expenses-ledger";
+
+// تعريف قائمة التبويبات مع بياناتها
+const tabs: { value: Tab; label: string; shortLabel: string; icon: React.ReactNode }[] = [
+  {
+    value: "installments",
+    label: "كشف الأقساط",
+    shortLabel: "أقساط",
+    icon: <WalletCards className="w-5 h-5" />,
+  },
+  {
+    value: "hafiza",
+    label: "حوافظ التوريد",
+    shortLabel: "حوافظ",
+    icon: <FileBox className="w-5 h-5" />,
+  },
+  {
+    value: "account",
+    label: "الحساب الجاري",
+    shortLabel: "حساب",
+    icon: <FileSpreadsheet className="w-5 h-5" />,
+  },
+  {
+    value: "journal",
+    label: "القيود اليومية",
+    shortLabel: "قيود",
+    icon: <BookOpenText className="w-5 h-5" />,
+  },
+  {
+    value: "monthly",
+    label: "كشف شهري",
+    shortLabel: "شهري",
+    icon: <PieChart className="w-5 h-5" />,
+  },
+  {
+    value: "revenue",
+    label: "الإيرادات",
+    shortLabel: "إيرادات",
+    icon: <TrendingUp className="w-5 h-5" />,
+  },
+  {
+    value: "expenses-table",
+    label: "المصروفات",
+    shortLabel: "مصروفات",
+    icon: <ReceiptText className="w-5 h-5" />,
+  },
+  {
+    value: "general-expenses-ledger",
+    label: "سجل النفقات",
+    shortLabel: "السجل",
+    icon: <FileSpreadsheet className="w-5 h-5" />,
+  },
+];
 
 function Index() {
   const [activeTab, setActiveTab] = useState<Tab>("installments");
@@ -88,13 +136,13 @@ function Index() {
   };
 
   return (
-    // الحاوية الرئيسية ممتدة بالكامل من الحافة إلى الحافة وباتجاه عربي أصيل (RTL)
+    // الحاوية الرئيسية مع مساحة سفلية لشريط التنقل
     <div
-      className="w-full min-h-screen bg-[#f3f7fa] p-2 sm:p-4 md:p-6 space-y-3 sm:space-y-6 font-tajawal selection:bg-[#10528e]/20 text-sm sm:text-base"
+      className="w-full min-h-screen bg-[#f3f7fa] font-tajawal selection:bg-[#10528e]/20 text-sm sm:text-base pb-[72px]"
       dir="rtl"
     >
-      {/* قسم الهيدر العلوي والأزرار السريعة بالألوان الزرقاء الملكية */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-gradient-to-r from-[#10528e] to-[#0b3d6d] p-3 sm:p-5 sm:rounded-2xl border-b sm:border border-slate-200/40 shadow-md text-white">
+      {/* قسم الهيدر العلوي */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 bg-gradient-to-r from-[#10528e] to-[#0b3d6d] p-3 sm:p-5 border-b border-slate-200/40 shadow-md text-white">
         {/* الجزء الأيمن: الأيقونة، العنوان، والوصف */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="p-2 bg-white/10 rounded-xl text-white hidden sm:block">
@@ -125,128 +173,55 @@ function Index() {
         </div>
       </div>
 
-      {/* نظام التبويبات الرئيسي الممتد */}
-      <Tabs
+      {/* محتوى التبويب النشط */}
+      <div className="w-full bg-white p-2 sm:p-4 md:p-6 min-h-[calc(100vh-140px)]">
+        {activeTab === "installments" && <InstallmentsTab />}
+        {activeTab === "hafiza" && <HafizaTab />}
+        {activeTab === "account" && <AccountTab />}
+        {activeTab === "journal" && <JournalTab />}
+        {activeTab === "monthly" && <MonthlyStatementTab />}
+        {activeTab === "revenue" && <RevenueTab />}
+        {activeTab === "expenses-table" && <ExpensesTab />}
+        {activeTab === "general-expenses-ledger" && <AppTabs />}
+      </div>
+
+      {/* شريط التنقل السفلي الثابت */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 bg-[#0b3d6d] border-t border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]"
         dir="rtl"
-        value={activeTab}
-        onValueChange={(value) => setActiveTab(value as Tab)}
-        className="w-full space-y-3 sm:space-y-4"
       >
-        {/* الحاوية وبأعلى أولوية ظهور لتبقى ثابتة دائماً عند التمرير */}
-        <div className="sticky top-0 z-50 w-full bg-[#f3f7fa] pt-2 pb-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabsList className="flex w-max min-w-full bg-[#0b3d6d] p-1 sm:p-1.5 sm:rounded-xl shadow-lg h-auto gap-1.5 sm:gap-2 rounded-none border-b border-white/10 justify-start">
-            {/* 1. الأقساط */}
-            <TabsTrigger
-              value="installments"
-              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
-            >
-              <WalletCards className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">كشف الأقساط</span>
-              <span className="sm:hidden">أقساط</span>
-            </TabsTrigger>
-
-            {/* 2. حوافظ التوريد */}
-            <TabsTrigger
-              value="hafiza"
-              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
-            >
-              <FileBox className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">حوافظ التوريد</span>
-              <span className="sm:hidden">حوافظ</span>
-            </TabsTrigger>
-
-            {/* 3. الحساب الجاري */}
-            <TabsTrigger
-              value="account"
-              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
-            >
-              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">الحساب الجاري</span>
-              <span className="sm:hidden">حساب</span>
-            </TabsTrigger>
-
-            {/* 4. القيود اليومية */}
-            <TabsTrigger
-              value="journal"
-              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
-            >
-              <BookOpenText className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">القيود اليومية</span>
-              <span className="sm:hidden">قيود</span>
-            </TabsTrigger>
-
-            {/* 5. كشف حساب شهري */}
-            <TabsTrigger
-              value="monthly"
-              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
-            >
-              <PieChart className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">كشف حساب شهري</span>
-              <span className="sm:hidden">شهري</span>
-            </TabsTrigger>
-
-            {/* 6. حركة الإيرادات */}
-            <TabsTrigger
-              value="revenue"
-              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
-            >
-              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">حركة الإيرادات</span>
-              <span className="sm:hidden">إيرادات</span>
-            </TabsTrigger>
-
-            {/* 7. جدول المصروفات */}
-            <TabsTrigger
-              value="expenses-table"
-              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
-            >
-              <ReceiptText className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">جدول المصروفات</span>
-              <span className="sm:hidden">مصروفات</span>
-            </TabsTrigger>
-
-            {/* 2. التوثيق: تم إضافة زر التبويب الثامن الجديد "سجل النفقات العامة" بنجاح هنا مع الحفاظ على نفس التصميم والألوان والاتساق الاستجابي للمشروع */}
-            <TabsTrigger
-              value="general-expenses-ledger"
-              className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm font-bold transition-all border-b-2 border-transparent data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=active]:border-amber-400 text-white/70 hover:text-white hover:bg-white/5 rounded-none flex-1 justify-center min-w-max"
-            >
-              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">سجل النفقات العامة</span>
-              <span className="sm:hidden">السجل العام</span>
-            </TabsTrigger>
-          </TabsList>
+        {/* شريط التمرير الأفقي للتبويبات */}
+        <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max min-w-full">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  onClick={() => setActiveTab(tab.value)}
+                  className={`
+                    flex flex-col items-center justify-center gap-1 px-3 py-2 flex-1 min-w-[64px] transition-all duration-200
+                    ${isActive
+                      ? "text-amber-400 bg-white/10 border-t-2 border-amber-400"
+                      : "text-white/60 hover:text-white hover:bg-white/5 border-t-2 border-transparent"
+                    }
+                  `}
+                >
+                  <span className={`transition-transform duration-200 ${isActive ? "scale-110" : "scale-100"}`}>
+                    {tab.icon}
+                  </span>
+                  <span className="text-[10px] font-bold leading-tight whitespace-nowrap">
+                    {tab.shortLabel}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* وعاء عرض المحتوى الداخلي الممتد بالكامل من الحافة إلى الحافة */}
-        <div className="w-full bg-white p-2 sm:p-4 md:p-6 sm:rounded-2xl border-y sm:border border-slate-200/60 shadow-sm min-h-[450px]">
-          <TabsContent value="installments" className="focus-visible:outline-none mt-0">
-            <InstallmentsTab />
-          </TabsContent>
-          <TabsContent value="hafiza" className="focus-visible:outline-none mt-0">
-            <HafizaTab />
-          </TabsContent>
-          <TabsContent value="account" className="focus-visible:outline-none mt-0">
-            <AccountTab />
-          </TabsContent>
-          <TabsContent value="journal" className="focus-visible:outline-none mt-0">
-            <JournalTab />
-          </TabsContent>
-          <TabsContent value="monthly" className="focus-visible:outline-none mt-0">
-            <MonthlyStatementTab />
-          </TabsContent>
-          <TabsContent value="revenue" className="focus-visible:outline-none mt-0">
-            <RevenueTab />
-          </TabsContent>
-          <TabsContent value="expenses-table" className="focus-visible:outline-none mt-0">
-            <ExpensesTab />
-          </TabsContent>
-
-          {/* 3. التوثيق: تم إضافة محتوى التبويب الجديد وعرض المكون AppTabs عند اختياره */}
-          <TabsContent value="general-expenses-ledger" className="focus-visible:outline-none mt-0">
-            <AppTabs />
-          </TabsContent>
-        </div>
-      </Tabs>
+        {/* مساحة آمنة للأجهزة ذات الشريط السفلي (iPhone X وما بعده) */}
+        <div className="h-safe-area-inset-bottom bg-[#0b3d6d]" style={{ height: "env(safe-area-inset-bottom)" }} />
+      </nav>
 
       <Toaster position="top-center" richColors />
     </div>
