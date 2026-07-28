@@ -569,7 +569,7 @@ export default function InstallmentsTab() {
                     .join("")}
                   <td>${fmt(row.totalPaid)}</td>
                   <td class="bg-remaining">${fmt(row.remaining)}</td>
-                  <td style="color: ${statusColor}; font-weight: bold;">${status}</td>
+                  <td style="color: #000 !important; font-weight: 900; background-color: ${status === 'عليه' ? '#fecaca' : '#a7f3d0'};">${status}</td>
                 </tr>
               `;
             }
@@ -634,20 +634,19 @@ export default function InstallmentsTab() {
             @page { size: A4 landscape; margin: 0mm; padding: 0; }
             html { margin: 0; padding: 0; }
             @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
-            body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 8px; background: white; width: 100%; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 8px; }
-            .header h1 { color: #000; margin: 0; font-size: 18px; }
-            .header p { color: #000; margin: 3px 0 0; font-size: 14px; }
+            body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 8px; background: white; width: 100%; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000 !important; font-weight: 700 !important; }
+            .header { text-align: center; margin-bottom: 12px; border-bottom: 3px solid #000; padding-bottom: 8px; }
+            .header h1 { color: #000 !important; margin: 0; font-size: 18px; font-weight: 900; }
+            .header p { color: #000 !important; margin: 3px 0 0; font-size: 14px; font-weight: 700; }
             table { width: 100%; border-collapse: collapse; font-size: 13px; }
-            th { background-color: #bae6fd !important; color: #000000 !important; font-weight: 900 !important; padding: 4px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; }
-            td { padding: 3px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; 
-            color: #000 !important; }
-            tr:nth-child(even) { background: #f8fafc; }
-            .bg-index { background-color: #000 !important; font-weight: bold; }
-            .bg-remaining { background-color: #000 !important; color: #881337 !important; font-weight: bold; }
-            .bg-total { background-color: #fef08a !important; font-weight: bold; }
-            .bg-total td { border-top: 3px solid #000 !important; }
-            .footer { margin-top: 10px; text-align: center; font-size: 13px; color: #000 !important; font-weight: 700; }
+            th { background-color: #1e3a5f !important; color: #000 !important; font-weight: 900 !important; padding: 5px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; font-size: 14px; }
+            td { padding: 3px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; color: #000 !important; font-weight: 700 !important; }
+            tr:nth-child(even) { background: #f1f5f9; }
+            .bg-index { background-color: #1e3a5f !important; color: #fff !important; font-weight: 900 !important; }
+            .bg-remaining { background-color: #fecaca !important; color: #000 !important; font-weight: 800 !important; }
+            .bg-total { background-color: #fef08a !important; color: #000 !important; font-weight: 900 !important; }
+            .bg-total td { border-top: 3px solid #000 !important; color: #000 !important; font-weight: 900 !important; }
+            .footer { margin-top: 10px; text-align: center; font-size: 13px; color: #000 !important; font-weight: 800; }
             @media print { * { margin: 0; padding: 0; } body { margin: 0; padding: 8px; } }
           </style>
         </head>
