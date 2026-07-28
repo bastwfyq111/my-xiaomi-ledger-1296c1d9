@@ -15,7 +15,8 @@ export async function exportStudentStatementPdf(row: any, year: number): Promise
     orientation: 'p',
     unit: 'mm',
     format: 'a4',
-    putOnlyUsedFonts: true
+    putOnlyUsedFonts: true,
+    compress: true
   });
 
   // إعدادات الخطوط العربية (استخدام الخط الافتراضي مع دعم RTL)
@@ -23,19 +24,52 @@ export async function exportStudentStatementPdf(row: any, year: number): Promise
   
   // العنوان الرئيسي
   doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
   doc.text("المجلس اليمني للاختصاصات الطبية", 105, 15, { align: 'center' });
+  
   doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
   doc.text(`كشف حساب رسمي - للعام ${year}م`, 105, 22, { align: 'center' });
 
+  // خط فاصل
+  doc.setDrawColor(31, 127, 184);
+  doc.setLineWidth(0.5);
+  doc.line(10, 26, 200, 26);
+
   // معلومات المتدرب
-  doc.setFontSize(10);
-  doc.rect(10, 30, 190, 25); // إطار المعلومات
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
   
-  const infoY = 37;
-  doc.text(`اسم المتدرب: ${row.name}`, 195, infoY, { align: 'center ' });
-  doc.text(`الدفعة: ${row.batch || '—'}`, 100, infoY, { align: 'center ' });
-  doc.text(`المساق: ${row.specialty || '—'}`, 195, infoY + 8, { align: 'center ' });
-  doc.text(`رقم الهاتف: ${row.phone || '—'}`, 100, infoY + 8, { align: 'center ' });
+  // إطار معلومات المتدرب
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(1);
+  doc.rect(10, 30, 190, 28);
+  
+  // إضافة خطوط داخلية للإطار
+  doc.line(105, 30, 105, 58);
+  doc.line(10, 39, 200, 39);
+  doc.line(10, 48, 200, 48);
+  
+  const infoY = 34;
+  doc.setFont('helvetica', 'bold');
+  doc.text("اسم المتدرب:", 15, infoY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(row.name || '—', 50, infoY);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text("الدفعة:", 110, infoY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(row.batch || '—', 145, infoY);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text("المساق:", 15, infoY + 9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(row.specialty || '—', 50, infoY + 9);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text("رقم الهاتف:", 110, infoY + 9);
+  doc.setFont('helvetica', 'normal');
+  doc.text(row.phone || '—', 145, infoY + 9);
 
   // البيانات المالية
   const monthsList = year === 2025 ? 
@@ -68,17 +102,46 @@ export async function exportStudentStatementPdf(row: any, year: number): Promise
 
   // إنشاء الجدول برمجياً (سريع جداً)
   (doc as any).autoTable({
-    startY: 60,
+    startY: 62,
     head: [['البيان', 'المبلغ']],
     body: tableRows,
-    styles: { font: 'helvetica', halign: 'center ', fontSize: 12 },
-    headStyles: { fillStyle: 'F', fillColor: [21, 128, 61], textColor: 255, halign: 'center' },
-    columnStyles: {
-      0: { cellWidth: 140 },
-      1: { cellWidth: 50, halign: 'center', fontStyle: 'bold' }
+    styles: { 
+      font: 'helvetica', 
+      halign: 'center', 
+      fontSize: 11,
+      cellPadding: 5,
+      lineColor: [0, 0, 0],
+      lineWidth: 1
     },
-    theme: 'grid'
+    headStyles: { 
+      fillColor: [31, 127, 184], 
+      textColor: [255, 255, 255], 
+      halign: 'center',
+      fontStyle: 'bold',
+      fontSize: 12
+    },
+    bodyStyles: {
+      lineColor: [0, 0, 0],
+      lineWidth: 1
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
+    },
+    columnStyles: {
+      0: { cellWidth: 130, halign: 'right' },
+      1: { cellWidth: 60, halign: 'center', fontStyle: 'bold' }
+    },
+    theme: 'grid',
+    margin: { top: 62, right: 10, bottom: 20, left: 10 }
   });
+
+  // إضافة توقيع وتاريخ في الأسفل
+  const finalY = (doc as any).lastAutoTable?.finalY || 150;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`تاريخ الإصدار: ${new Date().toLocaleDateString('ar-EG-u-nu-latn')}`, 15, finalY + 15);
+  doc.setFont('helvetica', 'bold');
+  doc.text("التوقيع: _______________", 15, finalY + 25);
 
   // الحل السحري لشاومي: استخدام Data URI بدلاً من Blob
   // هذا يفتح الملف مباشرة أو يبدأ تنزيله دون تعليق
@@ -93,15 +156,100 @@ export async function exportStudentStatementPdf(row: any, year: number): Promise
   document.body.removeChild(link);
 }
 
-// الدوال القديمة للطباعة فقط
+// دالة محسّنة للطباعة من HTML
 export function printHtmlContent(htmlContent: string): void {
   const w = window.open('', '_blank');
   if (!w) return;
-  w.document.write(htmlContent);
+  
+  // إضافة أنماط CSS محسّنة للطباعة
+  const styledContent = `
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>طباعة</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { size: A4; margin: 10mm; }
+        body {
+          font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif;
+          direction: rtl;
+          color: #000;
+          background: white;
+          line-height: 1.5;
+          font-size: 12px;
+        }
+        h1, h2, h3, h4, h5, h6 {
+          font-weight: 800;
+          letter-spacing: -0.01em;
+          margin: 8px 0;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 10px 0;
+        }
+        th, td {
+          border: 1px solid #000;
+          padding: 6px;
+          text-align: center;
+          vertical-align: middle;
+        }
+        th {
+          background: #1f7fb8;
+          color: white;
+          font-weight: 700;
+        }
+        tr:nth-child(even) td {
+          background: #f8fafc;
+        }
+        @media print {
+          * { margin: 0; padding: 0; }
+          body { background: white; }
+          .no-print { display: none !important; }
+        }
+      </style>
+    </head>
+    <body>
+      ${htmlContent}
+      <script>
+        window.onload = () => {
+          setTimeout(() => {
+            window.print();
+          }, 500);
+        };
+      </script>
+    </body>
+    </html>
+  `;
+  
+  w.document.write(styledContent);
   w.document.close();
-  w.onload = () => {
-    setTimeout(() => {
-      w.print();
-    }, 500);
-  };
+}
+
+// دالة إضافية لطباعة جدول بتنسيق احترافي
+export function printTable(title: string, columns: string[], rows: (string | number)[][]): void {
+  const tableHtml = `
+    <h1>${title}</h1>
+    <div style="text-align: center; color: #666; margin-bottom: 15px;">
+      ${new Date().toLocaleDateString('ar-EG-u-nu-latn')}
+    </div>
+    <table>
+      <thead>
+        <tr>
+          ${columns.map(col => `<th>${col}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(row => `
+          <tr>
+            ${row.map(cell => `<td>${cell === undefined || cell === null ? '' : cell}</td>`).join('')}
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  
+  printHtmlContent(tableHtml);
 }

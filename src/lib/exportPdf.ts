@@ -16,26 +16,88 @@ export function exportToPdf(opts: {
   const orient = opts.orientation || (opts.columns.length > 6 ? "landscape" : "portrait");
   const fontSize = opts.columns.length > 12 ? 9 : opts.columns.length > 8 ? 10 : 11;
   const head = `<meta charset="utf-8"><title>${opts.title}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    * { margin: 0; padding: 0; }
-    @page { size: A4 ${orient}; margin: 0mm; padding: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page { size: A4 ${orient}; margin: 10mm; padding: 0; }
+    @page :first { margin-top: 10mm; }
     html { margin: 0; padding: 0; }
-    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#000; margin: 0; padding: 8px; width: 100%; box-sizing: border-box; }
-    h1 { text-align:center; font-size:18px; margin: 0 0 2px; }
-    table { width:100%; border-collapse: collapse; font-size:${fontSize}px; table-layout: fixed; }
+    body { 
+      font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; 
+      direction: rtl; 
+      color: #000; 
+      margin: 0; 
+      padding: 8px; 
+      width: 100%; 
+      background: white;
+      line-height: 1.4;
+    }
+    h1 { 
+      text-align: center; 
+      font-size: 18px; 
+      font-weight: 800;
+      margin: 0 0 4px; 
+      color: #0f172a;
+      letter-spacing: -0.01em;
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      font-size: ${fontSize}px; 
+      table-layout: fixed;
+      margin-top: 8px;
+    }
     th, td { 
-      border:2px solid #000; 
-      padding:2px 2px; 
-      text-align:center; 
-      white-space: normal; /* السماح بالتفاف النص */
+      border: 1.5px solid #000; 
+      padding: 6px 4px; 
+      text-align: center; 
+      vertical-align: middle;
+      white-space: normal;
       word-wrap: break-word; 
       overflow-wrap: break-word; 
-      word-break: break-word; /* كسر الكلمات الطويلة لتناسب الخلية */
+      word-break: break-word;
+      font-weight: 500;
     }
-    thead { background:#28baff; color:black; }
-    tr:nth-child(even) td { background:#f1f5f9; }
-    .meta { font-size:14px; color:#475569; margin-bottom:8px; text-align:center; }
-    @media print { * { margin: 0; padding: 0; } body { margin: 0; padding: 8px; } }
+    th { 
+      background: #1f7fb8;
+      color: white;
+      font-weight: 700;
+      padding: 8px 4px;
+    }
+    tr:nth-child(even) td { background: #f8fafc; }
+    tr:nth-child(odd) td { background: #ffffff; }
+    .meta { 
+      font-size: 12px; 
+      color: #475569; 
+      margin: 4px 0 2px;
+      text-align: center;
+      font-weight: 600;
+    }
+    .period {
+      font-size: 13px;
+      color: #0f172a;
+      font-weight: 700;
+      margin: 6px 0 8px;
+    }
+    .total-row td {
+      background: #1f7fb8 !important;
+      color: white;
+      font-weight: 700;
+    }
+    .subtotal-row td {
+      background: #cbd5e1;
+      font-weight: 700;
+    }
+    .group-row td {
+      background: #fef3c7;
+      font-weight: 700;
+      color: #0f766e;
+    }
+    @media print { 
+      * { margin: 0; padding: 0; } 
+      body { margin: 0; padding: 8px; background: white; }
+      @page { margin: 10mm; }
+    }
   </style>`;
   const body = `<h1>${opts.title}</h1>
   <div class="meta">المجلس اليمني للاختصاصات الطبية — ${new Date().toLocaleDateString("ar-EG-u-nu-latn")}</div>
@@ -48,7 +110,7 @@ export function exportToPdf(opts: {
       )
       .join("")}</tbody>
   </table>
-  <script>window.onload=()=>{setTimeout(()=>window.print(),300)}</script>`;
+  <script>window.onload=()=>{setTimeout(()=>window.print(),500)}</script>`;
   w.document.write(
     `<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>${body}</body></html>`,
   );
@@ -230,7 +292,7 @@ export function monthlyStatementPdf(opts: {
     GCD = 0,
     GCC = 0;
   for (const g of groups) {
-    body += `<tr class="grp"><td colspan="9">${g.title}</td></tr>`;
+    body += `<tr class="group-row"><td colspan="9">${g.title}</td></tr>`;
     let gPD = 0,
       gPC = 0,
       gCD = 0,
@@ -251,41 +313,101 @@ export function monthlyStatementPdf(opts: {
     GPC += gPC;
     GCD += gCD;
     GCC += gCC;
-    body += `<tr class="sub"><td>جملة ${g.title}</td><td>${fmt(gPD)}</td><td>${fmt(gPC)}</td><td>${fmt(gCD)}</td><td>${fmt(gCC)}</td><td>${fmt(gPD + gCD)}</td><td>${fmt(gPC + gCC)}</td><td>${fmt(Math.max(0, gPD + gCD - gPC - gCC))}</td><td>${fmt(Math.max(0, gPC + gCC - gPD - gCD))}</td></tr>`;
+    body += `<tr class="subtotal-row"><td>جملة ${g.title}</td><td>${fmt(gPD)}</td><td>${fmt(gPC)}</td><td>${fmt(gCD)}</td><td>${fmt(gCC)}</td><td>${fmt(gPD + gCD)}</td><td>${fmt(gPC + gCC)}</td><td>${fmt(Math.max(0, gPD + gCD - gPC - gCC))}</td><td>${fmt(Math.max(0, gPC + gCC - gPD - gCD))}</td></tr>`;
   }
-  body += `<tr class="tot"><td>الإجمالي العام</td><td>${fmt(GPD)}</td><td>${fmt(GPC)}</td><td>${fmt(GCD)}</td><td>${fmt(GCC)}</td><td>${fmt(GPD + GCD)}</td><td>${fmt(GPC + GCC)}</td><td>${fmt(Math.max(0, GPD + GCD - GPC - GCC))}</td><td>${fmt(Math.max(0, GPC + GCC - GPD - GCD))}</td></tr>`;
+  body += `<tr class="total-row"><td>الإجمالي العام</td><td>${fmt(GPD)}</td><td>${fmt(GPC)}</td><td>${fmt(GCD)}</td><td>${fmt(GCC)}</td><td>${fmt(GPD + GCD)}</td><td>${fmt(GPC + GCC)}</td><td>${fmt(Math.max(0, GPD + GCD - GPC - GCC))}</td><td>${fmt(Math.max(0, GPC + GCC - GPD - GCD))}</td></tr>`;
   body += `</tbody></table>`;
 
   const head = `<meta charset="utf-8"><title>${title} - ${periodLabel}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap">
   <style>
-    * { margin: 0; padding: 0; }
-    @page { size: A4 landscape; margin: 0mm; padding: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page { size: A4 landscape; margin: 10mm; padding: 0; }
+    @page :first { margin-top: 10mm; }
     html { margin: 0; padding: 0; }
-    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#000; margin:0; padding:8px; width: 100%; box-sizing: border-box; }
-    h1 { text-align:center; font-size:18px; margin: 0 0 4px; color:#000; }
-    .meta { text-align:center; font-size:14px; color:#000; }
-    .period { font-weight:1000; color:#0f172a; margin: 4px 0 8px; }
-    table { width:100%; border-collapse: collapse; font-size:10px; table-layout:fixed; }
+    body { 
+      font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; 
+      direction: rtl; 
+      color: #000; 
+      margin: 0; 
+      padding: 8px; 
+      width: 100%; 
+      background: white;
+      line-height: 1.3;
+    }
+    h1 { 
+      text-align: center; 
+      font-size: 18px; 
+      font-weight: 800;
+      margin: 0 0 4px; 
+      color: #0f172a;
+      letter-spacing: -0.01em;
+    }
+    .meta { 
+      text-align: center; 
+      font-size: 12px; 
+      color: #475569;
+      font-weight: 600;
+    }
+    .period { 
+      font-weight: 700; 
+      color: #0f172a; 
+      margin: 4px 0 8px;
+      font-size: 13px;
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      font-size: 10px; 
+      table-layout: fixed;
+      margin-top: 8px;
+    }
     th, td { 
-      border:2px solid #000; 
-      padding:3px 4px; 
-      text-align:center; 
-      white-space: normal; /* السماح بالتفاف النص */
+      border: 1.5px solid #000; 
+      padding: 4px 3px; 
+      text-align: center;
+      vertical-align: middle;
+      white-space: normal;
       word-wrap: break-word; 
       overflow-wrap: break-word; 
-      word-break: break-word; 
+      word-break: break-word;
+      font-weight: 500;
     }
-    thead th { background:#28baff; color:black; font-weight:1000; }
-    td.acc { text-align:center; font-weight:1000; }
-    tr.grp td { background:#fef3c7; color:#0f766e; font-weight:800; text-align:center; }
-    tr.sub td { background:#e2e8f0; font-weight:1000; }
-    tr.tot td { background:#0f766e; color:white; font-weight:800; }
-    @media print { * { margin: 0; padding: 0; } body { margin: 0; padding: 8px; } button { display:none; } }
+    th { 
+      background: #1f7fb8;
+      color: white;
+      font-weight: 700;
+      padding: 5px 3px;
+    }
+    td.acc { 
+      text-align: center; 
+      font-weight: 700; 
+    }
+    tr.group-row td { 
+      background: #fef3c7; 
+      color: #0f766e; 
+      font-weight: 700; 
+      text-align: center; 
+    }
+    tr.subtotal-row td { 
+      background: #cbd5e1; 
+      font-weight: 700;
+    }
+    tr.total-row td { 
+      background: #1f7fb8; 
+      color: white; 
+      font-weight: 700; 
+    }
+    @media print { 
+      * { margin: 0; padding: 0; } 
+      body { margin: 0; padding: 8px; background: white; }
+      @page { margin: 10mm; }
+    }
   </style>`;
   w.document.write(
-    `<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>${body}<script>window.onload=()=>{setTimeout(()=>window.print(),400)}</script></body></html>`,
+    `<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>${body}<script>window.onload=()=>{setTimeout(()=>window.print(),500)}</script></body></html>`,
   );
   w.document.close();
 }
@@ -373,18 +495,18 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
     <tr><th>ريال</th><th>ريال</th><th>ريال</th></tr>
   </thead><tbody>`;
 
-  body += `<tr class="tot"><td class="acc">إجمالي الموارد</td><td colspan="4"></td><td>${fc(gCur)}</td><td>${fc(gPrev)}</td><td>${fc(gCur + gPrev)}</td></tr>`;
+  body += `<tr class="total-row"><td class="acc">إجمالي الموارد</td><td colspan="4"></td><td>${fc(gCur)}</td><td>${fc(gPrev)}</td><td>${fc(gCur + gPrev)}</td></tr>`;
 
   REV_SCHEMA.chapters.forEach((ch) => {
     if (ch.sections.length === 0) return;
     const a = chaptersAgg[ch.no];
-    body += `<tr class="grp"><td class="acc">${ch.longTitle || ch.title}</td><td>${ch.no}</td><td colspan="3"></td><td>${fc(a.cur)}</td><td>${fc(a.prev)}</td><td>${fc(a.cur + a.prev)}</td></tr>`;
+    body += `<tr class="group-row"><td class="acc">${ch.longTitle || ch.title}</td><td>${ch.no}</td><td colspan="3"></td><td>${fc(a.cur)}</td><td>${fc(a.prev)}</td><td>${fc(a.cur + a.prev)}</td></tr>`;
     ch.sections.forEach((sec) => {
       const sa = sectionsAgg[`${ch.no}-${sec.no}`];
-      body += `<tr class="sub"><td class="acc">&nbsp;&nbsp;${sec.title}</td><td></td><td>${sec.no}</td><td colspan="2"></td><td>${fc(sa.cur)}</td><td>${fc(sa.prev)}</td><td>${fc(sa.cur + sa.prev)}</td></tr>`;
+      body += `<tr class="subtotal-row"><td class="acc">&nbsp;&nbsp;${sec.title}</td><td></td><td>${sec.no}</td><td colspan="2"></td><td>${fc(sa.cur)}</td><td>${fc(sa.prev)}</td><td>${fc(sa.cur + sa.prev)}</td></tr>`;
       sec.items.forEach((it) => {
         const ia = itemsAgg[`${ch.no}-${sec.no}-${it.no}`];
-        body += `<tr class="sub2"><td class="acc">&nbsp;&nbsp;&nbsp;&nbsp;${it.title}</td><td colspan="2"></td><td>${it.no}</td><td></td><td>${fc(ia.cur)}</td><td>${fc(ia.prev)}</td><td>${fc(ia.cur + ia.prev)}</td></tr>`;
+        body += `<tr class="subtotal-row"><td class="acc">&nbsp;&nbsp;&nbsp;&nbsp;${it.title}</td><td colspan="2"></td><td>${it.no}</td><td></td><td>${fc(ia.cur)}</td><td>${fc(ia.prev)}</td><td>${fc(ia.cur + ia.prev)}</td></tr>`;
         it.types.forEach((t) => {
           const v = types[`${ch.no}-${sec.no}-${it.no}-${t.no}`];
           body += `<tr><td class="acc">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${t.title}</td><td colspan="3"></td><td>${t.no}</td><td>${fc(v.cur)}</td><td>${fc(v.prev)}</td><td>${fc(v.cur + v.prev)}</td></tr>`;
@@ -394,43 +516,100 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
   });
 
   REV_SCHEMA.chapters.forEach((ch) => {
-    const a = chaptersAgg[ch.no] || { cur: 0, prev: 0 };
-    body += `<tr class="sub"><td colspan="5" class="acc">جملة الباب ${ORDER_AR[ch.no - 1]} : ${ch.title}</td><td>${fc(a.cur)}</td><td>${fc(a.prev)}</td><td>${fc(a.cur + a.prev)}</td></tr>`;
+    const a = chaptersAgg[ch.no];
+    body += `<tr class="group-row"><td class="acc">إجمالي ${ch.title}</td><td>${ch.no}</td><td colspan="3"></td><td>${fc(a.cur)}</td><td>${fc(a.prev)}</td><td>${fc(a.cur + a.prev)}</td></tr>`;
   });
-  body += `<tr class="tot"><td colspan="5" class="acc">اجمالي عام الموارد</td><td>${fc(gCur)}</td><td>${fc(gPrev)}</td><td>${fc(gCur + gPrev)}</td></tr>`;
-  body += `</tbody></table>`;
 
-  const head = `<meta charset="utf-8"><title>${REV_SCHEMA.title} - ${MONTHS_PDF[month - 1]} ${year}</title>
+  const head = `<meta charset="utf-8"><title>${REV_SCHEMA.title} - ${MONTHS_PDF[month - 1]} ${year}م</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap">
   <style>
-    * { margin: 0; padding: 0; }
-    @page { size: A4 landscape; margin: 0mm; padding: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page { size: A4 landscape; margin: 10mm; padding: 0; }
+    @page :first { margin-top: 10mm; }
     html { margin: 0; padding: 0; }
-    body { font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction: rtl; color:#0f172a; margin:0; padding:4px; width: 100%; box-sizing: border-box; }
-    h1 { text-align:center; font-size:18px; margin: 0 0 2px; color:#0f766e; }
-    .meta { text-align:center; font-size:11px; color:#475569; }
-    .period { font-weight:700; color:#0f172a; margin: 2px 0 2px; }
-    table { width:100%; border-collapse: collapse; font-size:11px; table-layout:fixed; }
+    body { 
+      font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; 
+      direction: rtl; 
+      color: #000; 
+      margin: 0; 
+      padding: 8px; 
+      width: 100%; 
+      background: white;
+      line-height: 1.3;
+    }
+    h1 { 
+      text-align: center; 
+      font-size: 18px; 
+      font-weight: 800;
+      margin: 0 0 4px; 
+      color: #0f172a;
+      letter-spacing: -0.01em;
+    }
+    .meta { 
+      text-align: center; 
+      font-size: 12px; 
+      color: #475569;
+      font-weight: 600;
+    }
+    .period { 
+      font-weight: 700; 
+      color: #0f172a; 
+      margin: 4px 0 8px;
+      font-size: 13px;
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      font-size: 10px; 
+      table-layout: fixed;
+      margin-top: 8px;
+    }
     th, td { 
-      border:1px solid #475569; 
-      padding:2px 2px; 
-      text-align:center; 
-      white-space: normal; /* السماح بالتفاف النص */
+      border: 1.5px solid #000; 
+      padding: 4px 3px; 
+      text-align: center;
+      vertical-align: middle;
+      white-space: normal;
       word-wrap: break-word; 
       overflow-wrap: break-word; 
-      word-break: break-word; 
+      word-break: break-word;
+      font-weight: 500;
     }
-    thead th { background:#0f766e; color:white; font-weight:700; }
-    td.acc { text-align:center; font-weight: 1000; }
-    tr.grp td { background:#fef3c7; color:#0f766e; font-weight:1000; }
-    tr.sub td { background:#e2e8f0; font-weight:1000; }
-    tr.sub2 td { background:#f1f5f9; }
-    tr.tot td { background:#0f766e; color:white; font-weight:800; }
-    @media print { * { margin: 0; padding: 0; } body { margin: 0; padding: 4px; } button { display:none; } }
+    th { 
+      background: #1f7fb8;
+      color: white;
+      font-weight: 700;
+      padding: 5px 3px;
+    }
+    td.acc { 
+      text-align: center; 
+      font-weight: 700; 
+    }
+    tr.group-row td { 
+      background: #fef3c7; 
+      color: #0f766e; 
+      font-weight: 700; 
+      text-align: center; 
+    }
+    tr.subtotal-row td { 
+      background: #cbd5e1; 
+      font-weight: 700;
+    }
+    tr.total-row td { 
+      background: #1f7fb8; 
+      color: white; 
+      font-weight: 700; 
+    }
+    @media print { 
+      * { margin: 0; padding: 0; } 
+      body { margin: 0; padding: 8px; background: white; }
+      @page { margin: 10mm; }
+    }
   </style>`;
   w.document.write(
-    `<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>${body}<script>window.onload=()=>{setTimeout(()=>window.print(),400)}</script></body></html>`,
+    `<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>${body}<script>window.onload=()=>{setTimeout(()=>window.print(),500)}</script></body></html>`,
   );
   w.document.close();
 }
