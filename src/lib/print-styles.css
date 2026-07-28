@@ -1,18 +1,18 @@
 /**
  * Print and PDF Styles
- * تنسيقات محسّنة لصفحات الطباعة والـ PDF
- * متوافقة مع جميع المتصفحات والأجهزة
+ * طھظ†ط³ظٹظ‚ط§طھ ظ…ط­ط³ظ‘ظ†ط© ظ„طµظپط­ط§طھ ط§ظ„ط·ط¨ط§ط¹ط© ظˆط§ظ„ظ€ PDF
+ * ظ…طھظˆط§ظپظ‚ط© ظ…ط¹ ط¬ظ…ظٹط¹ ط§ظ„ظ…طھطµظپط­ط§طھ ظˆط§ظ„ط£ط¬ظ‡ط²ط©
  */
 
 @media print {
-  /* إعادة تعيين الهوامش والحشوات */
+  /* ط¥ط¹ط§ط¯ط© طھط¹ظٹظٹظ† ط§ظ„ظ‡ظˆط§ظ…ط´ ظˆط§ظ„ط­ط´ظˆط§طھ */
   * {
     margin: 0 !important;
     padding: 0 !important;
     box-sizing: border-box;
   }
 
-  /* إعدادات الصفحة */
+  /* ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„طµظپط­ط© */
   @page {
     size: A4;
     margin: 10mm;
@@ -22,7 +22,7 @@
     margin-top: 10mm;
   }
 
-  /* إعدادات الجسم */
+  /* ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط¬ط³ظ… */
   html {
     width: 100%;
     height: 100%;
@@ -41,7 +41,7 @@
     font-weight: 700 !important;
   }
 
-  /* العناوين */
+  /* ط§ظ„ط¹ظ†ط§ظˆظٹظ† */
   h1, h2, h3, h4, h5, h6 {
     page-break-after: avoid;
     page-break-inside: avoid;
@@ -63,13 +63,13 @@
     color: #000 !important;
   }
 
-  /* الفقرات والنصوص */
+  /* ط§ظ„ظپظ‚ط±ط§طھ ظˆط§ظ„ظ†طµظˆطµ */
   p, div {
     page-break-inside: avoid;
     margin: 4px 0 !important;
   }
 
-  /* الجداول */
+  /* ط§ظ„ط¬ط¯ط§ظˆظ„ */
   table {
     width: 100%;
     border-collapse: collapse;
@@ -92,7 +92,7 @@
     page-break-before: avoid;
   }
 
-  /* رؤوس الجداول */
+  /* ط±ط¤ظˆط³ ط§ظ„ط¬ط¯ط§ظˆظ„ */
   th {
     background: #1f7fb8 !important;
     color: white !important;
@@ -104,7 +104,7 @@
     page-break-inside: avoid;
   }
 
-  /* خلايا الجداول */
+  /* ط®ظ„ط§ظٹط§ ط§ظ„ط¬ط¯ط§ظˆظ„ */
   td {
     border: 1.5px solid #000 !important;
     padding: 5px 4px !important;
@@ -115,7 +115,7 @@
     font-weight: 700 !important;
   }
 
-  /* صفوف الجداول المتناوبة */
+  /* طµظپظˆظپ ط§ظ„ط¬ط¯ط§ظˆظ„ ط§ظ„ظ…طھظ†ط§ظˆط¨ط© */
   tr:nth-child(even) td {
     background: #f8fafc !important;
   }
@@ -124,7 +124,7 @@
     background: white !important;
   }
 
-  /* صفوف الإجمالي والمجموع */
+  /* طµظپظˆظپ ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ ظˆط§ظ„ظ…ط¬ظ…ظˆط¹ */
   .total-row td,
   tr.total-row td {
     background: #1f7fb8 !important;
@@ -132,7 +132,7 @@
     font-weight: 700 !important;
   }
 
-  /* صفوف المجموع الجزئي */
+  /* طµظپظˆظپ ط§ظ„ظ…ط¬ظ…ظˆط¹ ط§ظ„ط¬ط²ط¦ظٹ */
   .subtotal-row td,
   tr.subtotal-row td {
     background: #cbd5e1 !important;
@@ -140,7 +140,7 @@
     font-weight: 700 !important;
   }
 
-  /* صفوف المجموعات */
+  /* طµظپظˆظپ ط§ظ„ظ…ط¬ظ…ظˆط¹ط§طھ */
   .group-row td,
   tr.group-row td {
     background: #fef3c7 !important;
@@ -148,7 +148,7 @@
     font-weight: 700 !important;
   }
 
-  /* الأرقام والعملات */
+  /* ط§ظ„ط£ط±ظ‚ط§ظ… ظˆط§ظ„ط¹ظ…ظ„ط§طھ */
   .currency,
   .number {
     font-family: 'Courier New', monospace;
@@ -156,7 +156,7 @@
     color: #000 !important;
   }
 
-  /* الروابط */
+  /* ط§ظ„ط±ظˆط§ط¨ط· */
   a {
     text-decoration: none;
     color: #000 !important;
@@ -166,7 +166,7 @@
     content: none !important;
   }
 
-  /* الأزرار والعناصر التفاعلية */
+  /* ط§ظ„ط£ط²ط±ط§ط± ظˆط§ظ„ط¹ظ†ط§طµط± ط§ظ„طھظپط§ط¹ظ„ظٹط© */
   button,
   .btn,
   .button,
@@ -176,20 +176,20 @@
     display: none !important;
   }
 
-  /* الصور */
+  /* ط§ظ„طµظˆط± */
   img {
     max-width: 100%;
     page-break-inside: avoid;
   }
 
-  /* الخطوط الفاصلة */
+  /* ط§ظ„ط®ط·ظˆط· ط§ظ„ظپط§طµظ„ط© */
   hr {
     border: none;
     border-top: 1px solid #000;
     margin: 8px 0 !important;
   }
 
-  /* قوائم */
+  /* ظ‚ظˆط§ط¦ظ… */
   ul, ol {
     margin: 8px 0 !important;
     padding-right: 20px !important;
@@ -199,7 +199,7 @@
     margin: 4px 0 !important;
   }
 
-  /* منع فواصل الصفحات غير المرغوبة */
+  /* ظ…ظ†ط¹ ظپظˆط§طµظ„ ط§ظ„طµظپط­ط§طھ ط؛ظٹط± ط§ظ„ظ…ط±ط؛ظˆط¨ط© */
   .page-break {
     page-break-before: always;
   }
@@ -208,14 +208,14 @@
     page-break-inside: avoid;
   }
 
-  /* التعليقات والملاحظات */
+  /* ط§ظ„طھط¹ظ„ظٹظ‚ط§طھ ظˆط§ظ„ظ…ظ„ط§ط­ط¸ط§طھ */
   .comment,
   .note,
   .annotation {
     display: none !important;
   }
 
-  /* الشريط الجانبي والرأس والتذييل */
+  /* ط§ظ„ط´ط±ظٹط· ط§ظ„ط¬ط§ظ†ط¨ظٹ ظˆط§ظ„ط±ط£ط³ ظˆط§ظ„طھط°ظٹظٹظ„ */
   header,
   footer,
   nav,
@@ -227,24 +227,24 @@
     display: none !important;
   }
 
-  /* العناصر المخفية */
+  /* ط§ظ„ط¹ظ†ط§طµط± ط§ظ„ظ…ط®ظپظٹط© */
   .hidden,
   .hide,
   [hidden] {
     display: none !important;
   }
 
-  /* الحد الأدنى من الارتفاع للصفوف */
+  /* ط§ظ„ط­ط¯ ط§ظ„ط£ط¯ظ†ظ‰ ظ…ظ† ط§ظ„ط§ط±طھظپط§ط¹ ظ„ظ„طµظپظˆظپ */
   tr {
     page-break-inside: avoid;
   }
 
-  /* التأكد من عدم قطع الخلايا */
+  /* ط§ظ„طھط£ظƒط¯ ظ…ظ† ط¹ط¯ظ… ظ‚ط·ط¹ ط§ظ„ط®ظ„ط§ظٹط§ */
   td, th {
     page-break-inside: avoid;
   }
 
-  /* تنسيق الخطوط */
+  /* طھظ†ط³ظٹظ‚ ط§ظ„ط®ط·ظˆط· */
   strong, b {
     font-weight: 700;
   }
@@ -253,7 +253,7 @@
     font-style: italic;
   }
 
-  /* تنسيق خاص للمعلومات */
+  /* طھظ†ط³ظٹظ‚ ط®ط§طµ ظ„ظ„ظ…ط¹ظ„ظˆظ…ط§طھ */
   .info-box,
   .alert,
   .warning {
@@ -263,17 +263,17 @@
     page-break-inside: avoid;
   }
 
-  /* الحد الأدنى من حجم الخط */
+  /* ط§ظ„ط­ط¯ ط§ظ„ط£ط¯ظ†ظ‰ ظ…ظ† ط­ط¬ظ… ط§ظ„ط®ط· */
   body {
     font-size: 11px;
   }
 
-  /* تحسين وضوح النصوص الصغيرة */
+  /* طھط­ط³ظٹظ† ظˆط¶ظˆط­ ط§ظ„ظ†طµظˆطµ ط§ظ„طµط؛ظٹط±ط© */
   small {
     font-size: 9px;
   }
 
-  /* تحسين وضوح الأرقام */
+  /* طھط­ط³ظٹظ† ظˆط¶ظˆط­ ط§ظ„ط£ط±ظ‚ط§ظ… */
   .amount,
   .total {
     font-weight: 700;
@@ -281,13 +281,13 @@
     color: #000 !important;
   }
 
-  /* تنسيق التواريخ */
+  /* طھظ†ط³ظٹظ‚ ط§ظ„طھظˆط§ط±ظٹط® */
   .date {
     font-weight: 700;
     color: #000 !important;
   }
 
-  /* الفواصل والمسافات */
+  /* ط§ظ„ظپظˆط§طµظ„ ظˆط§ظ„ظ…ط³ط§ظپط§طھ */
   .spacer {
     height: 8px;
   }
@@ -297,13 +297,13 @@
   }
 }
 
-/* تنسيقات إضافية للشاشات قبل الطباعة */
+/* طھظ†ط³ظٹظ‚ط§طھ ط¥ط¶ط§ظپظٹط© ظ„ظ„ط´ط§ط´ط§طھ ظ‚ط¨ظ„ ط§ظ„ط·ط¨ط§ط¹ط© */
 @media screen {
   .print-only {
     display: none;
   }
 
-  /* زر الطباعة */
+  /* ط²ط± ط§ظ„ط·ط¨ط§ط¹ط© */
   .print-button {
     margin: 10px 0;
     padding: 8px 16px;
@@ -321,9 +321,9 @@
   }
 }
 
-/* معاينة الطباعة */
+/* ظ…ط¹ط§ظٹظ†ط© ط§ظ„ط·ط¨ط§ط¹ط© */
 @media print and (color) {
-  /* الألوان الملونة تطبع بشكل أفضل */
+  /* ط§ظ„ط£ظ„ظˆط§ظ† ط§ظ„ظ…ظ„ظˆظ†ط© طھط·ط¨ط¹ ط¨ط´ظƒظ„ ط£ظپط¶ظ„ */
   th {
     background: #1f7fb8 !important;
     color: #000 !important;
@@ -360,7 +360,7 @@
   }
 }
 
-/* معاينة الطباعة بالأبيض والأسود */
+/* ظ…ط¹ط§ظٹظ†ط© ط§ظ„ط·ط¨ط§ط¹ط© ط¨ط§ظ„ط£ط¨ظٹط¶ ظˆط§ظ„ط£ط³ظˆط¯ */
 @media print and (monochrome) {
   th {
     background: #333 !important;
