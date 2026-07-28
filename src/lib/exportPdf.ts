@@ -56,7 +56,7 @@ export function exportToPdf(opts: {
       word-wrap: break-word; 
       overflow-wrap: break-word; 
       word-break: break-word;
-      font-weight: 500;
+      font-weight: 1000;
     }
     th { 
       background: #1f7fb8;
@@ -75,7 +75,7 @@ export function exportToPdf(opts: {
     }
     .period {
       font-size: 13px;
-      color: #0f172a;
+      color: #000000;
       font-weight: 700;
       margin: 6px 0 8px;
     }
