@@ -234,8 +234,9 @@ export function printHtmlContent(htmlContent: string): void {
           background: #f8fafc;
         }
         @media print {
-          * { margin: 0; padding: 0; }
-          body { background: white; }
+          * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { background: white; color: #000 !important; font-weight: 700 !important; }
+          th, td { color: #000 !important; font-weight: 700 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .no-print { display: none !important; }
         }
       </style>

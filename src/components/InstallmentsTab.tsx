@@ -647,7 +647,7 @@ export default function InstallmentsTab() {
             .bg-total { background-color: #fef08a !important; color: #000 !important; font-weight: 900 !important; }
             .bg-total td { border-top: 3px solid #000 !important; color: #000 !important; font-weight: 900 !important; }
             .footer { margin-top: 10px; text-align: center; font-size: 13px; color: #000 !important; font-weight: 800; }
-            @media print { * { margin: 0; padding: 0; } body { margin: 0; padding: 8px; } }
+            @media print { * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body { margin: 0; padding: 8px; color: #000 !important; font-weight: 700 !important; } th, td { color: #000 !important; font-weight: 700 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
           </style>
         </head>
         <body>
@@ -1131,11 +1131,12 @@ export default function InstallmentsTab() {
           .row-total-paid { background-color: #a7f3d0 !important; }
           .row-final { background-color: #fecaca !important; font-size: 22px; border: 2px solid #000 !important; }
           @media print { 
-            * { margin: 0; padding: 0; }
+            * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             body { background: white; margin: 0; padding: 8px; color: #000 !important; font-weight: 700 !important; } 
             .container { box-shadow: none; padding: 0; width: 100%; margin: 0; }
-            .header { background: #15803d !important; -webkit-print-color-adjust: exact; }
-            th { background-color: #166534 !important; color: #000 !important; -webkit-print-color-adjust: exact; font-weight: 700 !important; }
+            .header { background: #15803d !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            th { background-color: #166534 !important; color: #000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; font-weight: 700 !important; }
+            td { color: #000 !important; font-weight: 700 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           }
         </style>
       </head>

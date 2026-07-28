@@ -62,7 +62,7 @@ export default function TabActions({
         tbody tr:nth-child(even) { background: #f1f5f9; }
         .num { font-family: 'Courier New', monospace; text-align: center; direction: ltr; color: #000 !important; font-weight: 700 !important; }
         .idx { width: 36px; text-align: center; color: #000 !important; font-weight: 700 !important; }
-        @media print { * { margin: 0; padding: 0; } body { margin: 0; padding: 8px; } }
+        @media print { * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body { margin: 0; padding: 8px; color: #000 !important; font-weight: 700 !important; } th, td { color: #000 !important; font-weight: 700 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
       </style>
     `;
 

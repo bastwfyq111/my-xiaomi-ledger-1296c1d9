@@ -326,29 +326,37 @@
   /* الألوان الملونة تطبع بشكل أفضل */
   th {
     background: #1f7fb8 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    color: #000 !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .total-row td,
   tr.total-row td {
     background: #1f7fb8 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    color: #000 !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .group-row td,
   tr.group-row td {
     background: #fef3c7 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    color: #000 !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .subtotal-row td,
   tr.subtotal-row td {
     background: #cbd5e1 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    color: #000 !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 
@@ -357,21 +365,35 @@
   th {
     background: #333 !important;
     color: #000 !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .total-row td,
   tr.total-row td {
     background: #333 !important;
     color: #000 !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .group-row td,
   tr.group-row td {
     background: #ccc !important;
+    color: #000 !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .subtotal-row td,
   tr.subtotal-row td {
     background: #eee !important;
+    color: #000 !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

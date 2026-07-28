@@ -696,7 +696,7 @@ export default function ExpensesTab() {
                 th,td{border:1px solid black;padding:4px 6px;text-align:right;white-space:nowrap;color:#000 !important;font-weight:700 !important}
                 thead th{background:#0b3d6d;color:#000 !important;font-weight:700 !important}
                 .cur{background:#fef9c3}.prev{background:#e0f2fe}.tot{background:#d1fae5}
-                @media print{*{margin:0;padding:0}body{margin:0;padding:8px}}</style>
+                @media print{*{margin:0;padding:0;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}body{margin:0;padding:8px;color:#000 !important;font-weight:700 !important}th,td{color:#000 !important;font-weight:700 !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}}</style>
                 </head><body><h2 style="text-align:center;color:#000 !important;font-weight:800">جدول المصروفات - ${year}م</h2>${el.innerHTML}
                 <script>window.onload=()=>setTimeout(()=>window.print(),300)</script></body></html>`);
               w.document.close();
