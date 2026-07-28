@@ -542,10 +542,10 @@ export default function InstallmentsTab() {
                   <td>${row.name || ""}</td>
                   <td>${row.batch || ""}</td>
                   <td>${row.specialty || ""}</td>
-                  <td class="num-cell">${fmt(row.fees)}</td>
-                  ${monthsList.map((m) => `<td class="num-cell">${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
-                  <td class="num-cell">${fmt(row.totalPaid)}</td>
-                  <td class="bg-remaining num-cell">${fmt(row.remaining)}</td>
+                  <td>${fmt(row.fees)}</td>
+                  ${monthsList.map((m) => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
+                  <td>${fmt(row.totalPaid)}</td>
+                  <td class="bg-remaining">${fmt(row.remaining)}</td>
                 </tr>
               `;
             } else {
@@ -557,9 +557,9 @@ export default function InstallmentsTab() {
                   <td>${row.name || ""}</td>
                   <td>${row.batch || ""}</td>
                   <td>${row.specialty || ""}</td>
-                  <td class="num-cell">${fmt(row.prevDue)}</td>
-                  <td class="num-cell">${fmt(row.fees)}</td>
-                  ${monthsList.map((m) => `<td class="num-cell">${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
+                  <td>${fmt(row.prevDue)}</td>
+                  <td>${fmt(row.fees)}</td>
+                  ${monthsList.map((m) => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
                   ${extraCols
                     .map((col) => {
                       if (col.type === "formula")
@@ -567,8 +567,8 @@ export default function InstallmentsTab() {
                       return `<td>${row.customData?.[col.name] || "—"}</td>`;
                     })
                     .join("")}
-                  <td class="num-cell">${fmt(row.totalPaid)}</td>
-                  <td class="bg-remaining num-cell">${fmt(row.remaining)}</td>
+                  <td>${fmt(row.totalPaid)}</td>
+                  <td class="bg-remaining">${fmt(row.remaining)}</td>
                   <td style="color: #000 !important; font-weight: 900; background-color: ${status === 'عليه' ? '#fecaca' : '#a7f3d0'};">${status}</td>
                 </tr>
               `;
@@ -582,22 +582,22 @@ export default function InstallmentsTab() {
           return `
             <tr class="bg-total">
               <td colspan="4" class="bg-index">الإجمالي</td>
-              <td class="num-cell">${fmt(totals2025.fees)}</td>
-              ${monthsList.map((m) => `<td class="num-cell">${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`).join("")}
-              <td class="num-cell">${fmt(totals2025.paid)}</td>
-              <td class="bg-remaining num-cell">${fmt(totals2025.remaining)}</td>
+              <td>${fmt(totals2025.fees)}</td>
+              ${monthsList.map((m) => `<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`).join("")}
+              <td>${fmt(totals2025.paid)}</td>
+              <td class="bg-remaining">${fmt(totals2025.remaining)}</td>
             </tr>
           `;
         } else {
           return `
             <tr class="bg-total">
               <td colspan="4" class="bg-index">الإجمالي</td>
-              <td class="num-cell">${fmt(totals2026.prevDue)}</td>
-              <td class="num-cell">${fmt(totals2026.fees)}</td>
-              ${monthsList.map((m) => `<td class="num-cell">${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`).join("")}
+              <td>${fmt(totals2026.prevDue)}</td>
+              <td>${fmt(totals2026.fees)}</td>
+              ${monthsList.map((m) => `<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`).join("")}
               ${extraCols.map(() => `<td>—</td>`).join("")}
-              <td class="num-cell">${fmt(totals2026.paid)}</td>
-              <td class="bg-remaining num-cell">${fmt(totals2026.remaining)}</td>
+              <td>${fmt(totals2026.paid)}</td>
+              <td class="bg-remaining">${fmt(totals2026.remaining)}</td>
               <td></td>
             </tr>
           `;
@@ -638,10 +638,9 @@ export default function InstallmentsTab() {
             .header { text-align: center; margin-bottom: 12px; border-bottom: 3px solid #000; padding-bottom: 8px; }
             .header h1 { color: #000 !important; margin: 0; font-size: 18px; font-weight: 900; }
             .header p { color: #000 !important; margin: 3px 0 0; font-size: 14px; font-weight: 700; }
-            table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+            table { width: 100%; border-collapse: collapse; font-size: 13px; }
             th { background-color: #1e3a5f !important; color: #000 !important; font-weight: 900 !important; padding: 5px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; font-size: 14px; }
-            td { padding: 3px 2px; border: 2px solid #000; text-align: center; color: #000 !important; font-weight: 700 !important; overflow: hidden; word-wrap: break-word; }
-            td.num-cell { white-space: nowrap; }
+            td { padding: 3px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; color: #000 !important; font-weight: 700 !important; }
             tr:nth-child(even) { background: #f1f5f9; }
             .bg-index { background-color: #1e3a5f !important; color: #fff !important; font-weight: 900 !important; }
             .bg-remaining { background-color: #fecaca !important; color: #000 !important; font-weight: 800 !important; }
@@ -1363,7 +1362,7 @@ export default function InstallmentsTab() {
                   {MONTHS_2025.map((m) => (
                     <th
                       key={m}
-                      className="p-1 text-center text-[11px] bg-slate-50 border-l border-slate-200 max-w-[70px] overflow-hidden text-ellipsis"
+                      className="p-1 text-center text-[11px] bg-slate-50 border-l border-slate-200 whitespace-nowrap"
                     >
                       {m}
                     </th>
@@ -1408,13 +1407,13 @@ export default function InstallmentsTab() {
                           <td className="p-2 text-center text-slate-500 whitespace-nowrap">
                             {i + 1}
                           </td>
-                          <td className="p-2 text-center font-semibold text-slate-900 max-w-[120px] overflow-hidden text-ellipsis" title={r.name}>
+                          <td className="p-2 text-center font-semibold text-slate-900 whitespace-nowrap">
                             {r.name}
                           </td>
-                          <td className="p-2 text-center text-slate-600 max-w-[80px] overflow-hidden text-ellipsis" title={r.batch}>
+                          <td className="p-2 text-center text-slate-600 whitespace-nowrap">
                             {r.batch || "—"}
                           </td>
-                          <td className="p-2 text-center text-slate-600 max-w-[100px] overflow-hidden text-ellipsis" title={r.specialty}>
+                          <td className="p-2 text-center text-slate-600 whitespace-nowrap">
                             {r.specialty || "—"}
                           </td>
                           <td className="p-2 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
@@ -1425,7 +1424,7 @@ export default function InstallmentsTab() {
                             return (
                               <td
                                 key={m}
-                                className="p-1 text-center bg-slate-50/50 border-l border-slate-200 max-w-[70px] overflow-hidden text-ellipsis"
+                                className="p-1 text-center bg-slate-50/50 border-l border-slate-200 whitespace-nowrap"
                               >
                                 {paid > 0 ? (
                                   <span className="text-emerald-700 font-bold font-mono">
@@ -1482,7 +1481,7 @@ export default function InstallmentsTab() {
                       {MONTHS_2025.map((m) => (
                         <td
                           key={m}
-                          className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 max-w-[70px] overflow-hidden text-ellipsis"
+                          className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap"
                         >
                           {totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}
                         </td>
@@ -1659,7 +1658,7 @@ export default function InstallmentsTab() {
                   {MONTHS_2026.map((m) => (
                     <th
                       key={m}
-                      className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 max-w-[70px] overflow-hidden text-ellipsis"
+                      className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap"
                     >
                       {m.trim()}
                     </th>
@@ -1736,7 +1735,7 @@ export default function InstallmentsTab() {
                           <td className="p-2 text-center text-slate-500 whitespace-nowrap">
                             {i + 1}
                           </td>
-                          <td className="p-1 text-center font-semibold text-slate-900 max-w-[120px] overflow-hidden text-ellipsis" title={r.name}>
+                          <td className="p-1 text-center font-semibold text-slate-900 whitespace-nowrap">
                             <input
                               value={r.name || ""}
                               onChange={(e) =>
@@ -1745,7 +1744,7 @@ export default function InstallmentsTab() {
                               className="w-full min-w-32 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
                             />
                           </td>
-                          <td className="p-1 text-center text-slate-600 max-w-[80px] overflow-hidden text-ellipsis" title={r.batch}>
+                          <td className="p-1 text-center text-slate-600 whitespace-nowrap">
                             <input
                               value={r.batch || ""}
                               onChange={(e) =>
@@ -1755,7 +1754,7 @@ export default function InstallmentsTab() {
                               placeholder="—"
                             />
                           </td>
-                          <td className="p-1 text-center text-slate-600 max-w-[100px] overflow-hidden text-ellipsis" title={r.specialty}>
+                          <td className="p-1 text-center text-slate-600 whitespace-nowrap">
                             <input
                               value={r.specialty || ""}
                               onChange={(e) =>
@@ -1791,7 +1790,7 @@ export default function InstallmentsTab() {
                             return (
                               <td
                                 key={m}
-                                className="p-1 text-center relative bg-white/40 border-l border-slate-200 hover:bg-slate-100 cursor-pointer group transition-colors max-w-[70px] overflow-hidden text-ellipsis"
+                                className="p-1 text-center relative bg-white/40 border-l border-slate-200 hover:bg-slate-100 cursor-pointer group transition-colors whitespace-nowrap"
                                 onMouseEnter={() => setHoveredCell(cellId)}
                                 onMouseLeave={() => setHoveredCell(null)}
                               >
@@ -1904,7 +1903,7 @@ export default function InstallmentsTab() {
                       {MONTHS_2026.map((m) => (
                         <td
                           key={m}
-                          className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 max-w-[70px] overflow-hidden text-ellipsis"
+                          className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap"
                         >
                           {totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}
                         </td>
