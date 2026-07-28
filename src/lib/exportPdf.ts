@@ -67,15 +67,15 @@ export function exportToPdf(opts: {
     tr:nth-child(even) td { background: #f8fafc; }
     tr:nth-child(odd) td { background: #ffffff; }
     .meta { 
-      font-size: 12px; 
-      color: #475569; 
+      font-size: 13px; 
+      color: #000; 
       margin: 4px 0 2px;
       text-align: center;
-      font-weight: 600;
+      font-weight: 1000;
     }
     .period {
       font-size: 13px;
-      color: #000000;
+      color: #000;
       font-weight: 700;
       margin: 6px 0 8px;
     }
@@ -91,7 +91,7 @@ export function exportToPdf(opts: {
     .group-row td {
       background: #fef3c7;
       font-weight: 700;
-      color: #0f766e;
+      color: #000;
     }
     @media print { 
       * { margin: 0; padding: 0; } 
