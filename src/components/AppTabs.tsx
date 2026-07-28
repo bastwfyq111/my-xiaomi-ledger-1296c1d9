@@ -385,20 +385,20 @@ const AppTabs: React.FC = () => {
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap">  
     <style>  
       @page { size: A4 landscape; margin: 6mm; }  
-      body { font-family:'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction:rtl; color:#0f172a; margin:0; padding:6px; }  
-      h2 { text-align:center; color:#0b3d6d; margin:4px 0 8px; }  
+      body { font-family:'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; direction:rtl; color:#000 !important; margin:0; padding:6px; font-weight:700 !important; }  
+      h2 { text-align:center; color:#000 !important; margin:4px 0 8px; font-weight:800; }  
       table { width:100%; border-collapse:collapse; font-size:8px; }  
-      th, td { border:1px solid #94a3b8; padding:2px 3px; text-align:center; white-space:nowrap; }  
-      thead th { background:#fff; font-weight:700; }  
+      th, td { border:1px solid #94a3b8; padding:2px 3px; text-align:center; white-space:nowrap; color:#000 !important; font-weight:700 !important; }  
+      thead th { background:#fff; font-weight:700; color:#000 !important; }  
       thead .c-total { background:${COLORS.TOTAL_ALL}; }  
       thead .c-bab   { background:${COLORS.BAB_TOTAL}; }  
       thead .c-fasl  { background:${COLORS.FASL}; }  
       thead .c-band  { background:${COLORS.BAND}; }  
-      td.formula { background:#f8fafc; font-weight:700; }  
-      tr.month td { background:#0b3d6d; color:#ffd54a; font-weight:700; text-align:right; padding:4px 8px; }  
-      tr.t-cur td  { background:#dbeafe; color:#0b3d6d; font-weight:700; }  
-      tr.t-prev td { background:#e2e8f0; color:#334155; font-weight:700; }  
-      tr.t-cum td  { background:#0b3d6d; color:#ffd54a; font-weight:700; }  
+      td.formula { background:#f8fafc; font-weight:700; color:#000 !important; }  
+      tr.month td { background:#0b3d6d; color:#000 !important; font-weight:700 !important; text-align:right; padding:4px 8px; }  
+      tr.t-cur td  { background:#dbeafe; color:#000 !important; font-weight:700 !important; }  
+      tr.t-prev td { background:#e2e8f0; color:#000 !important; font-weight:700 !important; }  
+      tr.t-cum td  { background:#0b3d6d; color:#000 !important; font-weight:700 !important; }  
       tr.t-cur td:first-child, tr.t-prev td:first-child, tr.t-cum td:first-child { text-align:right; padding-right:8px; }  
     </style></head><body>  
     <h2>سجل مفردات الاستخدامات والنفقات العامة</h2>  

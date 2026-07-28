@@ -38,6 +38,7 @@
     direction: rtl;
     line-height: 1.4;
     font-size: 12px;
+    font-weight: 700 !important;
   }
 
   /* العناوين */
@@ -47,18 +48,19 @@
     font-weight: 800;
     letter-spacing: -0.01em;
     margin: 8px 0 4px 0 !important;
+    color: #000 !important;
   }
 
   h1 {
     font-size: 18px;
     text-align: center;
-    color: #0f172a;
+    color: #000 !important;
   }
 
   h2 {
     font-size: 16px;
     text-align: center;
-    color: #1f7fb8;
+    color: #000 !important;
   }
 
   /* الفقرات والنصوص */
@@ -109,6 +111,8 @@
     text-align: center !important;
     vertical-align: middle !important;
     page-break-inside: avoid;
+    color: #000 !important;
+    font-weight: 700 !important;
   }
 
   /* صفوف الجداول المتناوبة */
@@ -124,7 +128,7 @@
   .total-row td,
   tr.total-row td {
     background: #1f7fb8 !important;
-    color: white !important;
+    color: #000 !important;
     font-weight: 700 !important;
   }
 
@@ -132,6 +136,7 @@
   .subtotal-row td,
   tr.subtotal-row td {
     background: #cbd5e1 !important;
+    color: #000 !important;
     font-weight: 700 !important;
   }
 
@@ -139,7 +144,7 @@
   .group-row td,
   tr.group-row td {
     background: #fef3c7 !important;
-    color: #0f766e !important;
+    color: #000 !important;
     font-weight: 700 !important;
   }
 
@@ -147,7 +152,8 @@
   .currency,
   .number {
     font-family: 'Courier New', monospace;
-    font-weight: 600;
+    font-weight: 700;
+    color: #000 !important;
   }
 
   /* الروابط */
@@ -272,11 +278,13 @@
   .total {
     font-weight: 700;
     font-family: 'Courier New', monospace;
+    color: #000 !important;
   }
 
   /* تنسيق التواريخ */
   .date {
-    font-weight: 600;
+    font-weight: 700;
+    color: #000 !important;
   }
 
   /* الفواصل والمسافات */
@@ -348,13 +356,13 @@
 @media print and (monochrome) {
   th {
     background: #333 !important;
-    color: white !important;
+    color: #000 !important;
   }
 
   .total-row td,
   tr.total-row td {
     background: #333 !important;
-    color: white !important;
+    color: #000 !important;
   }
 
   .group-row td,

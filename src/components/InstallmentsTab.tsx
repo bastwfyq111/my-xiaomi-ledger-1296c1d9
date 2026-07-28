@@ -647,7 +647,7 @@ export default function InstallmentsTab() {
             .bg-remaining { background-color: #000 !important; color: #881337 !important; font-weight: bold; }
             .bg-total { background-color: #fef08a !important; font-weight: bold; }
             .bg-total td { border-top: 3px solid #000 !important; }
-            .footer { margin-top: 10px; text-align: center; font-size: 13px; color: #64748b; }
+            .footer { margin-top: 10px; text-align: center; font-size: 13px; color: #000 !important; font-weight: 700; }
             @media print { * { margin: 0; padding: 0; } body { margin: 0; padding: 8px; } }
           </style>
         </head>
@@ -1112,30 +1112,30 @@ export default function InstallmentsTab() {
           @page { size: A4 portrait; margin: 0mm; padding: 0; }
           html { margin: 0; padding: 0; }
           @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
-          body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 8px; background-color: white; width: 100%; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 8px; background-color: white; width: 100%; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000 !important; font-weight: 700 !important; }
           .container { width: 100%; background: white; padding: 0; box-sizing: border-box; display: flex; flex-direction: column; }
           .header { background: #15803d !important; color: white; padding: 15px; border-radius: 6px; text-align: center; margin-bottom: 15px; border: 1px solid #000; }
           .header h1 { margin: 0; font-size: 22px; font-weight: 800; }
           .header p { margin: 5px 0 0; font-size: 16px; opacity: 1; }
           .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
           .info-box { border: 1px solid #000; padding: 8px; border-radius: 6px; text-align: center; }
-          .info-lbl { font-size: 12px; color: #1e293b; font-weight: 800; }
-          .info-val { font-size: 15px; color: #000; font-weight: 800; margin-top: 2px; }
+          .info-lbl { font-size: 12px; color: #000 !important; font-weight: 800; }
+          .info-val { font-size: 15px; color: #000 !important; font-weight: 800; margin-top: 2px; }
           table { width: 100%; border-collapse: collapse; margin-top: 3px; table-layout: fixed; }
-          th { background-color: #166534 !important; color: #ffffff !important; paddingtextx; font-size: 15px; border: 1px solid #000; text-px: center; font-weight: 800; }
-          td {padding:3px; border: 1px solid #000; text-align: center; font-size: 15px; overflow: hidden; word-wrap: break-word; }
-          .lbl { text-align: center; padding-right: 3px;  font-weight: 800; color: #000; }
-          .num { text-align: center ; padding-left: 3px; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
+          th { background-color: #166534 !important; color: #000 !important; padding:3px; font-size: 15px; border: 1px solid #000; text-align: center; font-weight: 800; }
+          td {padding:3px; border: 1px solid #000; text-align: center; font-size: 15px; overflow: hidden; word-wrap: break-word; color: #000 !important; font-weight: 700 !important; }
+          .lbl { text-align: center; padding-right: 3px;  font-weight: 800; color: #000 !important; }
+          .num { text-align: center ; padding-left: 3px; font-weight: 800; color: #000 !important; font-family: monospace; font-size: 20px; }
           .row-due-old { background-color: #f1f5f9 !important; }
           .row-total-due { background-color: #e2e8f0 !important; }
           .row-total-paid { background-color: #f0fdf4 !important; }
           .row-final { background-color: #fef2f2 !important; font-size: 22px; border: 2px solid #000 !important; }
           @media print { 
             * { margin: 0; padding: 0; }
-            body { background: white; margin: 0; padding: 8px; } 
+            body { background: white; margin: 0; padding: 8px; color: #000 !important; font-weight: 700 !important; } 
             .container { box-shadow: none; padding: 0; width: 100%; margin: 0; }
             .header { background: #15803d !important; -webkit-print-color-adjust: exact; }
-            th { background-color: #166534 !important; color: #ffffff !important; -webkit-print-color-adjust: exact; }
+            th { background-color: #166534 !important; color: #000 !important; -webkit-print-color-adjust: exact; font-weight: 700 !important; }
           }
         </style>
       </head>

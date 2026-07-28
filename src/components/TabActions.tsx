@@ -46,20 +46,22 @@ export default function TabActions({
         * { margin: 0; padding: 0; }
         @page { size: A4 landscape; margin: 0mm; padding: 0; }
         html { margin: 0; padding: 0; }
-        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 8px; color: #000; direction: rtl; margin: 0; width: 100%; box-sizing: border-box; }
-        h1 { text-align: center; color: #000; margin: 0 0 2px; font-size: 22px; }
-        .sub { text-align: center; color: #000; margin-bottom: 3px; font-size: 18px; }
+        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 8px; color: #000 !important; direction: rtl; margin: 0; width: 100%; box-sizing: border-box; font-weight: 700 !important; }
+        h1 { text-align: center; color: #000 !important; margin: 0 0 2px; font-size: 22px; font-weight: 800; }
+        .sub { text-align: center; color: #000 !important; margin-bottom: 3px; font-size: 18px; font-weight: 700 !important; }
         table { width: 100%; border-collapse: collapse; font-size: 18px; }
         th, td { 
           border: 2px solid #000; 
           padding: 2px 2px; 
           text-align: center; 
-          white-space: nowrap; 
+          white-space: nowrap;
+          color: #000 !important;
+          font-weight: 700 !important;
         }
-        thead th { background: #e2da84; color: #000; font-weight: 1000; }
+        thead th { background: #e2da84; color: #000 !important; font-weight: 700 !important; }
         tbody tr:nth-child(even) { background: #f1f5f9; }
-        .num { font-family: 'Courier New', monospace; text-align: center; direction: ltr; }
-        .idx { width: 36px; text-align: center; color: #000; }
+        .num { font-family: 'Courier New', monospace; text-align: center; direction: ltr; color: #000 !important; font-weight: 700 !important; }
+        .idx { width: 36px; text-align: center; color: #000 !important; font-weight: 700 !important; }
         @media print { * { margin: 0; padding: 0; } body { margin: 0; padding: 8px; } }
       </style>
     `;

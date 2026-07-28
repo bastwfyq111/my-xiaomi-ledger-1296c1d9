@@ -175,15 +175,17 @@ export function printHtmlContent(htmlContent: string): void {
         body {
           font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif;
           direction: rtl;
-          color: #000;
+          color: #000 !important;
           background: white;
           line-height: 1.5;
           font-size: 12px;
+          font-weight: 700 !important;
         }
         h1, h2, h3, h4, h5, h6 {
           font-weight: 800;
           letter-spacing: -0.01em;
           margin: 8px 0;
+          color: #000 !important;
         }
         table {
           width: 100%;
@@ -195,11 +197,13 @@ export function printHtmlContent(htmlContent: string): void {
           padding: 6px;
           text-align: center;
           vertical-align: middle;
+          color: #000 !important;
+          font-weight: 700 !important;
         }
         th {
           background: #1f7fb8;
-          color: white;
-          font-weight: 700;
+          color: #000 !important;
+          font-weight: 700 !important;
         }
         tr:nth-child(even) td {
           background: #f8fafc;
@@ -232,7 +236,7 @@ export function printHtmlContent(htmlContent: string): void {
 export function printTable(title: string, columns: string[], rows: (string | number)[][]): void {
   const tableHtml = `
     <h1>${title}</h1>
-    <div style="text-align: center; color: #666; margin-bottom: 15px;">
+    <div style="text-align: center; color: #000 !important; margin-bottom: 15px; font-weight: 700;">
       ${new Date().toLocaleDateString('ar-EG-u-nu-latn')}
     </div>
     <table>

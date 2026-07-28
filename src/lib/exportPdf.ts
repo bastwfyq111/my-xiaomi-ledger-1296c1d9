@@ -25,19 +25,20 @@ export function exportToPdf(opts: {
     body { 
       font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; 
       direction: rtl; 
-      color: #000; 
+      color: #000 !important; 
       margin: 0; 
       padding: 8px; 
       width: 100%; 
       background: white;
       line-height: 1.4;
+      font-weight: 700 !important;
     }
     h1 { 
       text-align: center; 
       font-size: 18px; 
       font-weight: 800;
       margin: 0 0 4px; 
-      color: #0f172a;
+      color: #000 !important;
       letter-spacing: -0.01em;
     }
     table { 
@@ -56,11 +57,12 @@ export function exportToPdf(opts: {
       word-wrap: break-word; 
       overflow-wrap: break-word; 
       word-break: break-word;
-      font-weight: 1000;
+      font-weight: 700 !important;
+      color: #000 !important;
     }
     th { 
       background: #1f7fb8;
-      color: white;
+      color: #000 !important;
       font-weight: 700;
       padding: 8px 4px;
     }
@@ -68,30 +70,31 @@ export function exportToPdf(opts: {
     tr:nth-child(odd) td { background: #ffffff; }
     .meta { 
       font-size: 13px; 
-      color: #000; 
+      color: #000 !important; 
       margin: 4px 0 2px;
       text-align: center;
-      font-weight: 1000;
+      font-weight: 700 !important;
     }
     .period {
       font-size: 13px;
-      color: #000;
-      font-weight: 700;
+      color: #000 !important;
+      font-weight: 700 !important;
       margin: 6px 0 8px;
     }
     .total-row td {
       background: #1f7fb8 !important;
-      color: white;
-      font-weight: 700;
+      color: #000 !important;
+      font-weight: 700 !important;
     }
     .subtotal-row td {
       background: #cbd5e1;
-      font-weight: 700;
+      font-weight: 700 !important;
+      color: #000 !important;
     }
     .group-row td {
       background: #fef3c7;
-      font-weight: 700;
-      color: #000;
+      font-weight: 700 !important;
+      color: #000 !important;
     }
     @media print { 
       * { margin: 0; padding: 0; } 
@@ -330,30 +333,31 @@ export function monthlyStatementPdf(opts: {
     body { 
       font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; 
       direction: rtl; 
-      color: #000; 
+      color: #000 !important; 
       margin: 0; 
       padding: 8px; 
       width: 100%; 
       background: white;
       line-height: 1.3;
+      font-weight: 700 !important;
     }
     h1 { 
       text-align: center; 
       font-size: 18px; 
       font-weight: 800;
       margin: 0 0 4px; 
-      color: #0f172a;
+      color: #000 !important;
       letter-spacing: -0.01em;
     }
     .meta { 
       text-align: center; 
       font-size: 12px; 
-      color: #475569;
-      font-weight: 600;
+      color: #000 !important;
+      font-weight: 700 !important;
     }
     .period { 
-      font-weight: 700; 
-      color: #0f172a; 
+      font-weight: 700 !important; 
+      color: #000 !important; 
       margin: 4px 0 8px;
       font-size: 13px;
     }
@@ -373,32 +377,35 @@ export function monthlyStatementPdf(opts: {
       word-wrap: break-word; 
       overflow-wrap: break-word; 
       word-break: break-word;
-      font-weight: 500;
+      font-weight: 700 !important;
+      color: #000 !important;
     }
     th { 
       background: #1f7fb8;
-      color: white;
-      font-weight: 700;
+      color: #000 !important;
+      font-weight: 700 !important;
       padding: 5px 3px;
     }
     td.acc { 
       text-align: center; 
-      font-weight: 700; 
+      font-weight: 700 !important; 
+      color: #000 !important;
     }
     tr.group-row td { 
       background: #fef3c7; 
-      color: #0f766e; 
-      font-weight: 700; 
+      color: #000 !important; 
+      font-weight: 700 !important; 
       text-align: center; 
     }
     tr.subtotal-row td { 
       background: #cbd5e1; 
-      font-weight: 700;
+      font-weight: 700 !important;
+      color: #000 !important;
     }
     tr.total-row td { 
       background: #1f7fb8; 
-      color: white; 
-      font-weight: 700; 
+      color: #000 !important; 
+      font-weight: 700 !important; 
     }
     @media print { 
       * { margin: 0; padding: 0; } 
@@ -529,33 +536,34 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
     @page { size: A4 landscape; margin: 10mm; padding: 0; }
     @page :first { margin-top: 10mm; }
     html { margin: 0; padding: 0; }
-    body { 
+        body { 
       font-family: 'Cairo','Tajawal','Segoe UI',Tahoma,Arial,sans-serif; 
       direction: rtl; 
-      color: #000; 
+      color: #000 !important; 
       margin: 0; 
       padding: 8px; 
       width: 100%; 
       background: white;
       line-height: 1.3;
+      font-weight: 700 !important;
     }
     h1 { 
       text-align: center; 
       font-size: 18px; 
       font-weight: 800;
       margin: 0 0 4px; 
-      color: #0f172a;
+      color: #000 !important;
       letter-spacing: -0.01em;
     }
     .meta { 
       text-align: center; 
       font-size: 12px; 
-      color: #475569;
-      font-weight: 600;
+      color: #000 !important;
+      font-weight: 700 !important;
     }
     .period { 
-      font-weight: 700; 
-      color: #0f172a; 
+      font-weight: 700 !important; 
+      color: #000 !important; 
       margin: 4px 0 8px;
       font-size: 13px;
     }
@@ -575,32 +583,35 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
       word-wrap: break-word; 
       overflow-wrap: break-word; 
       word-break: break-word;
-      font-weight: 500;
+      font-weight: 700 !important;
+      color: #000 !important;
     }
     th { 
       background: #1f7fb8;
-      color: white;
-      font-weight: 700;
+      color: #000 !important;
+      font-weight: 700 !important;
       padding: 5px 3px;
     }
     td.acc { 
       text-align: center; 
-      font-weight: 700; 
+      font-weight: 700 !important; 
+      color: #000 !important;
     }
     tr.group-row td { 
       background: #fef3c7; 
-      color: #0f766e; 
-      font-weight: 700; 
+      color: #000 !important; 
+      font-weight: 700 !important; 
       text-align: center; 
     }
     tr.subtotal-row td { 
       background: #cbd5e1; 
-      font-weight: 700;
+      font-weight: 700 !important;
+      color: #000 !important;
     }
     tr.total-row td { 
       background: #1f7fb8; 
-      color: white; 
-      font-weight: 700; 
+      color: #000 !important; 
+      font-weight: 700 !important; 
     }
     @media print { 
       * { margin: 0; padding: 0; } 
@@ -613,3 +624,5 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
   );
   w.document.close();
 }
+
+

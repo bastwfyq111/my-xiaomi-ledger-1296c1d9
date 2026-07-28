@@ -691,13 +691,13 @@ export default function ExpensesTab() {
               if (!w) return;
               w.document
                 .write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>المصروفات - ${view}</title>
-                <style>*{margin:0;padding:0}@page{size:A4 landscape;margin:0mm;padding:0}html{margin:0;padding:0}body{font-family:Tajawal,Cairo,Tahoma,Arial,sans-serif;padding:8px;margin:0;width:100%;box-sizing:border-box}
+                <style>*{margin:0;padding:0}@page{size:A4 landscape;margin:0mm;padding:0}html{margin:0;padding:0}body{font-family:Tajawal,Cairo,Tahoma,Arial,sans-serif;padding:8px;margin:0;width:100%;box-sizing:border-box;color:#000 !important;font-weight:700 !important}
                 table{width:100%;border-collapse:collapse;font-size:11px}
-                th,td{border:1px solid black;padding:4px 6px;text-align:right;white-space:nowrap}
-                thead th{background:#0b3d6d;color:#fff}
+                th,td{border:1px solid black;padding:4px 6px;text-align:right;white-space:nowrap;color:#000 !important;font-weight:700 !important}
+                thead th{background:#0b3d6d;color:#000 !important;font-weight:700 !important}
                 .cur{background:#fef9c3}.prev{background:#e0f2fe}.tot{background:#d1fae5}
                 @media print{*{margin:0;padding:0}body{margin:0;padding:8px}}</style>
-                </head><body><h2 style="text-align:center;color:#10528e">جدول المصروفات - ${year}م</h2>${el.innerHTML}
+                </head><body><h2 style="text-align:center;color:#000 !important;font-weight:800">جدول المصروفات - ${year}م</h2>${el.innerHTML}
                 <script>window.onload=()=>setTimeout(()=>window.print(),300)</script></body></html>`);
               w.document.close();
             }}
