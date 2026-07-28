@@ -638,9 +638,10 @@ export default function InstallmentsTab() {
             .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 8px; }
             .header h1 { color: #000; margin: 0; font-size: 18px; }
             .header p { color: #000; margin: 3px 0 0; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            table { width: 100%; border-collapse: collapse; font-size: 13px; }
             th { background-color: #bae6fd !important; color: #000000 !important; font-weight: 900 !important; padding: 4px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; }
-            td { padding: 3px 2px; border: 2px solid #000; text-align: center; white-space: nowrap;color:#000000; }
+            td { padding: 3px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; 
+            color: #000000 !important; }
             tr:nth-child(even) { background: #f8fafc; }
             .bg-index { background-color: #cbd5e1 !important; font-weight: bold; }
             .bg-remaining { background-color: #fecdd3 !important; color: #881337 !important; font-weight: bold; }
