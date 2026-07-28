@@ -1126,10 +1126,11 @@ export default function InstallmentsTab() {
           td {padding:3px; border: 1px solid #000; text-align: center; font-size: 15px; overflow: hidden; word-wrap: break-word; color: #000 !important; font-weight: 700 !important; }
           .lbl { text-align: center; padding-right: 3px;  font-weight: 800; color: #000 !important; }
           .num { text-align: center ; padding-left: 3px; font-weight: 800; color: #000 !important; font-family: monospace; font-size: 20px; }
-          .row-due-old { background-color: #f1f5f9 !important; }
-          .row-total-due { background-color: #e2e8f0 !important; }
-          .row-total-paid { background-color: #f0fdf4 !important; }
-          .row-final { background-color: #fef2f2 !important; font-size: 22px; border: 2px solid #000 !important; }
+          .row-fees { background-color: #dbeafe !important; }
+          .row-due-old { background-color: #fde68a !important; }
+          .row-total-due { background-color: #fca5a5 !important; }
+          .row-total-paid { background-color: #a7f3d0 !important; }
+          .row-final { background-color: #fecaca !important; font-size: 22px; border: 2px solid #000 !important; }
           @media print { 
             * { margin: 0; padding: 0; }
             body { background: white; margin: 0; padding: 8px; color: #000 !important; font-weight: 700 !important; } 
@@ -1160,7 +1161,7 @@ export default function InstallmentsTab() {
               </tr>
             </thead>
             <tbody>
-              <tr><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${escapeHtml(fmt(fees))}</td></tr>
+              <tr class="row-fees"><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${escapeHtml(fmt(fees))}</td></tr>
               ${prevRow}
               <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${escapeHtml(fmt(dueTotal))}</td></tr>
               ${paidRows}

@@ -101,6 +101,26 @@ export async function exportStudentStatementPdf(row: any, year: number): Promise
   tableRows.push([remaining > 0 ? "الرصيد المتبقي (عليه)" : "الرصيد الإضافي (له)", fmt(Math.abs(remaining))]);
 
   // إنشاء الجدول برمجياً (سريع جداً)
+  // ألوان الخلفية المميزة لكل صف
+  const rowColors: [number, number, number][] = [];
+  const totalRows = tableRows.length;
+  tableRows.forEach((row, i) => {
+    const label = row[0] as string;
+    if (label === 'إجمالي الرسوم المستحقة') {
+      rowColors[i] = [219, 234, 254]; // أزرق فاتح #dbeafe
+    } else if (label.includes('مدور') || label.includes('2025')) {
+      rowColors[i] = [253, 230, 138]; // أصفر #fde68a
+    } else if (label === 'إجمالي المبلغ المطلوب') {
+      rowColors[i] = [252, 165, 165]; // أحمر فاتح #fca5a5
+    } else if (label.includes('المسدد')) {
+      rowColors[i] = [167, 243, 208]; // أخضر فاتح #a7f3d0
+    } else if (label.includes('المتبقي') || label.includes('الإضافي') || label.includes('تم السداد')) {
+      rowColors[i] = [254, 202, 202]; // أحمر أفتح #fecaca
+    } else {
+      rowColors[i] = [255, 255, 255]; // أبيض
+    }
+  });
+
   (doc as any).autoTable({
     startY: 62,
     head: [['البيان', 'المبلغ']],
@@ -132,7 +152,12 @@ export async function exportStudentStatementPdf(row: any, year: number): Promise
       1: { cellWidth: 60, halign: 'center', fontStyle: 'bold' }
     },
     theme: 'grid',
-    margin: { top: 62, right: 10, bottom: 20, left: 10 }
+    margin: { top: 62, right: 10, bottom: 20, left: 10 },
+    didParseCell: function(data: any) {
+      if (data.section === 'body' && data.row.index !== undefined) {
+        data.cell.styles.fillColor = rowColors[data.row.index] || [255, 255, 255];
+      }
+    }
   });
 
   // إضافة توقيع وتاريخ في الأسفل
