@@ -641,13 +641,13 @@ export default function InstallmentsTab() {
             table { width: 100%; border-collapse: collapse; font-size: 13px; }
             th { background-color: #bae6fd !important; color: #000000 !important; font-weight: 900 !important; padding: 4px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; }
             td { padding: 3px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; 
-            color: #000000 !important; }
+            color: #000 !important; }
             tr:nth-child(even) { background: #f8fafc; }
-            .bg-index { background-color: #cbd5e1 !important; font-weight: bold; }
-            .bg-remaining { background-color: #fecdd3 !important; color: #881337 !important; font-weight: bold; }
+            .bg-index { background-color: #000 !important; font-weight: bold; }
+            .bg-remaining { background-color: #000 !important; color: #881337 !important; font-weight: bold; }
             .bg-total { background-color: #fef08a !important; font-weight: bold; }
             .bg-total td { border-top: 3px solid #000 !important; }
-            .footer { margin-top: 10px; text-align: left; font-size: 10px; color: #64748b; }
+            .footer { margin-top: 10px; text-align: center; font-size: 13px; color: #64748b; }
             @media print { * { margin: 0; padding: 0; } body { margin: 0; padding: 8px; } }
           </style>
         </head>
@@ -1124,7 +1124,7 @@ export default function InstallmentsTab() {
           table { width: 100%; border-collapse: collapse; margin-top: 3px; table-layout: fixed; }
           th { background-color: #166534 !important; color: #ffffff !important; paddingtextx; font-size: 15px; border: 1px solid #000; text-px: center; font-weight: 800; }
           td {padding:3px; border: 1px solid #000; text-align: center; font-size: 15px; overflow: hidden; word-wrap: break-word; }
-          .lbl { text-align: right; padding-right: 3px;  font-weight: 800; color: #000; }
+          .lbl { text-align: center; padding-right: 3px;  font-weight: 800; color: #000; }
           .num { text-align: center ; padding-left: 3px; font-weight: 800; color: #000; font-family: monospace; font-size: 20px; }
           .row-due-old { background-color: #f1f5f9 !important; }
           .row-total-due { background-color: #e2e8f0 !important; }
@@ -1143,7 +1143,8 @@ export default function InstallmentsTab() {
         <div class="container">
           <div class="header">
             <h1>المجلس اليمني للاختصاصات الطبية</h1>
-            <p>كشف حساب رسمي - العام ${year}م</p>
+            <p>كشف حساب متدرب-للعام 
+            ${year}م</p>
           </div>
           <div class="info-grid">
             ${infoCard("اسم المتدرب", row.name)}
@@ -1623,7 +1624,7 @@ export default function InstallmentsTab() {
                     </div>
                   </th>
                   <th
-                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-normal cursor-pointer hover:bg-slate-200"
                     onClick={() => handleSort2026("batch")}
                   >
                     <div className="flex items-center justify-center gap-1">
