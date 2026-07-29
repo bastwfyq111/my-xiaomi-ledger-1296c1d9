@@ -338,31 +338,33 @@ export default function AccountsTab() {
   );
   const currentBalance = totalIncome - totalExpense;
 
+
 // src/components/AccountTab.tsx  
 const filteredWithBalance = useMemo(() => {  
-  // قصر السجلات على عام 2026 فقط (نفس منطق المطابقة الشاملة)  
-  const cleanDate = (dateStr: string) => String(dateStr ?? "").replace(/[^\d]/g, "");  
-  const accounts2026 = accounts.filter(  
-    (a) => cleanDate(a.date).substring(0, 4) === "2026",  
-  );  
+  // هل بيان الصف يمثّل "رصيد افتتاحي"؟  
+  const isOpeningRow = (row: any) =>  
+    String(row.description ?? "").includes("رصيد افتتاحي");  
   
-  // الترتيب الزمني الثابت لكل سجلات 2026 (لا يتأثر بالفرز/الفلترة الظاهرة)  
-  const sortedAccounts = [...accounts2026].sort((a, b) => {  
-    if (a.date === b.date) return 0;  
-    return a.date > b.date ? 1 : -1;  
-  });  
+  // صف الرصيد الافتتاحي ثابت (يُؤخذ من كل السجلات، لا يتأثر بالفرز/الفلترة)  
+  const openingRow = accounts.find(isOpeningRow);  
+  const base = openingRow ? Number(openingRow.income) || 0 : 0;  
   
-  // الرصيد التراكمي: رصيد الصف = رصيد الصف السابق + إيراد − مصروف  
-  const balanceMap = new Map<string, number>();  
-  let runningBalance = 0;  
-  sortedAccounts.forEach((row) => {  
+  // باقي الصفوف بترتيب العرض الحالي (فرز/فلترة) مع استبعاد صف الافتتاحي  
+  const displayedRows = filtered.filter((r) => !isOpeningRow(r));  
+  
+  // نمط إكسل: رصيد الصف = رصيد الصف الذي فوقه مباشرةً + إيراد − مصروف  
+  let runningBalance = base;  
+  const rest = displayedRows.map((row) => {  
     runningBalance += (Number(row.income) || 0) - (Number(row.expense) || 0);  
-    balanceMap.set(row.id, runningBalance);  
+    return { ...row, balance: runningBalance };  
   });  
   
-  // ربط الرصيد المحسوب بكل صف معروض عبر id  
-  return filtered.map((row) => ({ ...row, balance: balanceMap.get(row.id) ?? 0 }));  
+  // صف الافتتاحي مثبّت في الأعلى ورصيده = مبلغ الإيراد نفسه (الأساس)  
+  const pinned = openingRow ? [{ ...openingRow, balance: base }] : [];  
+  return [...pinned, ...rest];  
 }, [filtered, accounts]);
+
+  
 
 
   
