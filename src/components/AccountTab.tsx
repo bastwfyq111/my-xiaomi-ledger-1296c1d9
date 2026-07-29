@@ -338,20 +338,36 @@ export default function AccountsTab() {
   );
   const currentBalance = totalIncome - totalExpense;
 
-  const filteredWithBalance = useMemo(() => {
-    const sortedAccounts = [...accounts].sort((a, b) => {
-      if (a.date === b.date) return 0;
-      return a.date > b.date ? 1 : -1;
-    });
-    const balanceMap = new Map<string, number>();
-    let runningBalance = 0;
-    sortedAccounts.forEach((row) => {
-      runningBalance += (Number(row.income) || 0) - (Number(row.expense) || 0);
-      balanceMap.set(row.id, runningBalance);
-    });
-    return filtered.map((row) => ({ ...row, balance: balanceMap.get(row.id) ?? 0 }));
-  }, [filtered, accounts]);
+// src/components/AccountTab.tsx  
+const filteredWithBalance = useMemo(() => {  
+  // قصر السجلات على عام 2026 فقط (نفس منطق المطابقة الشاملة)  
+  const cleanDate = (dateStr: string) => String(dateStr ?? "").replace(/[^\d]/g, "");  
+  const accounts2026 = accounts.filter(  
+    (a) => cleanDate(a.date).substring(0, 4) === "2026",  
+  );  
+  
+  // الترتيب الزمني الثابت لكل سجلات 2026 (لا يتأثر بالفرز/الفلترة الظاهرة)  
+  const sortedAccounts = [...accounts2026].sort((a, b) => {  
+    if (a.date === b.date) return 0;  
+    return a.date > b.date ? 1 : -1;  
+  });  
+  
+  // الرصيد التراكمي: رصيد الصف = رصيد الصف السابق + إيراد − مصروف  
+  const balanceMap = new Map<string, number>();  
+  let runningBalance = 0;  
+  sortedAccounts.forEach((row) => {  
+    runningBalance += (Number(row.income) || 0) - (Number(row.expense) || 0);  
+    balanceMap.set(row.id, runningBalance);  
+  });  
+  
+  // ربط الرصيد المحسوب بكل صف معروض عبر id  
+  return filtered.map((row) => ({ ...row, balance: balanceMap.get(row.id) ?? 0 }));  
+}, [filtered, accounts]);
 
+
+  
+
+  
   const submit = () => {
     if (!form.description && !form.name) {
       toast.error("يرجى إدخال الاسم أو البيان على الأقل");
