@@ -70,6 +70,23 @@ export default function TabActions({
       .map((c) => `<th>${escapeHtml(c.label)}</th>`)
       .join("")}</tr>`;
 
+    // حساب الإجماليات للأعمدة الرقمية
+    const totals: Record<string, number> = {};
+    columns.forEach((c) => {
+      if (numericKeys.includes(c.key)) {
+        totals[c.key] = rows.reduce((sum, r) => sum + (Number(r[c.key]) || 0), 0);
+      }
+    });
+
+    const totalRow = `<tr style="background: #e2da84; font-weight: 800; border-top: 3px solid #000;">${columns
+      .map((c) => {
+        if (numericKeys.includes(c.key)) {
+          return `<td class="num">${escapeHtml(fmt(totals[c.key] || 0))}</td>`;
+        }
+        return `<td></td>`;
+      })
+      .join("")}</tr>`;
+
     const body2 = rows
       .map(
         (r, i) =>
@@ -90,7 +107,7 @@ export default function TabActions({
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>
       <h1>${escapeHtml(title)}</h1>
       <div class="sub">المجلس اليمني للاختصاصات الطبية - صعدة • ${today} • عدد السجلات: ${rows.length}</div>
-      <table><thead>${head2}</thead><tbody>${body2}</tbody></table>
+      <table><thead>${head2}</thead><tbody>${body2}${totalRow}</tbody></table>
       <script>
         window.onload = () => {
           setTimeout(() => {
@@ -117,6 +134,17 @@ export default function TabActions({
       });
       return out;
     });
+
+    // إضافة صف الإجمالي للتصدير Excel
+    const totalRow: Record<string, any> = { م: "الإجمالي" };
+    columns.forEach((c) => {
+      if (numericKeys.includes(c.key)) {
+        totalRow[c.label] = rows.reduce((sum, r) => sum + (Number(r[c.key]) || 0), 0);
+      } else {
+        totalRow[c.label] = "";
+      }
+    });
+    data.push(totalRow);
 
     const ws = XLSX.utils.json_to_sheet(data);
 
