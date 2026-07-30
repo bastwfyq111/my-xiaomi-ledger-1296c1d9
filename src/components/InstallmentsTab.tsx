@@ -647,7 +647,8 @@ const exportToPDF = (year: number) => {
             "المتبقي",
             "حالة",
           ];
-  
+
+// src/components/InstallmentsTab.tsx  
 const html = `  
   <html dir="rtl" lang="ar">  
   <head>  
@@ -668,31 +669,30 @@ const html = `
       @media print { body { padding: 0; } }  
     </style>  
   </head>  
-  <body>
-        <div class="header">
-          <h1>المجلس اليمني للاختصاصات الطبية</h1>
-          <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
-          <p>تاريخ التقرير: ${date}</p>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              ${headers.map((h) => `<th>${h}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${generateTableRows()}
-            ${generateTotalRow()}
-          </tbody>
-        </table>
-        <div class="footer">
-          <p>إجمالي عدد المتدربين: ${rows.length}</p>
-          <p>تم إنشاء التقرير بواسطة نظام المجلس اليمني للاختصاصات الطبية</p>
-        </div>
-      </body>
-      </html>
-    `;
-
+  <body>  
+    <div class="header">  
+      <h1>المجلس اليمني للاختصاصات الطبية</h1>  
+      <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>  
+      <p>تاريخ التقرير: ${date}</p>  
+    </div>  
+    <table>  
+      <thead>  
+        <tr>  
+          ${headers.map((h) => `<th>${h}</th>`).join("")}  
+        </tr>  
+      </thead>  
+      <tbody>  
+        ${generateTableRows()}  
+        ${generateTotalRow()}  
+      </tbody>  
+    </table>  
+    <div class="footer">  
+      <p>إجمالي عدد المتدربين: ${rows.length}</p>  
+      <p>تم إنشاء التقرير بواسطة نظام المجلس اليمني للاختصاصات الطبية</p>  
+    </div>  
+  </body>  
+  </html>  
+`;
     const w = window.open("", "", "width=1200,height=800");
     if (w) {
       w.document.write(html);
