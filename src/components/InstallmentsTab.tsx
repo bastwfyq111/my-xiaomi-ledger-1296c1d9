@@ -666,7 +666,7 @@ const exportToPDF = (year: number) => {
           .header {
             text-align: center;
             margin-bottom: 20px;
-            border-bottom: 2px solid #b45309; /* ذهبي غامق */
+            border-bottom: 1px solid #b45309; /* ذهبي غامق */
             padding-bottom: 15px;
           }
           .header h1 {
@@ -683,8 +683,7 @@ const exportToPDF = (year: number) => {
             width: 100%;
             border:solid 1px black ;
             font-size: 13px;
-            whait-space:normal; 
-            word-wrap:break-word; 
+            white-space: nowrap; 
           }
           /* رأس الجدول بتدرج ذهبي لامع ونص أسود داكن */
           th {
@@ -696,8 +695,9 @@ const exportToPDF = (year: number) => {
             text-align: center;
           }
           td {
+          white-space: nowrap; 
             padding: 6px 4px;
-            border: 1px solid #000;
+            border: 1px solid black;
             text-align: center;
             color: #1f2937; /* أسود داكن */
           }
@@ -706,7 +706,7 @@ const exportToPDF = (year: number) => {
           }
           .footer {
             margin-top: 20px;
-            text-align: left;
+            text-align: center;
             font-size: 12px;
             color: #475569;
           }
