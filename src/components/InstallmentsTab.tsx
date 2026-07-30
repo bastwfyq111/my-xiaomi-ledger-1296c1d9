@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+0import React, { useMemo, useState } from "react";
 import { useStore, type InstallmentCustomColumn } from "@/lib/store";
 import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
@@ -664,7 +664,7 @@ font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 8px; backg
 table 
 { width: 100%; border: solid 1.5px black; font-size: 8px; table-layout: fixed; }  
 th 
-{ background: #1e40af; color: white; padding: 3px 2px; border: 1px solid #1e3a8a; font-weight: bold; text-align: center; word-break: break-word; }  
+{  color: white; padding: 3px 2px; border: 1px solid #1e3a8a; font-weight: bold; text-align: center; word-break: break-word; }  
 td { padding: 3px 2px; border: 1px solid black; text-align: center; word-break: break-word; }
 
 
@@ -686,22 +686,11 @@ td { padding: 3px 2px; border: 1px solid black; text-align: center; word-break: 
             font-size: 14px;
           }
       
-          /* رأس الجدول بتدرج ذهبي لامع ونص أسود داكن */
+    
           th {
             background: linear-gradient(to left, #f59e0b, #fbbf24);
-            color: #111827;
-            padding: 8px 4px;
-            border: 1px solid black;
-            font-weight: bold;
-            text-align: center;
-          }
-          td {
-          white-space: nowrap; 
-            padding: 6px 4px;
-            border: 1px solid black;
-            text-align: center;
-            color: #1f2937; /* أسود داكن */
-          }
+            } 
+          
           tr:nth-child(even) {
             background: #f8fafc;
           }
