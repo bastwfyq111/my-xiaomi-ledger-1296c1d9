@@ -31,12 +31,12 @@ export function exportToPdf(opts: {
       width: 100%; 
       background: white;
       line-height: 1.4;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
     }
     h1 { 
       text-align: center; 
       font-size: 18px; 
-      font-weight: 800;
+      font-weight: 900;
       margin: 0 0 4px; 
       color: #000 !important;
       letter-spacing: -0.01em;
@@ -57,13 +57,13 @@ export function exportToPdf(opts: {
       word-wrap: break-word; 
       overflow-wrap: break-word; 
       word-break: break-word;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       color: #000 !important;
     }
     th { 
       background: #1f7fb8;
       color: #000 !important;
-      font-weight: 700;
+      font-weight: 900;
       padding: 8px 4px;
     }
     tr:nth-child(even) td { background: #f8fafc; }
@@ -73,27 +73,27 @@ export function exportToPdf(opts: {
       color: #000 !important; 
       margin: 4px 0 2px;
       text-align: center;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
     }
     .period {
       font-size: 13px;
       color: #000 !important;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       margin: 6px 0 8px;
     }
     .total-row td {
       background: #1f7fb8 !important;
       color: #000 !important;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
     }
     .subtotal-row td {
       background: #cbd5e1;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       color: #000 !important;
     }
     .group-row td {
       background: #fef3c7;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       color: #000 !important;
     }
     @media print { 
@@ -324,7 +324,7 @@ export function monthlyStatementPdf(opts: {
   const head = `<meta charset="utf-8"><title>${title} - ${periodLabel}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700;900&display=swap">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     @page { size: A4 landscape; margin: 10mm; padding: 0; }
@@ -339,12 +339,12 @@ export function monthlyStatementPdf(opts: {
       width: 100%; 
       background: white;
       line-height: 1.3;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
     }
     h1 { 
       text-align: center; 
       font-size: 18px; 
-      font-weight: 800;
+      font-weight: 900;
       margin: 0 0 4px; 
       color: #000 !important;
       letter-spacing: -0.01em;
@@ -353,10 +353,10 @@ export function monthlyStatementPdf(opts: {
       text-align: center; 
       font-size: 12px; 
       color: #000 !important;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
     }
     .period { 
-      font-weight: 700 !important; 
+      font-weight: 900 !important; 
       color: #000 !important; 
       margin: 4px 0 8px;
       font-size: 13px;
@@ -377,35 +377,35 @@ export function monthlyStatementPdf(opts: {
       word-wrap: break-word; 
       overflow-wrap: break-word; 
       word-break: break-word;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       color: #000 !important;
     }
     th { 
       background: #1f7fb8;
       color: #000 !important;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       padding: 5px 3px;
     }
     td.acc { 
       text-align: center; 
-      font-weight: 700 !important; 
+      font-weight: 900 !important; 
       color: #000 !important;
     }
     tr.group-row td { 
       background: #fef3c7; 
       color: #000 !important; 
-      font-weight: 700 !important; 
+      font-weight: 900 !important; 
       text-align: center; 
     }
     tr.subtotal-row td { 
       background: #cbd5e1; 
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       color: #000 !important;
     }
     tr.total-row td { 
       background: #1f7fb8; 
       color: #000 !important; 
-      font-weight: 700 !important; 
+      font-weight: 900 !important; 
     }
     @media print { 
       * { margin: 0; padding: 0; } 
@@ -530,7 +530,7 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
   const head = `<meta charset="utf-8"><title>${REV_SCHEMA.title} - ${MONTHS_PDF[month - 1]} ${year}م</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=Tajawal:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700;900&display=swap">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     @page { size: A4 landscape; margin: 10mm; padding: 0; }
@@ -545,12 +545,12 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
       width: 100%; 
       background: white;
       line-height: 1.3;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
     }
     h1 { 
       text-align: center; 
       font-size: 18px; 
-      font-weight: 800;
+      font-weight: 900;
       margin: 0 0 4px; 
       color: #000 !important;
       letter-spacing: -0.01em;
@@ -559,10 +559,10 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
       text-align: center; 
       font-size: 12px; 
       color: #000 !important;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
     }
     .period { 
-      font-weight: 700 !important; 
+      font-weight: 900 !important; 
       color: #000 !important; 
       margin: 4px 0 8px;
       font-size: 13px;
@@ -583,35 +583,35 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
       word-wrap: break-word; 
       overflow-wrap: break-word; 
       word-break: break-word;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       color: #000 !important;
     }
     th { 
       background: #1f7fb8;
       color: #000 !important;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       padding: 5px 3px;
     }
     td.acc { 
       text-align: center; 
-      font-weight: 700 !important; 
+      font-weight: 900 !important; 
       color: #000 !important;
     }
     tr.group-row td { 
       background: #fef3c7; 
       color: #000 !important; 
-      font-weight: 700 !important; 
+      font-weight: 900 !important; 
       text-align: center; 
     }
     tr.subtotal-row td { 
       background: #cbd5e1; 
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       color: #000 !important;
     }
     tr.total-row td { 
       background: #1f7fb8; 
       color: #000 !important; 
-      font-weight: 700 !important; 
+      font-weight: 900 !important; 
     }
     @media print { 
       * { margin: 0; padding: 0; } 

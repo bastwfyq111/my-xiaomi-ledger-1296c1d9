@@ -637,17 +637,17 @@ export default function InstallmentsTab() {
             body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 8px; background: white; width: 100%; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000 !important; font-weight: 700 !important; }
             .header { text-align: center; margin-bottom: 12px; border-bottom: 3px solid #000; padding-bottom: 8px; }
             .header h1 { color: #000 !important; margin: 0; font-size: 18px; font-weight: 900; }
-            .header p { color: #000 !important; margin: 3px 0 0; font-size: 14px; font-weight: 700; }
+            .header p { color: #000 !important; margin: 3px 0 0; font-size: 14px; font-weight: 900; }
             table { width: 100%; border-collapse: collapse; font-size: 13px; }
-            th { background-color: #1e3a5f !important; color: #000 !important; font-weight: 900 !important; padding: 5px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; font-size: 14px; }
-            td { padding: 3px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; color: #000 !important; font-weight: 700 !important; }
+            th { background-color: #1e3a5f !important; color: #000 !important; font-weight: 900 !important; padding: 5px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; font-size: 14px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            td { padding: 3px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; color: #000 !important; font-weight: 900 !important; }
             tr:nth-child(even) { background: #f1f5f9; }
-            .bg-index { background-color: #1e3a5f !important; color: #fff !important; font-weight: 900 !important; }
+            .bg-index { background-color: #1e3a5f !important; color: #000 !important; font-weight: 900 !important; }
             .bg-remaining { background-color: #fecaca !important; color: #000 !important; font-weight: 800 !important; }
             .bg-total { background-color: #fef08a !important; color: #000 !important; font-weight: 900 !important; }
             .bg-total td { border-top: 3px solid #000 !important; color: #000 !important; font-weight: 900 !important; }
-            .footer { margin-top: 10px; text-align: center; font-size: 13px; color: #000 !important; font-weight: 800; }
-            @media print { * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body { margin: 0; padding: 8px; color: #000 !important; font-weight: 700 !important; } th, td { color: #000 !important; font-weight: 700 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+            .footer { margin-top: 10px; text-align: center; font-size: 13px; color: #000 !important; font-weight: 900; }
+            @media print { * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body { margin: 0; padding: 8px; color: #000 !important; font-weight: 900 !important; } th, td { color: #000 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
           </style>
         </head>
         <body>
@@ -1111,20 +1111,20 @@ export default function InstallmentsTab() {
           @page { size: A4 portrait; margin: 0mm; padding: 0; }
           html { margin: 0; padding: 0; }
           @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
-          body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 8px; background-color: white; width: 100%; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000 !important; font-weight: 700 !important; }
+          body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 8px; background-color: white; width: 100%; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000 !important; font-weight: 900 !important; }
           .container { width: 100%; background: white; padding: 0; box-sizing: border-box; display: flex; flex-direction: column; }
-          .header { background: #15803d !important; color: white; padding: 15px; border-radius: 6px; text-align: center; margin-bottom: 15px; border: 1px solid #000; }
+          .header { background: #15803d !important; color: #000 !important; padding: 15px; border-radius: 6px; text-align: center; margin-bottom: 15px; border: 1px solid #000; }
           .header h1 { margin: 0; font-size: 22px; font-weight: 800; }
           .header p { margin: 5px 0 0; font-size: 16px; opacity: 1; }
           .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
           .info-box { border: 1px solid #000; padding: 8px; border-radius: 6px; text-align: center; }
-          .info-lbl { font-size: 12px; color: #000 !important; font-weight: 800; }
-          .info-val { font-size: 15px; color: #000 !important; font-weight: 800; margin-top: 2px; }
+          .info-lbl { font-size: 12px; color: #000 !important; font-weight: 900; }
+          .info-val { font-size: 15px; color: #000 !important; font-weight: 900; margin-top: 2px; }
           table { width: 100%; border-collapse: collapse; margin-top: 3px; table-layout: fixed; }
-          th { background-color: #166534 !important; color: #000 !important; padding:3px; font-size: 15px; border: 1px solid #000; text-align: center; font-weight: 800; }
-          td {padding:3px; border: 1px solid #000; text-align: center; font-size: 15px; overflow: hidden; word-wrap: break-word; color: #000 !important; font-weight: 700 !important; }
-          .lbl { text-align: center; padding-right: 3px;  font-weight: 800; color: #000 !important; }
-          .num { text-align: center ; padding-left: 3px; font-weight: 800; color: #000 !important; font-family: monospace; font-size: 20px; }
+          th { background-color: #166534 !important; color: #000 !important; padding:3px; font-size: 15px; border: 1px solid #000; text-align: center; font-weight: 900; }
+          td {padding:3px; border: 1px solid #000; text-align: center; font-size: 15px; overflow: hidden; word-wrap: break-word; color: #000 !important; font-weight: 900 !important; }
+          .lbl { text-align: center; padding-right: 3px;  font-weight: 900; color: #000 !important; }
+          .num { text-align: center ; padding-left: 3px; font-weight: 900; color: #000 !important; font-family: monospace; font-size: 20px; }
           .row-fees { background-color: #dbeafe !important; }
           .row-due-old { background-color: #fde68a !important; }
           .row-total-due { background-color: #fca5a5 !important; }
@@ -1132,11 +1132,11 @@ export default function InstallmentsTab() {
           .row-final { background-color: #fecaca !important; font-size: 22px; border: 2px solid #000 !important; }
           @media print { 
             * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            body { background: white; margin: 0; padding: 8px; color: #000 !important; font-weight: 700 !important; } 
+            body { background: white; margin: 0; padding: 8px; color: #000 !important; font-weight: 900 !important; } 
             .container { box-shadow: none; padding: 0; width: 100%; margin: 0; }
             .header { background: #15803d !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            th { background-color: #166534 !important; color: #000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; font-weight: 700 !important; }
-            td { color: #000 !important; font-weight: 700 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            th { background-color: #166534 !important; color: #000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; font-weight: 900 !important; }
+            td { color: #000 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           }
         </style>
       </head>

@@ -38,7 +38,7 @@
     direction: rtl;
     line-height: 1.4;
     font-size: 12px;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
   }
 
   /* ط§ظ„ط¹ظ†ط§ظˆظٹظ† */
@@ -95,8 +95,8 @@
   /* ط±ط¤ظˆط³ ط§ظ„ط¬ط¯ط§ظˆظ„ */
   th {
     background: #1f7fb8 !important;
-    color: white !important;
-    font-weight: 700 !important;
+    color: #000 !important;
+    font-weight: 900 !important;
     border: 1.5px solid #000 !important;
     padding: 6px 4px !important;
     text-align: center !important;
@@ -112,7 +112,7 @@
     vertical-align: middle !important;
     page-break-inside: avoid;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
   }
 
   /* طµظپظˆظپ ط§ظ„ط¬ط¯ط§ظˆظ„ ط§ظ„ظ…طھظ†ط§ظˆط¨ط© */
@@ -129,7 +129,7 @@
   tr.total-row td {
     background: #1f7fb8 !important;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
   }
 
   /* طµظپظˆظپ ط§ظ„ظ…ط¬ظ…ظˆط¹ ط§ظ„ط¬ط²ط¦ظٹ */
@@ -137,7 +137,7 @@
   tr.subtotal-row td {
     background: #cbd5e1 !important;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
   }
 
   /* طµظپظˆظپ ط§ظ„ظ…ط¬ظ…ظˆط¹ط§طھ */
@@ -145,14 +145,14 @@
   tr.group-row td {
     background: #fef3c7 !important;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
   }
 
   /* ط§ظ„ط£ط±ظ‚ط§ظ… ظˆط§ظ„ط¹ظ…ظ„ط§طھ */
   .currency,
   .number {
     font-family: 'Courier New', monospace;
-    font-weight: 700;
+    font-weight: 900;
     color: #000 !important;
   }
 
@@ -246,7 +246,7 @@
 
   /* طھظ†ط³ظٹظ‚ ط§ظ„ط®ط·ظˆط· */
   strong, b {
-    font-weight: 700;
+    font-weight: 900;
   }
 
   em, i {
@@ -276,14 +276,14 @@
   /* طھط­ط³ظٹظ† ظˆط¶ظˆط­ ط§ظ„ط£ط±ظ‚ط§ظ… */
   .amount,
   .total {
-    font-weight: 700;
+    font-weight: 900;
     font-family: 'Courier New', monospace;
     color: #000 !important;
   }
 
   /* طھظ†ط³ظٹظ‚ ط§ظ„طھظˆط§ط±ظٹط® */
   .date {
-    font-weight: 700;
+    font-weight: 900;
     color: #000 !important;
   }
 
@@ -327,7 +327,7 @@
   th {
     background: #1f7fb8 !important;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -336,7 +336,7 @@
   tr.total-row td {
     background: #1f7fb8 !important;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -345,7 +345,7 @@
   tr.group-row td {
     background: #fef3c7 !important;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -354,7 +354,7 @@
   tr.subtotal-row td {
     background: #cbd5e1 !important;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -365,7 +365,7 @@
   th {
     background: #333 !important;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -374,7 +374,7 @@
   tr.total-row td {
     background: #333 !important;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -383,7 +383,7 @@
   tr.group-row td {
     background: #ccc !important;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -392,7 +392,7 @@
   tr.subtotal-row td {
     background: #eee !important;
     color: #000 !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }

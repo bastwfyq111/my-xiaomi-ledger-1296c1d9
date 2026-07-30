@@ -204,7 +204,7 @@ export function printHtmlContent(htmlContent: string): void {
           background: white;
           line-height: 1.5;
           font-size: 12px;
-          font-weight: 700 !important;
+          font-weight: 900 !important;
         }
         h1, h2, h3, h4, h5, h6 {
           font-weight: 800;
@@ -223,20 +223,20 @@ export function printHtmlContent(htmlContent: string): void {
           text-align: center;
           vertical-align: middle;
           color: #000 !important;
-          font-weight: 700 !important;
+          font-weight: 900 !important;
         }
         th {
           background: #1f7fb8;
           color: #000 !important;
-          font-weight: 700 !important;
+          font-weight: 900 !important;
         }
         tr:nth-child(even) td {
           background: #f8fafc;
         }
         @media print {
           * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          body { background: white; color: #000 !important; font-weight: 700 !important; }
-          th, td { color: #000 !important; font-weight: 700 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { background: white; color: #000 !important; font-weight: 900 !important; }
+          th, td { color: #000 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           .no-print { display: none !important; }
         }
       </style>
