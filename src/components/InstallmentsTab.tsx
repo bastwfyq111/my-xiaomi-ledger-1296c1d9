@@ -379,38 +379,36 @@ export default function InstallmentsTab() {
     setSortConfig2026({ key, direction });
   };
 
-  const totals2025 = useMemo(
-    () => ({
-      fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
-      paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
-      remaining: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
-      months: MONTHS_2025.reduce(
-        (acc, m) => {
-          acc[m] = (filteredRows2025 || []).reduce((s, r) => s + (Number(r.payments?.[m]) || 0), 0);
-          return acc;
-        },
-        {} as Record<string, number>,
-      ),
-    }),
-    [filteredRows2025],
-  );
+// src/components/InstallmentsTab.tsx  
+const totals2025 = useMemo(  
+  () => ({  
+    fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),  
+    paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),  
+    remaining: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),  
+    months: MONTHS_2025.reduce((acc, m) => {  
+      acc[m] = (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.payments?.[m]), 0);  
+      return acc;  
+    }, {} as Record<string, number>),  
+  }),  
+  [filteredRows2025],  
+);  
+  
+const totals2026 = useMemo(  
+  () => ({  
+    prevDue: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.prevDue), 0),  
+    fees: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),  
+    paid: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),  
+    remaining: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),  
+    months: MONTHS_2026.reduce((acc, m) => {  
+      acc[m] = (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.payments?.[m]), 0);  
+      return acc;  
+    }, {} as Record<string, number>),  
+  }),  
+  [filteredRows2026],  
+);
 
-  const totals2026 = useMemo(
-    () => ({
-      prevDue: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.prevDue), 0),
-      fees: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
-      paid: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
-      remaining: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
-      months: MONTHS_2026.reduce(
-        (acc, m) => {
-          acc[m] = (filteredRows2026 || []).reduce((s, r) => s + (Number(r.payments?.[m]) || 0), 0);
-          return acc;
-        },
-        {} as Record<string, number>,
-      ),
-    }),
-    [filteredRows2026],
-  );
+
+
 
   const allNames = useMemo(() => {
     const n1 = (installments2025 || []).map((s: any) => s.name);
