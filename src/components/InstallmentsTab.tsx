@@ -357,7 +357,7 @@ export default function InstallmentsTab() {
           aVal = aVal ? String(aVal).toLowerCase() : "";
           bVal = bVal ? String(bVal).toLowerCase() : "";
         }
-        if (aVal < bVal) return sortConfig2026.direction === "asc" ? -1 : 1;
+        if (aVal < bVal) retun sorrtConfig2026.direction === "asc" ? -1 : 1;
         if (aVal > bVal) return sortConfig2026.direction === "asc" ? 1 : -1;
         return 0;
       });
@@ -656,13 +656,19 @@ const exportToPDF = (year: number) => {
         <style>
           @page { size: A3 landscape; margin: 10mm; }
           * { box-sizing: border-box; }
-          body {
-            font-family: 'Cairo', sans-serif;
-            direction: rtl;
-            margin: 0;
-            padding: 20px;
-            background: white;
-          }
+body 
+{ 
+font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 8px; background: white; 
+}  
+...  
+table 
+{ width: 100%; border: solid 1.5px black; font-size: 8px; table-layout: fixed; }  
+th 
+{ background: #1e40af; color: white; padding: 3px 2px; border: 1px solid #1e3a8a; font-weight: bold; text-align: center; word-break: break-word; }  
+td { padding: 3px 2px; border: 1px solid black; text-align: center; word-break: break-word; }
+
+
+          
           .header {
             text-align: center;
             margin-bottom: 20px;
@@ -679,12 +685,7 @@ const exportToPDF = (year: number) => {
             margin: 5px 0 0;
             font-size: 14px;
           }
-          table {
-            width: 100%;
-            border:solid 1px black ;
-            font-size: 13px;
-            white-space: nowrap; 
-          }
+      
           /* رأس الجدول بتدرج ذهبي لامع ونص أسود داكن */
           th {
             background: linear-gradient(to left, #f59e0b, #fbbf24);
