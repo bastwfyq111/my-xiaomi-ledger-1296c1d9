@@ -1138,6 +1138,7 @@ export default function InstallmentsTab() {
             th { background-color: #166534 !important; color: #000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; font-weight: 900 !important; }
             td { color: #000 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           }
+td.month { color: #000; font-weight: bold; }
         </style>
       </head>
       <body>
