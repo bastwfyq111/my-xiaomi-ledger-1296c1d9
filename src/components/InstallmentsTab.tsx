@@ -659,12 +659,13 @@ const exportToPDF = (year: number) => {
 body 
 { 
 font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 8px; background: white; 
-}  
-...  
+}   
 table 
 { width: 100%; border: solid 1.5px black; font-size: 8px; table-layout: fixed; }  
 th 
-{  color: white; padding: 3px 2px; border: 1px solid #1e3a8a; font-weight: bold; text-align: center; word-break: break-word; }  
+{  
+background: linear-gradient(to left, #f59e0b, #fbbf24);
+color: white; padding: 3px 2px; border: 1px solid #1e3a8a; font-weight: bold; text-align: center; word-break: break-word; }  
 td { padding: 3px 2px; border: 1px solid black; text-align: center; word-break: break-word; }
 
 
@@ -686,10 +687,7 @@ td { padding: 3px 2px; border: 1px solid black; text-align: center; word-break: 
             font-size: 14px;
           }
       
-    
-          th {
-            background: linear-gradient(to left, #f59e0b, #fbbf24);
-            } 
+  
           
           tr:nth-child(even) {
             background: #f8fafc;
