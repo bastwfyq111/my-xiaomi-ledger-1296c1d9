@@ -647,68 +647,28 @@ const exportToPDF = (year: number) => {
             "المتبقي",
             "حالة",
           ];
-
-    const html = `
-      <html dir="rtl" lang="ar">
-      <head>
-        <meta charset="utf-8" />
-        <title>تقرير الأقساط ${year}</title>
-        <style>
-          @page { size: A3 landscape; margin: 10mm; }
-          * { box-sizing: border-box; }
-body 
-{ 
-font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 8px; background: white; 
-}   
-table 
-{ width: 100%; border: solid 1.5px black; font-size: 8px; table-layout: fixed; }  
-th 
-{  
-background: linear-gradient(to left, #f59e0b, #fbbf24);
-color: white; padding: 3px 2px; border: 1px solid #1e3a8a; font-weight: bold; text-align: center; word-break: break-word; }  
-td { padding: 3px 2px; border: 1px solid black; text-align: center; word-break: break-word; }
-
-
-          
-          .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #b45309; /* ذهبي غامق */
-            padding-bottom: 15px;
-          }
-          .header h1 {
-            color: #1e40af;
-            margin: 0;
-            font-size: 24px;
-          }
-          .header p {
-            color: #475569;
-            margin: 5px 0 0;
-            font-size: 14px;
-          }
-      
   
-          
-          tr:nth-child(even) {
-            background: #f8fafc;
-          }
-          .footer {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #475569;
-          }
-          @media print {
-            body { padding: 0; }
-            th {
-              background: linear-gradient(to left, #f59e0b, #fbbf24) !important;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-          }
-        </style>
-      </head>
-      <body>
+const html = `  
+  <html dir="rtl" lang="ar">  
+  <head>  
+    <meta charset="utf-8" />  
+    <title>تقرير الأقساط ${year}</title>  
+    <style>  
+      @page { size: A3 landscape; margin: 10mm; }  
+      * { box-sizing: border-box; }  
+      body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 8px; background: white; }  
+      .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #1e40af; padding-bottom: 15px; }  
+      .header h1 { color: #1e40af; margin: 0; font-size: 24px; }  
+      .header p { color: #64748b; margin: 5px 0 0; font-size: 14px; }  
+      table { width: 100%; border-collapse: collapse; font-size: 8px; table-layout: fixed; border: 1.5px solid #000000; }  
+      th { background: #1e40af; color: white; padding: 4px 2px; border: 1.5px solid #000000; font-weight: bold; text-align: center; word-break: break-word; }  
+      td { padding: 3px 2px; border: 1.5px solid #000000; text-align: center; word-break: break-word; }  
+      tr:nth-child(even) { background: #f8fafc; }  
+      .footer { margin-top: 20px; text-align: left; font-size: 12px; color: #64748b; }  
+      @media print { body { padding: 0; } }  
+    </style>  
+  </head>  
+  <body>
         <div class="header">
           <h1>المجلس اليمني للاختصاصات الطبية</h1>
           <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
