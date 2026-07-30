@@ -683,14 +683,15 @@ const exportToPDF = (year: number) => {
             width: 100%;
             border:solid 1px black ;
             font-size: 13px;
-            whait-space:nowrap; 
+            whait-space:normal; 
+            word-wrap:break-word; 
           }
           /* رأس الجدول بتدرج ذهبي لامع ونص أسود داكن */
           th {
             background: linear-gradient(to left, #f59e0b, #fbbf24);
             color: #111827;
             padding: 8px 4px;
-            border: 1px solid #000;
+            border: 1px solid black;
             font-weight: bold;
             text-align: center;
           }
