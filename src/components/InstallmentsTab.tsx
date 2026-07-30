@@ -543,7 +543,9 @@ export default function InstallmentsTab() {
                   <td>${row.batch || ""}</td>
                   <td>${row.specialty || ""}</td>
                   <td>${fmt(row.fees)}</td>
-                  ${monthsList.map((m) => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
+               
+${monthsList.map(m => `<td class="month">${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
+                  
                   <td>${fmt(row.totalPaid)}</td>
                   <td class="bg-remaining">${fmt(row.remaining)}</td>
                 </tr>
