@@ -681,21 +681,22 @@ const exportToPDF = (year: number) => {
           }
           table {
             width: 100%;
-            border-collapse: collapse;
-            font-size: 10px;
+            border:solid 1px black ;
+            font-size: 13px;
+            whait-space:nowrap; 
           }
           /* رأس الجدول بتدرج ذهبي لامع ونص أسود داكن */
           th {
             background: linear-gradient(to left, #f59e0b, #fbbf24);
             color: #111827;
             padding: 8px 4px;
-            border: 1px solid #d97706;
+            border: 1px solid #000;
             font-weight: bold;
             text-align: center;
           }
           td {
             padding: 6px 4px;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #000;
             text-align: center;
             color: #1f2937; /* أسود داكن */
           }
