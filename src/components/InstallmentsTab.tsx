@@ -524,175 +524,240 @@ export default function InstallmentsTab() {
     }
   };
 
-  // تصدير PDF للجدول (تم التعديل لضمان التوافق مع الطباعة والحفظ الصحيح)
-  const exportToPDF = (year: number) => {
-    try {
-      const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-      const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
-      const extraCols = year === 2026 ? extraCols2026 : [];
-      const date = new Date().toLocaleDateString("ar-SA");
+const exportToPDF = (year: number) => {
+  try {
+    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+    const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
+    const extraCols = year === 2026 ? extraCols2026 : [];
+    const date = new Date().toLocaleDateString("ar-SA");
 
-      const generateTableRows = () => {
-        return rows
-          .map((row: any, i: number) => {
-            if (year === 2025) {
-              return `
-                <tr>
-                  <td class="bg-index">${i + 1}</td>
-                  <td>${row.name || ""}</td>
-                  <td>${row.batch || ""}</td>
-                  <td>${row.specialty || ""}</td>
-                  <td>${fmt(row.fees)}</td>
-                  ${monthsList.map((m) => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
-                  <td>${fmt(row.totalPaid)}</td>
-                  <td class="bg-remaining">${fmt(row.remaining)}</td>
-                </tr>
-              `;
-            } else {
-              const status = row.remaining <= 0 ? "له" : "عليه";
-              const statusColor = row.remaining <= 0 ? "#059669" : "#e11d48";
-              return `
-                <tr>
-                  <td class="bg-index">${i + 1}</td>
-                  <td>${row.name || ""}</td>
-                  <td>${row.batch || ""}</td>
-                  <td>${row.specialty || ""}</td>
-                  <td>${fmt(row.prevDue)}</td>
-                  <td>${fmt(row.fees)}</td>
-                  ${monthsList.map((m) => `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`).join("")}
-                  ${extraCols
-                    .map((col) => {
-                      if (col.type === "formula")
-                        return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
-                      return `<td>${row.customData?.[col.name] || "—"}</td>`;
-                    })
-                    .join("")}
-                  <td>${fmt(row.totalPaid)}</td>
-                  <td class="bg-remaining">${fmt(row.remaining)}</td>
-                  <td style="color: #000 !important; font-weight: 900; background-color: ${status === 'عليه' ? '#fecaca' : '#a7f3d0'};">${status}</td>
-                </tr>
-              `;
-            }
-          })
-          .join("");
-      };
-
-      const generateTotalRow = () => {
-        if (year === 2025) {
-          return `
-            <tr class="bg-total">
-              <td colspan="4" class="bg-index">الإجمالي</td>
-              <td>${fmt(totals2025.fees)}</td>
-              ${monthsList.map((m) => `<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`).join("")}
-              <td>${fmt(totals2025.paid)}</td>
-              <td class="bg-remaining">${fmt(totals2025.remaining)}</td>
+    const generateTableRows = () => {
+      return rows
+        .map((row: any, i: number) => {
+          if (year === 2025) {
+            return `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${row.name || ""}</td>
+              <td>${row.batch || ""}</td>
+              <td>${row.specialty || ""}</td>
+              <td>${fmt(row.fees)}</td>
+              ${monthsList
+                .map(
+                  (m) =>
+                    `<td>${
+                      row.payments?.[m] ? fmt(row.payments[m]) : "—"
+                    }</td>`
+                )
+                .join("")}
+              <td>${fmt(row.totalPaid)}</td>
+              <td>${fmt(row.remaining)}</td>
             </tr>
           `;
-        } else {
-          return `
-            <tr class="bg-total">
-              <td colspan="4" class="bg-index">الإجمالي</td>
-              <td>${fmt(totals2026.prevDue)}</td>
-              <td>${fmt(totals2026.fees)}</td>
-              ${monthsList.map((m) => `<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`).join("")}
-              ${extraCols.map(() => `<td>—</td>`).join("")}
-              <td>${fmt(totals2026.paid)}</td>
-              <td class="bg-remaining">${fmt(totals2026.remaining)}</td>
-              <td></td>
+          } else {
+            const status = row.remaining <= 0 ? "له" : "عليه";
+            const statusColor = row.remaining <= 0 ? "#059669" : "#e11d48";
+            return `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${row.name || ""}</td>
+              <td>${row.batch || ""}</td>
+              <td>${row.specialty || ""}</td>
+              <td>${fmt(row.prevDue)}</td>
+              <td>${fmt(row.fees)}</td>
+              ${monthsList
+                .map(
+                  (m) =>
+                    `<td>${
+                      row.payments?.[m] ? fmt(row.payments[m]) : "—"
+                    }</td>`
+                )
+                .join("")}
+              ${extraCols
+                .map((col) => {
+                  if (col.type === "formula")
+                    return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
+                  return `<td>${row.customData?.[col.name] || "—"}</td>`;
+                })
+                .join("")}
+              <td>${fmt(row.totalPaid)}</td>
+              <td>${fmt(row.remaining)}</td>
+              <td style="color: ${statusColor}; font-weight: bold;">${status}</td>
             </tr>
           `;
-        }
-      };
+          }
+        })
+        .join("");
+    };
 
-      const headers =
-        year === 2025
-          ? ["م", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
-          : [
-              "م",
-              "الاسم",
-              "الدفعة",
-              "المساق",
-              "مدور 2025",
-              "الرسوم",
-              ...monthsList,
-              ...extraCols.map((c) => c.name),
-              "المسدد",
-              "المتبقي",
-              "حالة",
-            ];
-
-      // إضافة DOCTYPE واسم مناسب في title
-      const html = `<!DOCTYPE html>
-        <html dir="rtl" lang="ar">
-        <head>
-          <meta charset="utf-8" />
-          <title>تقرير_الأقساط_${year}</title>
-          <link rel="preconnect" href="https://fonts.googleapis.com">
-          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;800&display=swap">
-          <style>
-            * { margin: 0; padding: 0; }
-            @page { size: A4 landscape; margin: 0mm; padding: 0; }
-            html { margin: 0; padding: 0; }
-            @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
-            body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 8px; background: white; width: 100%; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000 !important; font-weight: 700 !important; }
-            .header { text-align: center; margin-bottom: 12px; border-bottom: 3px solid #000; padding-bottom: 8px; }
-            .header h1 { color: #000 !important; margin: 0; font-size: 18px; font-weight: 900; }
-            .header p { color: #000 !important; margin: 3px 0 0; font-size: 14px; font-weight: 900; }
-            table { width: 100%; border-collapse: collapse; font-size: 13px; }
-            th { background-color: #1e3a5f !important; color: #000 !important; font-weight: 900 !important; padding: 5px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; font-size: 14px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            td { padding: 3px 2px; border: 2px solid #000; text-align: center; white-space: nowrap; color: #000 !important; font-weight: 900 !important; }
-            tr:nth-child(even) { background: #f1f5f9; }
-            .bg-index { background-color: #1e3a5f !important; color: #000 !important; font-weight: 900 !important; }
-            .bg-remaining { background-color: #fecaca !important; color: #000 !important; font-weight: 800 !important; }
-            .bg-total { background-color: #fef08a !important; color: #000 !important; font-weight: 900 !important; }
-            .bg-total td { border-top: 3px solid #000 !important; color: #000 !important; font-weight: 900 !important; }
-            .footer { margin-top: 10px; text-align: center; font-size: 13px; color: #000 !important; font-weight: 900; }
-            @media print { * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body { margin: 0; padding: 8px; color: #000 !important; font-weight: 900 !important; } th, td { color: #000 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>المجلس اليمني للاختصاصات الطبية</h1>
-            <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
-            <p>تاريخ التقرير: ${date}</p>
-          </div>
-          <table>
-            <thead>
-              <tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr>
-            </thead>
-            <tbody>
-              ${generateTableRows()}
-              ${generateTotalRow()}
-            </tbody>
-          </table>
-          <div class="footer">
-            <p>إجمالي عدد المتدربين: ${rows.length}</p>
-            <p>تم إنشاء التقرير بواسطة نظام المجلس اليمني للاختصاصات الطبية</p>
-          </div>
-          <script>
-            // ننتظر تحميل الخطوط العربية لضمان توافق PDF
-            document.fonts.ready.then(function() {
-              window.print();
-            });
-          </script>
-        </body>
-        </html>
-      `;
-
-      const w = window.open("", "", "width=1200,height=800");
-      if (w) {
-        w.document.open();
-        w.document.write(html);
-        w.document.close();
-        toast.success("تم فتح التقرير للطباعة");
+    const generateTotalRow = () => {
+      if (year === 2025) {
+        return `
+          <tr style="background: #f1f5f9; font-weight: bold; border-top: 2px solid #b45309;">
+            <td colspan="4">الإجمالي</td>
+            <td>${fmt(totals2025.fees)}</td>
+            ${monthsList
+              .map(
+                (m) =>
+                  `<td>${
+                    totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"
+                  }</td>`
+              )
+              .join("")}
+            <td>${fmt(totals2025.paid)}</td>
+            <td>${fmt(totals2025.remaining)}</td>
+          </tr>
+        `;
       } else {
-        toast.error("يرجى السماح بالنوافذ المنبثقة");
+        return `
+          <tr style="background: #f1f5f9; font-weight: bold; border-top: 2px solid #b45309;">
+            <td colspan="4">الإجمالي</td>
+            <td>${fmt(totals2026.prevDue)}</td>
+            <td>${fmt(totals2026.fees)}</td>
+            ${monthsList
+              .map(
+                (m) =>
+                  `<td>${
+                    totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"
+                  }</td>`
+              )
+              .join("")}
+            ${extraCols.map(() => `<td>—</td>`).join("")}
+            <td>${fmt(totals2026.paid)}</td>
+            <td>${fmt(totals2026.remaining)}</td>
+            <td></td>
+          </tr>
+        `;
       }
-    } catch (error) {
-      toast.error("فشل إنشاء التقرير");
-    }
-  };
+    };
 
+    const headers =
+      year === 2025
+        ? ["#", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
+        : [
+            "#",
+            "الاسم",
+            "الدفعة",
+            "المساق",
+            "مدور 2025",
+            "الرسوم",
+            ...monthsList,
+            ...extraCols.map((c) => c.name),
+            "المسدد",
+            "المتبقي",
+            "حالة",
+          ];
+
+    const html = `
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="utf-8" />
+        <title>تقرير الأقساط ${year}</title>
+        <style>
+          @page { size: A3 landscape; margin: 10mm; }
+          * { box-sizing: border-box; }
+          body {
+            font-family: 'Cairo', sans-serif;
+            direction: rtl;
+            margin: 0;
+            padding: 20px;
+            background: white;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #b45309; /* ذهبي غامق */
+            padding-bottom: 15px;
+          }
+          .header h1 {
+            color: #1e40af;
+            margin: 0;
+            font-size: 24px;
+          }
+          .header p {
+            color: #475569;
+            margin: 5px 0 0;
+            font-size: 14px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+          }
+          /* رأس الجدول بتدرج ذهبي لامع ونص أسود داكن */
+          th {
+            background: linear-gradient(to left, #f59e0b, #fbbf24);
+            color: #111827;
+            padding: 8px 4px;
+            border: 1px solid #d97706;
+            font-weight: bold;
+            text-align: center;
+          }
+          td {
+            padding: 6px 4px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+            color: #1f2937; /* أسود داكن */
+          }
+          tr:nth-child(even) {
+            background: #f8fafc;
+          }
+          .footer {
+            margin-top: 20px;
+            text-align: left;
+            font-size: 12px;
+            color: #475569;
+          }
+          @media print {
+            body { padding: 0; }
+            th {
+              background: linear-gradient(to left, #f59e0b, #fbbf24) !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>المجلس اليمني للاختصاصات الطبية</h1>
+          <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
+          <p>تاريخ التقرير: ${date}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              ${headers.map((h) => `<th>${h}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${generateTableRows()}
+            ${generateTotalRow()}
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>إجمالي عدد المتدربين: ${rows.length}</p>
+          <p>تم إنشاء التقرير بواسطة نظام المجلس اليمني للاختصاصات الطبية</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const w = window.open("", "", "width=1200,height=800");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      setTimeout(() => w.print(), 500);
+      toast.success("تم فتح التقرير للطباعة");
+    }
+  } catch (error) {
+    toast.error("فشل إنشاء التقرير");
+  }
+};
+
+
+  
+      
   const saveRowEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editRowModal) return;
