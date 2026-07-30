@@ -380,6 +380,7 @@ export default function InstallmentsTab() {
   };
 
 // src/components/InstallmentsTab.tsx  
+ // src/components/InstallmentsTab.tsx  
 const totals2025 = useMemo(  
   () => ({  
     fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),  
@@ -405,7 +406,8 @@ const totals2026 = useMemo(
     }, {} as Record<string, number>),  
   }),  
   [filteredRows2026],  
-);
+); 
+
 
 
 
