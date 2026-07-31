@@ -1,4 +1,4 @@
-0import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useStore, type InstallmentCustomColumn } from "@/lib/store";
 import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
@@ -135,11 +135,11 @@ const SortIcon = ({
   columnKey: string;
 }) => {
   if (sortConfig?.key !== columnKey)
-    return <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />;
+    return <ArrowUpDown className="w-3 h-3 text-slate-700 opacity-60" />;
   return sortConfig.direction === "asc" ? (
-    <ArrowUp className="w-3 h-3 text-emerald-600" />
+    <ArrowUp className="w-3 h-3 text-emerald-700" />
   ) : (
-    <ArrowDown className="w-3 h-3 text-emerald-600" />
+    <ArrowDown className="w-3 h-3 text-emerald-700" />
   );
 };
 
@@ -357,7 +357,7 @@ export default function InstallmentsTab() {
           aVal = aVal ? String(aVal).toLowerCase() : "";
           bVal = bVal ? String(bVal).toLowerCase() : "";
         }
-        if (aVal < bVal) retun sorrtConfig2026.direction === "asc" ? -1 : 1;
+        if (aVal < bVal) return sortConfig2026.direction === "asc" ? -1 : 1;
         if (aVal > bVal) return sortConfig2026.direction === "asc" ? 1 : -1;
         return 0;
       });
@@ -379,38 +379,32 @@ export default function InstallmentsTab() {
     setSortConfig2026({ key, direction });
   };
 
-// src/components/InstallmentsTab.tsx  
- // src/components/InstallmentsTab.tsx  
-const totals2025 = useMemo(  
-  () => ({  
-    fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),  
-    paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),  
-    remaining: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),  
-    months: MONTHS_2025.reduce((acc, m) => {  
-      acc[m] = (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.payments?.[m]), 0);  
-      return acc;  
-    }, {} as Record<string, number>),  
-  }),  
-  [filteredRows2025],  
-);  
-  
-const totals2026 = useMemo(  
-  () => ({  
-    prevDue: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.prevDue), 0),  
-    fees: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),  
-    paid: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),  
-    remaining: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),  
-    months: MONTHS_2026.reduce((acc, m) => {  
-      acc[m] = (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.payments?.[m]), 0);  
-      return acc;  
-    }, {} as Record<string, number>),  
-  }),  
-  [filteredRows2026],  
-); 
+  const totals2025 = useMemo(
+    () => ({
+      fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
+      paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
+      remaining: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
+      months: MONTHS_2025.reduce((acc, m) => {
+        acc[m] = (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.payments?.[m]), 0);
+        return acc;
+      }, {} as Record<string, number>),
+    }),
+    [filteredRows2025],
+  );
 
-
-
-
+  const totals2026 = useMemo(
+    () => ({
+      prevDue: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.prevDue), 0),
+      fees: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
+      paid: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
+      remaining: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
+      months: MONTHS_2026.reduce((acc, m) => {
+        acc[m] = (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.payments?.[m]), 0);
+        return acc;
+      }, {} as Record<string, number>),
+    }),
+    [filteredRows2026],
+  );
 
   const allNames = useMemo(() => {
     const n1 = (installments2025 || []).map((s: any) => s.name);
@@ -524,190 +518,235 @@ const totals2026 = useMemo(
     }
   };
 
-const exportToPDF = (year: number) => {
-  try {
-    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-    const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
-    const extraCols = year === 2026 ? extraCols2026 : [];
-    const date = new Date().toLocaleDateString("ar-SA");
+  // تصدير PDF للجدول (رأس الجدول ذهبي لامع + نصوص سوداء غامقة)
+  const exportToPDF = (year: number) => {
+    try {
+      const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+      const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
+      const extraCols = year === 2026 ? extraCols2026 : [];
+      const date = new Date().toLocaleDateString("ar-SA");
 
-    const generateTableRows = () => {
-      return rows
-        .map((row: any, i: number) => {
-          if (year === 2025) {
-            return `
-            <tr>
-              <td>${i + 1}</td>
-              <td>${row.name || ""}</td>
-              <td>${row.batch || ""}</td>
-              <td>${row.specialty || ""}</td>
-              <td>${fmt(row.fees)}</td>
+      const fixedColsCount = year === 2025 ? 7 : 9;
+      const totalColsCount = fixedColsCount + monthsList.length + extraCols.length;
+
+      const fontSizePx =
+        totalColsCount > 30 ? 6 : totalColsCount > 24 ? 6.5 : totalColsCount > 18 ? 7.5 : 9;
+      const headerFontSizePx = fontSizePx + 1;
+      const cellPadding = totalColsCount > 24 ? "2px 1px" : "3px 2px";
+
+      const generateTableRows = () => {
+        return rows
+          .map((row: any, i: number) => {
+            if (year === 2025) {
+              return `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${row.name || ""}</td>
+                <td>${row.batch || ""}</td>
+                <td>${row.specialty || ""}</td>
+                <td>${fmt(row.fees)}</td>
+                ${monthsList
+                  .map(
+                    (m) =>
+                      `<td>${
+                        row.payments?.[m] ? fmt(row.payments[m]) : "—"
+                      }</td>`
+                  )
+                  .join("")}
+                <td>${fmt(row.totalPaid)}</td>
+                <td>${fmt(row.remaining)}</td>
+              </tr>
+            `;
+            } else {
+              const status = row.remaining <= 0 ? "له" : "عليه";
+              return `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${row.name || ""}</td>
+                <td>${row.batch || ""}</td>
+                <td>${row.specialty || ""}</td>
+                <td>${fmt(row.prevDue)}</td>
+                <td>${fmt(row.fees)}</td>
+                ${monthsList
+                  .map(
+                    (m) =>
+                      `<td>${
+                        row.payments?.[m] ? fmt(row.payments[m]) : "—"
+                      }</td>`
+                  )
+                  .join("")}
+                ${extraCols
+                  .map((col) => {
+                    if (col.type === "formula")
+                      return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
+                    return `<td>${row.customData?.[col.name] || "—"}</td>`;
+                  })
+                  .join("")}
+                <td>${fmt(row.totalPaid)}</td>
+                <td>${fmt(row.remaining)}</td>
+                <td style="font-weight: 900; background-color: ${status === "عليه" ? "#fecaca" : "#a7f3d0"};">${status}</td>
+              </tr>
+            `;
+            }
+          })
+          .join("");
+      };
+
+      const generateTotalRow = () => {
+        if (year === 2025) {
+          return `
+            <tr style="background: #fef3c7; font-weight: 900; border-top: 2px solid #92400e;">
+              <td colspan="4">الإجمالي</td>
+              <td>${fmt(totals2025.fees)}</td>
               ${monthsList
                 .map(
                   (m) =>
                     `<td>${
-                      row.payments?.[m] ? fmt(row.payments[m]) : "—"
+                      totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"
                     }</td>`
                 )
                 .join("")}
-              <td>${fmt(row.totalPaid)}</td>
-              <td>${fmt(row.remaining)}</td>
+              <td>${fmt(totals2025.paid)}</td>
+              <td>${fmt(totals2025.remaining)}</td>
             </tr>
           `;
-          } else {
-            const status = row.remaining <= 0 ? "له" : "عليه";
-            const statusColor = row.remaining <= 0 ? "#059669" : "#e11d48";
-            return `
-            <tr>
-              <td>${i + 1}</td>
-              <td>${row.name || ""}</td>
-              <td>${row.batch || ""}</td>
-              <td>${row.specialty || ""}</td>
-              <td>${fmt(row.prevDue)}</td>
-              <td>${fmt(row.fees)}</td>
+        } else {
+          return `
+            <tr style="background: #fef3c7; font-weight: 900; border-top: 2px solid #92400e;">
+              <td colspan="4">الإجمالي</td>
+              <td>${fmt(totals2026.prevDue)}</td>
+              <td>${fmt(totals2026.fees)}</td>
               ${monthsList
                 .map(
                   (m) =>
                     `<td>${
-                      row.payments?.[m] ? fmt(row.payments[m]) : "—"
+                      totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"
                     }</td>`
                 )
                 .join("")}
-              ${extraCols
-                .map((col) => {
-                  if (col.type === "formula")
-                    return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
-                  return `<td>${row.customData?.[col.name] || "—"}</td>`;
-                })
-                .join("")}
-              <td>${fmt(row.totalPaid)}</td>
-              <td>${fmt(row.remaining)}</td>
-              <td style="color: ${statusColor}; font-weight: bold;">${status}</td>
+              ${extraCols.map(() => `<td>—</td>`).join("")}
+              <td>${fmt(totals2026.paid)}</td>
+              <td>${fmt(totals2026.remaining)}</td>
+              <td></td>
             </tr>
           `;
-          }
-        })
-        .join("");
-    };
+        }
+      };
 
-    const generateTotalRow = () => {
-      if (year === 2025) {
-        return `
-          <tr style="background: #f1f5f9; font-weight: bold; border-top: 2px solid #b45309;">
-            <td colspan="4">الإجمالي</td>
-            <td>${fmt(totals2025.fees)}</td>
-            ${monthsList
-              .map(
-                (m) =>
-                  `<td>${
-                    totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"
-                  }</td>`
-              )
-              .join("")}
-            <td>${fmt(totals2025.paid)}</td>
-            <td>${fmt(totals2025.remaining)}</td>
-          </tr>
-        `;
-      } else {
-        return `
-          <tr style="background: #f1f5f9; font-weight: bold; border-top: 2px solid #b45309;">
-            <td colspan="4">الإجمالي</td>
-            <td>${fmt(totals2026.prevDue)}</td>
-            <td>${fmt(totals2026.fees)}</td>
-            ${monthsList
-              .map(
-                (m) =>
-                  `<td>${
-                    totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"
-                  }</td>`
-              )
-              .join("")}
-            ${extraCols.map(() => `<td>—</td>`).join("")}
-            <td>${fmt(totals2026.paid)}</td>
-            <td>${fmt(totals2026.remaining)}</td>
-            <td></td>
-          </tr>
-        `;
+      const headers =
+        year === 2025
+          ? ["#", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
+          : [
+              "#",
+              "الاسم",
+              "الدفعة",
+              "المساق",
+              "مدور 2025",
+              "الرسوم",
+              ...monthsList,
+              ...extraCols.map((c) => c.name),
+              "المسدد",
+              "المتبقي",
+              "حالة",
+            ];
+
+      const html = `
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="utf-8" />
+          <title>تقرير الأقساط ${year}</title>
+          <style>
+            @page { size: A3 landscape; margin: 6mm; }
+            * { box-sizing: border-box; }
+            html, body { width: 100%; overflow-x: hidden; }
+            body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 4px; background: white; color: #000; }
+            .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid #b8860b; padding-bottom: 8px; }
+            .header h1 { color: #000; margin: 0; font-size: 20px; font-weight: 900; }
+            .header p { color: #000; margin: 3px 0 0; font-size: 11px; font-weight: 700; }
+            table {
+              width: 100%;
+              max-width: 100%;
+              border-collapse: collapse;
+              font-size: ${fontSizePx}px;
+              table-layout: fixed;
+              border: 1.5px solid #000000;
+            }
+            th {
+              background: linear-gradient(180deg, #ffe066 0%, #d4af37 50%, #b8860b 100%) !important;
+              color: #000000 !important;
+              padding: ${cellPadding};
+              border: 1px solid #7a5c00;
+              font-weight: 900;
+              font-size: ${headerFontSizePx}px;
+              text-align: center;
+              word-break: break-word;
+              overflow-wrap: break-word;
+              line-height: 1.15;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            td {
+              padding: ${cellPadding};
+              border: 1px solid #000000;
+              text-align: center;
+              word-break: break-word;
+              overflow-wrap: break-word;
+              color: #000000;
+              font-weight: 700;
+              line-height: 1.15;
+            }
+            tr:nth-child(even) { background: #f8fafc; }
+            .footer { margin-top: 10px; text-align: left; font-size: 10px; color: #000; font-weight: 700; }
+            @media print {
+              html, body { width: 100%; }
+              body { padding: 0; color: #000 !important; }
+              table { width: 100% !important; max-width: 100% !important; }
+              th {
+                background: linear-gradient(180deg, #ffe066 0%, #d4af37 50%, #b8860b 100%) !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              td { color: #000000 !important; font-weight: 700 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>المجلس اليمني للاختصاصات الطبية</h1>
+            <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
+            <p>تاريخ التقرير: ${date}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                ${headers.map((h) => `<th>${h}</th>`).join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${generateTableRows()}
+              ${generateTotalRow()}
+            </tbody>
+          </table>
+          <div class="footer">
+            <p>إجمالي عدد المتدربين: ${rows.length}</p>
+            <p>تم إنشاء التقرير بواسطة نظام المجلس اليمني للاختصاصات الطبية</p>
+          </div>
+        </body>
+        </html>
+      `;
+      const w = window.open("", "", "width=1200,height=800");
+      if (w) {
+        w.document.write(html);
+        w.document.close();
+        setTimeout(() => w.print(), 500);
+        toast.success("تم فتح التقرير للطباعة");
       }
-    };
-
-    const headers =
-      year === 2025
-        ? ["#", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
-        : [
-            "#",
-            "الاسم",
-            "الدفعة",
-            "المساق",
-            "مدور 2025",
-            "الرسوم",
-            ...monthsList,
-            ...extraCols.map((c) => c.name),
-            "المسدد",
-            "المتبقي",
-            "حالة",
-          ];
-
-// src/components/InstallmentsTab.tsx  
-const html = `  
-  <html dir="rtl" lang="ar">  
-  <head>  
-    <meta charset="utf-8" />  
-    <title>تقرير الأقساط ${year}</title>  
-    <style>  
-      @page { size: A3 landscape; margin: 10mm; }  
-      * { box-sizing: border-box; }  
-      body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 8px; background: white; }  
-      .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #1e40af; padding-bottom: 15px; }  
-      .header h1 { color: #1e40af; margin: 0; font-size: 24px; }  
-      .header p { color: #64748b; margin: 5px 0 0; font-size: 14px; }  
-      table { width: 100%; border-collapse: collapse; font-size: 8px; table-layout: fixed; border: 1.5px solid #000000; }  
-      th { background: #1e40af; color: white; padding: 4px 2px; border: 1.5px solid #000000; font-weight: bold; text-align: center; word-break: break-word; }  
-      td { padding: 3px 2px; border: 1.5px solid #000000; text-align: center; word-break: break-word; }  
-      tr:nth-child(even) { background: #f8fafc; }  
-      .footer { margin-top: 20px; text-align: left; font-size: 12px; color: #64748b; }  
-      @media print { body { padding: 0; } }  
-    </style>  
-  </head>  
-  <body>  
-    <div class="header">  
-      <h1>المجلس اليمني للاختصاصات الطبية</h1>  
-      <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>  
-      <p>تاريخ التقرير: ${date}</p>  
-    </div>  
-    <table>  
-      <thead>  
-        <tr>  
-          ${headers.map((h) => `<th>${h}</th>`).join("")}  
-        </tr>  
-      </thead>  
-      <tbody>  
-        ${generateTableRows()}  
-        ${generateTotalRow()}  
-      </tbody>  
-    </table>  
-    <div class="footer">  
-      <p>إجمالي عدد المتدربين: ${rows.length}</p>  
-      <p>تم إنشاء التقرير بواسطة نظام المجلس اليمني للاختصاصات الطبية</p>  
-    </div>  
-  </body>  
-  </html>  
-`;
-    const w = window.open("", "", "width=1200,height=800");
-    if (w) {
-      w.document.write(html);
-      w.document.close();
-      setTimeout(() => w.print(), 500);
-      toast.success("تم فتح التقرير للطباعة");
+    } catch (error) {
+      toast.error("فشل إنشاء التقرير");
     }
-  } catch (error) {
-    toast.error("فشل إنشاء التقرير");
-  }
-};
+  };
 
-
-  
-      
   const saveRowEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editRowModal) return;
@@ -1067,8 +1106,8 @@ const html = `
 
   const getStatusText = (rem: number) =>
     rem <= 0
-      ? { text: "له", color: "text-emerald-600", bg: "bg-emerald-50" }
-      : { text: "عليه", color: "text-rose-600", bg: "bg-rose-50" };
+      ? { text: "له", color: "text-emerald-800", bg: "bg-emerald-50" }
+      : { text: "عليه", color: "text-rose-800", bg: "bg-rose-50" };
 
   // تم تعديل هذه الدالة لتتوافق بشكل أفضل مع صيغة حفظ PDF واللغة العربية
   const generateAccountStatement = (row: any, year: number) => {
@@ -1136,7 +1175,15 @@ const html = `
           .info-lbl { font-size: 12px; color: #000 !important; font-weight: 900; }
           .info-val { font-size: 15px; color: #000 !important; font-weight: 900; margin-top: 2px; }
           table { width: 100%; border-collapse: collapse; margin-top: 3px; table-layout: fixed; }
-          th { background-color: #166534 !important; color: #000 !important; padding:3px; font-size: 15px; border: 1px solid #000; text-align: center; font-weight: 900; }
+          th {
+            background: linear-gradient(180deg, #ffe066 0%, #d4af37 50%, #b8860b 100%) !important;
+            color: #000000 !important;
+            padding:3px;
+            font-size: 15px;
+            border: 1px solid #7a5c00;
+            text-align: center;
+            font-weight: 900;
+          }
           td {padding:3px; border: 1px solid #000; text-align: center; font-size: 15px; overflow: hidden; word-wrap: break-word; color: #000 !important; font-weight: 900 !important; }
           .lbl { text-align: center; padding-right: 3px;  font-weight: 900; color: #000 !important; }
           .num { text-align: center ; padding-left: 3px; font-weight: 900; color: #000 !important; font-family: monospace; font-size: 20px; }
@@ -1150,7 +1197,13 @@ const html = `
             body { background: white; margin: 0; padding: 8px; color: #000 !important; font-weight: 900 !important; } 
             .container { box-shadow: none; padding: 0; width: 100%; margin: 0; }
             .header { background: #15803d !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            th { background-color: #166534 !important; color: #000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; font-weight: 900 !important; }
+            th {
+              background: linear-gradient(180deg, #ffe066 0%, #d4af37 50%, #b8860b 100%) !important;
+              color: #000000 !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              font-weight: 900 !important;
+            }
             td { color: #000 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           }
         </style>
@@ -1340,11 +1393,11 @@ const html = `
           <StatsGrid stats={stats2025} columns={3} />
           <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
             <table className="w-full text-xs sm:text-sm">
-              <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
+              <thead className="bg-gradient-to-b from-yellow-300 via-amber-400 to-yellow-600 font-bold border-b-2 border-amber-700 text-black sticky top-0 z-20 shadow-md">
                 <tr>
                   <th className="p-2 text-center whitespace-nowrap">#</th>
                   <th
-                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2025("name")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1352,7 +1405,7 @@ const html = `
                     </div>
                   </th>
                   <th
-                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2025("batch")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1360,7 +1413,7 @@ const html = `
                     </div>
                   </th>
                   <th
-                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2025("specialty")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1368,7 +1421,7 @@ const html = `
                     </div>
                   </th>
                   <th
-                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2025("fees")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1378,13 +1431,13 @@ const html = `
                   {MONTHS_2025.map((m) => (
                     <th
                       key={m}
-                      className="p-1 text-center text-[11px] bg-slate-50 border-l border-slate-200 whitespace-nowrap"
+                      className="p-1 text-center text-[11px] border-l border-amber-700/40 whitespace-nowrap"
                     >
                       {m}
                     </th>
                   ))}
                   <th
-                    className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2025("totalPaid")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1392,7 +1445,7 @@ const html = `
                     </div>
                   </th>
                   <th
-                    className="p-2 text-center text-rose-700 whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2025("remaining")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1420,19 +1473,19 @@ const html = `
                           key={i}
                           className="border-t border-slate-200 hover:bg-slate-50/80 transition-colors"
                         >
-                          <td className="p-2 text-center text-slate-500 whitespace-nowrap">
+                          <td className="p-2 text-center text-black whitespace-nowrap">
                             {i + 1}
                           </td>
-                          <td className="p-2 text-center font-semibold text-slate-900 whitespace-nowrap">
+                          <td className="p-2 text-center font-semibold text-black whitespace-nowrap">
                             {r.name}
                           </td>
-                          <td className="p-2 text-center text-slate-600 whitespace-nowrap">
+                          <td className="p-2 text-center text-black whitespace-nowrap">
                             {r.batch || "—"}
                           </td>
-                          <td className="p-2 text-center text-slate-600 whitespace-nowrap">
+                          <td className="p-2 text-center text-black whitespace-nowrap">
                             {r.specialty || "—"}
                           </td>
-                          <td className="p-2 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
+                          <td className="p-2 text-center font-mono font-semibold text-black whitespace-nowrap">
                             {fmt(r.fees)}
                           </td>
                           {MONTHS_2025.map((m) => {
@@ -1443,7 +1496,7 @@ const html = `
                                 className="p-1 text-center bg-slate-50/50 border-l border-slate-200 whitespace-nowrap"
                               >
                                 {paid > 0 ? (
-                                  <span className="text-emerald-700 font-bold font-mono">
+                                  <span className="text-black font-bold font-mono">
                                     {fmt(paid)}
                                   </span>
                                 ) : (
@@ -1452,10 +1505,10 @@ const html = `
                               </td>
                             );
                           })}
-                          <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">
+                          <td className="p-2 text-center font-mono text-black font-bold bg-emerald-50/30 whitespace-nowrap">
                             {fmt(r.totalPaid)}
                           </td>
-                          <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">
+                          <td className="p-2 text-center font-mono text-black font-bold bg-rose-50/30 whitespace-nowrap">
                             {fmt(r.remaining)}
                           </td>
                           <td className="p-2 text-center whitespace-nowrap flex justify-center gap-1">
@@ -1488,24 +1541,24 @@ const html = `
                       );
                     })}
                     <tr className="border-t-2 border-slate-400 bg-slate-100 font-bold">
-                      <td className="p-2 text-center whitespace-nowrap" colSpan={4}>
+                      <td className="p-2 text-center text-black whitespace-nowrap" colSpan={4}>
                         الإجماليات
                       </td>
-                      <td className="p-2 text-center font-mono text-slate-900 whitespace-nowrap">
+                      <td className="p-2 text-center font-mono text-black whitespace-nowrap">
                         {fmt(totals2025.fees)}
                       </td>
                       {MONTHS_2025.map((m) => (
                         <td
                           key={m}
-                          className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap"
+                          className="p-1 text-center font-mono text-black border-l border-slate-200 whitespace-nowrap"
                         >
                           {totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}
                         </td>
                       ))}
-                      <td className="p-2 text-center font-mono text-emerald-700 whitespace-nowrap">
+                      <td className="p-2 text-center font-mono text-black whitespace-nowrap">
                         {fmt(totals2025.paid)}
                       </td>
-                      <td className="p-2 text-center font-mono text-rose-700 whitespace-nowrap">
+                      <td className="p-2 text-center font-mono text-black whitespace-nowrap">
                         {fmt(totals2025.remaining)}
                       </td>
                       <td className="p-2 text-center whitespace-nowrap"></td>
@@ -1628,11 +1681,11 @@ const html = `
           <StatsGrid stats={stats2026} columns={3} />
           <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
             <table className="w-full text-xs sm:text-sm">
-              <thead className="bg-slate-100 font-bold border-b border-slate-300 text-slate-700 sticky top-0 z-20 shadow-sm">
+              <thead className="bg-gradient-to-b from-yellow-300 via-amber-400 to-yellow-600 font-bold border-b-2 border-amber-700 text-black sticky top-0 z-20 shadow-md">
                 <tr>
                   <th className="p-2 text-center whitespace-nowrap">#</th>
                   <th
-                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2026("name")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1640,7 +1693,7 @@ const html = `
                     </div>
                   </th>
                   <th
-                    className="p-2 text-center whitespace-normal cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-normal cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2026("batch")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1648,7 +1701,7 @@ const html = `
                     </div>
                   </th>
                   <th
-                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2026("specialty")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1656,7 +1709,7 @@ const html = `
                     </div>
                   </th>
                   <th
-                    className="p-2 text-center bg-amber-50 text-amber-900 whitespace-nowrap cursor-pointer hover:bg-amber-100"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95 border-x border-amber-700/40"
                     onClick={() => handleSort2026("prevDue")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1664,7 +1717,7 @@ const html = `
                     </div>
                   </th>
                   <th
-                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2026("fees")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1674,7 +1727,7 @@ const html = `
                   {MONTHS_2026.map((m) => (
                     <th
                       key={m}
-                      className="p-1 text-center text-xs bg-slate-50 border-l border-slate-200 whitespace-nowrap"
+                      className="p-1 text-center text-xs border-l border-amber-700/40 whitespace-nowrap"
                     >
                       {m.trim()}
                     </th>
@@ -1682,7 +1735,7 @@ const html = `
                   {extraCols2026.map((col) => (
                     <th
                       key={col.name}
-                      className="p-2 text-center text-xs bg-blue-50 border-l border-slate-200 whitespace-nowrap text-blue-800"
+                      className="p-2 text-center text-xs border-l border-amber-700/40 whitespace-nowrap text-black"
                     >
                       <div className="flex items-center justify-center gap-1">
                         {col.name}
@@ -1696,7 +1749,7 @@ const html = `
                               formula: col.formula || "",
                             })
                           }
-                          className="p-0.5 bg-blue-200 hover:bg-blue-500 hover:text-white rounded transition-all"
+                          className="p-0.5 bg-black/10 hover:bg-black/20 rounded transition-all"
                           title="تعديل أو حذف العمود"
                         >
                           <Settings className="w-3 h-3" />
@@ -1705,7 +1758,7 @@ const html = `
                     </th>
                   ))}
                   <th
-                    className="p-2 text-center text-emerald-700 whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2026("totalPaid")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1713,7 +1766,7 @@ const html = `
                     </div>
                   </th>
                   <th
-                    className="p-2 text-center text-rose-700 whitespace-nowrap cursor-pointer hover:bg-slate-200"
+                    className="p-2 text-center whitespace-nowrap cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2026("remaining")}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1748,56 +1801,56 @@ const html = `
                           key={i}
                           className={`border-t border-slate-200 transition-colors ${rowBgClass}`}
                         >
-                          <td className="p-2 text-center text-slate-500 whitespace-nowrap">
+                          <td className="p-2 text-center text-black whitespace-nowrap">
                             {i + 1}
                           </td>
-                          <td className="p-1 text-center font-semibold text-slate-900 whitespace-nowrap">
+                          <td className="p-1 text-center font-semibold text-black whitespace-nowrap">
                             <input
                               value={r.name || ""}
                               onChange={(e) =>
                                 update2026CellValue(originalIndex, "name", e.target.value)
                               }
-                              className="w-full min-w-32 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              className="w-full min-w-32 bg-transparent text-center text-black outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
                             />
                           </td>
-                          <td className="p-1 text-center text-slate-600 whitespace-nowrap">
+                          <td className="p-1 text-center text-black whitespace-nowrap">
                             <input
                               value={r.batch || ""}
                               onChange={(e) =>
                                 update2026CellValue(originalIndex, "batch", e.target.value)
                               }
-                              className="w-full min-w-20 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              className="w-full min-w-20 bg-transparent text-center text-black outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
                               placeholder="—"
                             />
                           </td>
-                          <td className="p-1 text-center text-slate-600 whitespace-nowrap">
+                          <td className="p-1 text-center text-black whitespace-nowrap">
                             <input
                               value={r.specialty || ""}
                               onChange={(e) =>
                                 update2026CellValue(originalIndex, "specialty", e.target.value)
                               }
-                              className="w-full min-w-24 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              className="w-full min-w-24 bg-transparent text-center text-black outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
                               placeholder="—"
                             />
                           </td>
-                          <td className="p-1 text-center font-mono text-amber-700 font-bold bg-amber-50/20 whitespace-nowrap">
+                          <td className="p-1 text-center font-mono text-black font-bold bg-amber-50/20 whitespace-nowrap">
                             <input
                               type="number"
                               value={r.prevDue || 0}
                               onChange={(e) =>
                                 update2026CellValue(originalIndex, "prevDue", e.target.value)
                               }
-                              className="w-full min-w-20 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              className="w-full min-w-20 bg-transparent text-center text-black outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
                             />
                           </td>
-                          <td className="p-1 text-center font-mono text-slate-700 font-bold whitespace-nowrap">
+                          <td className="p-1 text-center font-mono text-black font-bold whitespace-nowrap">
                             <input
                               type="number"
                               value={r.fees || 0}
                               onChange={(e) =>
                                 update2026CellValue(originalIndex, "fees", e.target.value)
                               }
-                              className="w-full min-w-20 bg-transparent text-center outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              className="w-full min-w-20 bg-transparent text-center text-black outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
                             />
                           </td>
                           {MONTHS_2026.map((m) => {
@@ -1816,7 +1869,7 @@ const html = `
                                   onChange={(e) =>
                                     update2026PaymentValue(originalIndex, m, e.target.value)
                                   }
-                                  className="w-20 bg-transparent text-center font-mono text-emerald-700 font-bold outline-none focus:bg-white focus:ring-1 ring-emerald-300 rounded px-1 py-1"
+                                  className="w-20 bg-transparent text-center font-mono text-black font-bold outline-none focus:bg-white focus:ring-1 ring-emerald-300 rounded px-1 py-1"
                                   placeholder="—"
                                   min="0"
                                   step="0.01"
@@ -1829,7 +1882,7 @@ const html = `
                             <td key={col.name} className="p-1 border-l border-slate-200">
                               {col.type === "select" ? (
                                 <select
-                                  className="w-full text-center bg-transparent outline-none focus:bg-white focus:ring-1 ring-blue-300 rounded px-1 py-1 text-xs"
+                                  className="w-full text-center text-black bg-transparent outline-none focus:bg-white focus:ring-1 ring-blue-300 rounded px-1 py-1 text-xs"
                                   value={r.customData?.[col.name] || ""}
                                   onChange={(e) =>
                                     updateCustomColValue(originalIndex, col.name, e.target.value)
@@ -1843,13 +1896,13 @@ const html = `
                                   ))}
                                 </select>
                               ) : col.type === "formula" ? (
-                                <div className="text-center font-mono text-xs font-bold text-indigo-700 bg-white/50 py-1.5 rounded">
+                                <div className="text-center font-mono text-xs font-bold text-black bg-white/50 py-1.5 rounded">
                                   {evaluateFormula(col.formula || "", r)}
                                 </div>
                               ) : (
                                 <input
                                   type="text"
-                                  className="w-full text-center bg-transparent outline-none focus:bg-white focus:ring-1 ring-blue-300 rounded px-1 py-1 text-xs"
+                                  className="w-full text-center text-black bg-transparent outline-none focus:bg-white focus:ring-1 ring-blue-300 rounded px-1 py-1 text-xs"
                                   value={r.customData?.[col.name] || ""}
                                   onChange={(e) =>
                                     updateCustomColValue(originalIndex, col.name, e.target.value)
@@ -1860,10 +1913,10 @@ const html = `
                             </td>
                           ))}
 
-                          <td className="p-2 text-center font-mono text-emerald-700 font-bold bg-emerald-50/30 whitespace-nowrap">
+                          <td className="p-2 text-center font-mono text-black font-bold bg-emerald-50/30 whitespace-nowrap">
                             {fmt(r.totalPaid)}
                           </td>
-                          <td className="p-2 text-center font-mono text-rose-700 font-bold bg-rose-50/30 whitespace-nowrap">
+                          <td className="p-2 text-center font-mono text-black font-bold bg-rose-50/30 whitespace-nowrap">
                             {fmt(r.remaining)}
                           </td>
                           <td className="p-2 text-center whitespace-nowrap">
@@ -1910,16 +1963,16 @@ const html = `
                       );
                     })}
                     <tr className="border-t-2 border-slate-400 bg-slate-100 font-bold">
-                      <td className="p-2 text-center whitespace-nowrap" colSpan={5}>
+                      <td className="p-2 text-center text-black whitespace-nowrap" colSpan={5}>
                         الإجماليات
                       </td>
-                      <td className="p-2 text-center font-mono text-slate-900 whitespace-nowrap">
+                      <td className="p-2 text-center font-mono text-black whitespace-nowrap">
                         {fmt(totals2026.fees)}
                       </td>
                       {MONTHS_2026.map((m) => (
                         <td
                           key={m}
-                          className="p-1 text-center font-mono text-slate-900 border-l border-slate-200 whitespace-nowrap"
+                          className="p-1 text-center font-mono text-black border-l border-slate-200 whitespace-nowrap"
                         >
                           {totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}
                         </td>
@@ -1927,15 +1980,15 @@ const html = `
                       {extraCols2026.map((col) => (
                         <td
                           key={col.name}
-                          className="p-1 text-center border-l border-slate-200 whitespace-nowrap"
+                          className="p-1 text-center text-black border-l border-slate-200 whitespace-nowrap"
                         >
                           —
                         </td>
                       ))}
-                      <td className="p-2 text-center font-mono text-emerald-700 whitespace-nowrap">
+                      <td className="p-2 text-center font-mono text-black whitespace-nowrap">
                         {fmt(totals2026.paid)}
                       </td>
-                      <td className="p-2 text-center font-mono text-rose-700 whitespace-nowrap">
+                      <td className="p-2 text-center font-mono text-black whitespace-nowrap">
                         {fmt(totals2026.remaining)}
                       </td>
                       <td className="p-2 text-center whitespace-nowrap"></td>
@@ -2402,175 +2455,4 @@ const html = `
               className="w-full p-2 border rounded-lg outline-none"
             />
             {showSuggestions && nameSuggestions.length > 0 && (
-              <div className="absolute top-full right-0 left-0 bg-white border rounded-b-lg shadow-xl z-50 max-h-32 overflow-y-auto">
-                {nameSuggestions.map((n, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => {
-                      setNewStudentName(n);
-                      setShowSuggestions(false);
-                    }}
-                    className="p-2 text-sm hover:bg-purple-50 cursor-pointer text-slate-800"
-                  >
-                    {n}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              المبلغ المالي *
-            </label>
-            <input
-              type="number"
-              required
-              value={newStudentAmount}
-              onChange={(e) => setNewStudentAmount(e.target.value)}
-              className="w-full p-2 border rounded-lg"
-              min="0"
-              step="0.01"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              الشهر المستهدف *
-            </label>
-            <select
-              required
-              value={newStudentMonth}
-              onChange={(e) => setNewStudentMonth(e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            >
-              <option value="">-- اختر الشهر --</option>
-              {MONTHS_2026.map((m) => (
-                <option key={m} value={m}>
-                  {m.trim()}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex justify-end gap-2 pt-3 border-t mt-4">
-            <button
-              type="button"
-              onClick={() => setNewPaymentModal(false)}
-              className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg"
-            >
-              إلغاء
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg font-bold"
-            >
-              حفظ
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
-        title="💵 تسجيل دفعة مالية"
-        isOpen={!!paymentModal}
-        onClose={() => setPaymentModal(null)}
-      >
-        {paymentModal && (
-          <>
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-slate-800">
-              <p>
-                <b>المتدرب:</b> {paymentModal.row.name}
-              </p>
-              <p>
-                <b>شهر:</b> {paymentModal.month}
-              </p>
-            </div>
-            <form onSubmit={addPayment} className="space-y-3 mt-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  المبلغ المدفوع *
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={payAmount}
-                  onChange={(e) => setPayAmount(e.target.value)}
-                  className="w-full p-2 border rounded-lg"
-                  autoFocus
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-3 border-t mt-4">
-                <button
-                  type="button"
-                  onClick={() => setPaymentModal(null)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold"
-                >
-                  تأكيد التوريد
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-      </Modal>
-
-      <Modal
-        title="✏️ مراجعة وتعديل القسط"
-        isOpen={!!editPaymentModal}
-        onClose={() => setEditPaymentModal(null)}
-      >
-        {editPaymentModal && (
-          <>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-slate-800">
-              <p className="font-bold">{editPaymentModal.row.name}</p>
-              <p>بيان شهر: {editPaymentModal.month}</p>
-            </div>
-            <form onSubmit={editPayment} className="space-y-3 mt-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  المبلغ المعدل *
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={editAmount}
-                  onChange={(e) => setEditAmount(e.target.value)}
-                  className="w-full p-2 border rounded-lg"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-3 border-t mt-4">
-                <button
-                  type="button"
-                  onClick={() => setEditPaymentModal(null)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deletePayment(editPaymentModal.row, editPaymentModal.month)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg"
-                >
-                  🗑️ حذف القسط
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold"
-                >
-                  حفظ التعديل
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-      </Modal>
-    </div>
-  );
-}
+              <div className="absolute top-full right-0 left-0 bg-white border rounded-b-lg shadow-xl z-50 max-h-32 overfl
