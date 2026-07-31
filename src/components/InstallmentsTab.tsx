@@ -595,39 +595,39 @@ export default function InstallmentsTab() {
       const generateTotalRow = () => {
         if (year === 2025) {
           return `
-            <tr style="background: #fef3c7; font-weight: 900; border-top: 2px solid #92400e;">
-              <td colspan="4">الإجمالي</td>
-              <td>${fmt(totals2025.fees)}</td>
+            <tr style="background: #fef3c7 !important; font-weight: 900;">
+              <td colspan="4" style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e; white-space: nowrap;">الإجمالي</td>
+              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2025.fees)}</td>
               ${monthsList
                 .map(
                   (m) =>
-                    `<td>${
+                    `<td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${
                       totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"
                     }</td>`
                 )
                 .join("")}
-              <td>${fmt(totals2025.paid)}</td>
-              <td>${fmt(totals2025.remaining)}</td>
+              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2025.paid)}</td>
+              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2025.remaining)}</td>
             </tr>
           `;
         } else {
           return `
-            <tr style="background: #fef3c7; font-weight: 900; border-top: 2px solid #92400e;">
-              <td colspan="4">الإجمالي</td>
-              <td>${fmt(totals2026.prevDue)}</td>
-              <td>${fmt(totals2026.fees)}</td>
+            <tr style="background: #fef3c7 !important; font-weight: 900;">
+              <td colspan="4" style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e; white-space: nowrap;">الإجمالي</td>
+              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2026.prevDue)}</td>
+              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2026.fees)}</td>
               ${monthsList
                 .map(
                   (m) =>
-                    `<td>${
+                    `<td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${
                       totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"
                     }</td>`
                 )
                 .join("")}
-              ${extraCols.map(() => `<td>—</td>`).join("")}
-              <td>${fmt(totals2026.paid)}</td>
-              <td>${fmt(totals2026.remaining)}</td>
-              <td></td>
+              ${extraCols.map(() => `<td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">—</td>`).join("")}
+              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2026.paid)}</td>
+              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2026.remaining)}</td>
+              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;"></td>
             </tr>
           `;
         }
@@ -666,15 +666,15 @@ export default function InstallmentsTab() {
             table {
               width: 100%;
               max-width: 100%;
-              border-collapse: collapse;
+              border-collapse: solid 1px black;
               font-size: ${fontSizePx}px;
-              table-layout: fixed;
+              table-layout: auto;
               border: 1.5px solid #000000;
             }
             th {
               background: linear-gradient(180deg, #ffe066 0%, #d4af37 50%, #b8860b 100%) !important;
               color: #000000 !important;
-              padding: ${cellPadding};
+              padding: 0;
               border: 1px solid #7a5c00;
               font-weight: 900;
               font-size: ${headerFontSizePx}px;
@@ -718,6 +718,9 @@ export default function InstallmentsTab() {
             <p>تاريخ التقرير: ${date}</p>
           </div>
           <table>
+            <colgroup>
+              ${headers.map(() => `<col style="width: ${100 / headers.length}%;" />`).join("")}
+            </colgroup>
             <thead>
               <tr>
                 ${headers.map((h) => `<th>${h}</th>`).join("")}
@@ -1176,11 +1179,11 @@ export default function InstallmentsTab() {
           .info-val { font-size: 15px; color: #000 !important; font-weight: 900; margin-top: 2px; }
           table { width: 100%; border-collapse: collapse; margin-top: 3px; table-layout: fixed; }
           th {
-            background: linear-gradient(180deg, #ffe066 0%, #d4af37 50%, #b8860b 100%) !important;
+            background-color: #1e3a5f !important;
             color: #000000 !important;
             padding:3px;
             font-size: 15px;
-            border: 1px solid #7a5c00;
+            border: 1px solid #000;
             text-align: center;
             font-weight: 900;
           }
@@ -1198,7 +1201,7 @@ export default function InstallmentsTab() {
             .container { box-shadow: none; padding: 0; width: 100%; margin: 0; }
             .header { background: #15803d !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             th {
-              background: linear-gradient(180deg, #ffe066 0%, #d4af37 50%, #b8860b 100%) !important;
+              background-color: #1e3a5f !important;
               color: #000000 !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
