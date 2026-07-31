@@ -22,7 +22,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import TabActions from "./TabActions";
-import { exportStudentStatementPdf, printHtmlContent } from "@/lib/pdfExporter";
+import { exportStudentStatementPdf, printHtmlContent } from "@/lib/<Exporter";
 
 const MONTHS_2025 = [
   "يونيو 2024",
@@ -518,7 +518,9 @@ export default function InstallmentsTab() {
     }
   };
 
-  // تصدير PDF للجدول (رأس الجدول ذهبي لامع + نصوص سوداء غامقة)
+
+
+  // تصدير PDF للجدول (معدل: احتواء الجدول بالكامل داخل حدود صفحة الطباعة)
   const exportToPDF = (year: number) => {
     try {
       const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
@@ -526,14 +528,12 @@ export default function InstallmentsTab() {
       const extraCols = year === 2026 ? extraCols2026 : [];
       const date = new Date().toLocaleDateString("ar-SA");
 
-      const fixedColsCount = year === 2025 ? 7 : 9;
-      const totalColsCount = fixedColsCount + monthsList.length + extraCols.length;
-
-      const fontSizePx =
-        totalColsCount > 30 ? 6 : totalColsCount > 24 ? 6.5 : totalColsCount > 18 ? 7.5 : 9;
+      // 1. تصغير حجم الخط ديناميكياً: 
+      // عام 2026 يحتوي أعمدة أكثر، لذا نستخدم خط أصغر (8px) لضمان اتساع الصفحة، و(9.5px) لعام 2025.
+      const fontSizePx = year === 2026 ? 8 : 9.5;
       const headerFontSizePx = fontSizePx + 1;
-      const cellPadding = totalColsCount > 24 ? "2px 1px" : "3px 2px";
 
+      // دالة توليد صفوف البيانات
       const generateTableRows = () => {
         return rows
           .map((row: any, i: number) => {
@@ -541,16 +541,14 @@ export default function InstallmentsTab() {
               return `
               <tr>
                 <td>${i + 1}</td>
-                <td>${row.name || ""}</td>
+                <td class="wrap-text">${row.name || ""}</td>
                 <td>${row.batch || ""}</td>
                 <td>${row.specialty || ""}</td>
                 <td>${fmt(row.fees)}</td>
                 ${monthsList
                   .map(
                     (m) =>
-                      `<td>${
-                        row.payments?.[m] ? fmt(row.payments[m]) : "—"
-                      }</td>`
+                      `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`
                   )
                   .join("")}
                 <td>${fmt(row.totalPaid)}</td>
@@ -562,7 +560,7 @@ export default function InstallmentsTab() {
               return `
               <tr>
                 <td>${i + 1}</td>
-                <td>${row.name || ""}</td>
+                <td class="wrap-text">${row.name || ""}</td>
                 <td>${row.batch || ""}</td>
                 <td>${row.specialty || ""}</td>
                 <td>${fmt(row.prevDue)}</td>
@@ -570,9 +568,7 @@ export default function InstallmentsTab() {
                 ${monthsList
                   .map(
                     (m) =>
-                      `<td>${
-                        row.payments?.[m] ? fmt(row.payments[m]) : "—"
-                      }</td>`
+                      `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`
                   )
                   .join("")}
                 ${extraCols
@@ -584,7 +580,7 @@ export default function InstallmentsTab() {
                   .join("")}
                 <td>${fmt(row.totalPaid)}</td>
                 <td>${fmt(row.remaining)}</td>
-                <td style="font-weight: 900; background-color: ${status === "عليه" ? "#fecaca" : "#a7f3d0"};">${status}</td>
+                <td style="background-color: ${status === "عليه" ? "#fecaca" : "#a7f3d0"};">${status}</td>
               </tr>
             `;
             }
@@ -592,42 +588,39 @@ export default function InstallmentsTab() {
           .join("");
       };
 
+      // دالة توليد صف الإجمالي
       const generateTotalRow = () => {
         if (year === 2025) {
           return `
-            <tr style="background: #fef3c7 !important; font-weight: 900;">
-              <td colspan="4" style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e; white-space: nowrap;">الإجمالي</td>
-              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2025.fees)}</td>
+            <tr class="total-row">
+              <td colspan="4">الإجمالي</td>
+              <td>${fmt(totals2025.fees)}</td>
               ${monthsList
                 .map(
                   (m) =>
-                    `<td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${
-                      totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"
-                    }</td>`
+                    `<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`
                 )
                 .join("")}
-              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2025.paid)}</td>
-              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2025.remaining)}</td>
+              <td>${fmt(totals2025.paid)}</td>
+              <td>${fmt(totals2025.remaining)}</td>
             </tr>
           `;
         } else {
           return `
-            <tr style="background: #fef3c7 !important; font-weight: 900;">
-              <td colspan="4" style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e; white-space: nowrap;">الإجمالي</td>
-              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2026.prevDue)}</td>
-              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2026.fees)}</td>
+            <tr class="total-row">
+              <td colspan="4">الإجمالي</td>
+              <td>${fmt(totals2026.prevDue)}</td>
+              <td>${fmt(totals2026.fees)}</td>
               ${monthsList
                 .map(
                   (m) =>
-                    `<td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${
-                      totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"
-                    }</td>`
+                    `<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`
                 )
                 .join("")}
-              ${extraCols.map(() => `<td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">—</td>`).join("")}
-              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2026.paid)}</td>
-              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;">${fmt(totals2026.remaining)}</td>
-              <td style="background: #fef3c7 !important; font-weight: 900; border-top: 2px solid #92400e;"></td>
+              ${extraCols.map(() => `<td>—</td>`).join("")}
+              <td>${fmt(totals2026.paid)}</td>
+              <td>${fmt(totals2026.remaining)}</td>
+              <td></td>
             </tr>
           `;
         }
@@ -656,58 +649,85 @@ export default function InstallmentsTab() {
           <meta charset="utf-8" />
           <title>تقرير الأقساط ${year}</title>
           <style>
-            @page { size: A3 landscape; margin: 6mm; }
+            /* 2. ضبط إعدادات الصفحة وتقليل الهوامش لأقصى حد لزيادة المساحة المتاحة للجدول */
+            @page { size: A3 landscape; margin: 3mm; }
             * { box-sizing: border-box; }
-            html, body { width: 100%; overflow-x: hidden; }
-            body { font-family: 'Cairo', sans-serif; direction: rtl; margin: 0; padding: 4px; background: white; color: #000; }
-            .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid #b8860b; padding-bottom: 8px; }
-            .header h1 { color: #000; margin: 0; font-size: 20px; font-weight: 900; }
-            .header p { color: #000; margin: 3px 0 0; font-size: 11px; font-weight: 700; }
+            html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+            body { 
+              font-family: 'Cairo', sans-serif; 
+              direction: rtl; 
+              margin: 0; 
+              padding: 0; 
+              background: white; 
+              color: #000; 
+            }
+            .header { 
+              text-align: center; 
+              margin-bottom: 5px; 
+              border-bottom: 2px solid #b8860b; 
+              padding-bottom: 5px; 
+            }
+            .header h1 { color: #000; margin: 0; font-size: 18px; font-weight: 900; }
+            .header p { color: #000; margin: 2px 0 0; font-size: 11px; font-weight: 700; }
+            
             table {
               width: 100%;
-              max-width: 100%;
-              border-collapse: solid 1px black;
+              max-width: 100%; /* ضمان عدم تجاوز الجدول لعرض الشاشة/الورقة */
+              border-collapse: collapse;
               font-size: ${fontSizePx}px;
-              table-layout: auto;
-              border: 1.5px solid #000000;
+              border: 2px solid #000000;
+              table-layout: auto; 
             }
+            
+            /* 3. منع انقسام الصفوف بين الصفحات عند الطباعة */
+            tr {
+              page-break-inside: avoid;
+            }
+
+            th, td {
+              /* هوامش شبه معدومة لتوفير المساحة */
+              padding: 1px !important; 
+              margin: 0 !important;
+              border: 1px solid #000000;
+              text-align: center;
+              color: #000000 !important;
+              font-weight: 900 !important;
+            }
+
+            /* خلايا البيانات الرقمية لا تلتف لتحافظ على التنسيق */
+            td {
+              white-space: nowrap; 
+            }
+            
+            /* رؤوس الأعمدة مسموح لها بالالتفاف قليلاً إذا لزم الأمر لكي لا تدفع الجدول للخارج */
             th {
               background: linear-gradient(180deg, #ffe066 0%, #d4af37 50%, #b8860b 100%) !important;
-              color: #000000 !important;
-              padding: 0;
-              border: 1px solid #7a5c00;
-              font-weight: 900;
               font-size: ${headerFontSizePx}px;
-              text-align: center;
-              word-break: break-word;
-              overflow-wrap: break-word;
-              line-height: 1.15;
+              white-space: normal;
+              word-wrap: break-word;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
-            td {
-              padding: ${cellPadding};
-              border: 1px solid #000000;
-              text-align: center;
-              word-break: break-word;
-              overflow-wrap: break-word;
-              color: #000000;
-              font-weight: 700;
-              line-height: 1.15;
+            
+            /* عمود الاسم مسموح له بالالتفاف ويأخذ مساحة مناسبة */
+            .wrap-text {
+              white-space: normal !important;
+              word-wrap: break-word;
+              min-width: 80px; /* تقليل الحد الأدنى ليتناسب مع المساحة */
             }
-            tr:nth-child(even) { background: #f8fafc; }
-            .footer { margin-top: 10px; text-align: left; font-size: 10px; color: #000; font-weight: 700; }
+
+            .total-row td {
+              background: #fef3c7 !important;
+              border-top: 2px solid #92400e !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+
+            /* أوامر مخصصة لوقت الطباعة الفعلي */
             @media print {
               html, body { width: 100%; }
-              body { padding: 0; color: #000 !important; }
+              body { padding: 0; margin: 0; color: #000 !important; }
               table { width: 100% !important; max-width: 100% !important; }
-              th {
-                background: linear-gradient(180deg, #ffe066 0%, #d4af37 50%, #b8860b 100%) !important;
-                color: #000000 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              td { color: #000000 !important; font-weight: 700 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             }
           </style>
         </head>
@@ -718,9 +738,6 @@ export default function InstallmentsTab() {
             <p>تاريخ التقرير: ${date}</p>
           </div>
           <table>
-            <colgroup>
-              ${headers.map(() => `<col style="width: ${100 / headers.length}%;" />`).join("")}
-            </colgroup>
             <thead>
               <tr>
                 ${headers.map((h) => `<th>${h}</th>`).join("")}
@@ -731,10 +748,6 @@ export default function InstallmentsTab() {
               ${generateTotalRow()}
             </tbody>
           </table>
-          <div class="footer">
-            <p>إجمالي عدد المتدربين: ${rows.length}</p>
-            <p>تم إنشاء التقرير بواسطة نظام المجلس اليمني للاختصاصات الطبية</p>
-          </div>
         </body>
         </html>
       `;
@@ -742,13 +755,15 @@ export default function InstallmentsTab() {
       if (w) {
         w.document.write(html);
         w.document.close();
-        setTimeout(() => w.print(), 500);
+        // إعطاء وقت إضافي للمتصفح لمعالجة الخطوط قبل فتح نافذة الطباعة
+        setTimeout(() => w.print(), 800);
         toast.success("تم فتح التقرير للطباعة");
       }
     } catch (error) {
       toast.error("فشل إنشاء التقرير");
     }
   };
+
 
   const saveRowEdit = (e: React.FormEvent) => {
     e.preventDefault();
