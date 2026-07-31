@@ -1476,16 +1476,16 @@ export default function InstallmentsTab() {
                           <td className="p-2 text-center text-black whitespace-nowrap">
                             {i + 1}
                           </td>
-                          <td className="p-2 text-center font-semibold text-black whitespace-nowrap">
+                          <td className="p-2 text-center font-semibold text-black whitespace-nowrap text-[11px] sm:text-xs bg-teal-50/70">
                             {r.name}
                           </td>
-                          <td className="p-2 text-center text-black whitespace-nowrap">
+                          <td className="p-2 text-center text-black whitespace-nowrap text-[11px] sm:text-xs bg-cyan-50/70">
                             {r.batch || "—"}
                           </td>
-                          <td className="p-2 text-center text-black whitespace-nowrap">
+                          <td className="p-2 text-center text-black whitespace-nowrap text-[11px] sm:text-xs bg-sky-50/70">
                             {r.specialty || "—"}
                           </td>
-                          <td className="p-2 text-center font-mono font-semibold text-black whitespace-nowrap">
+                          <td className="p-2 text-center font-mono font-semibold text-black whitespace-nowrap text-[11px] sm:text-xs bg-blue-50/70">
                             {fmt(r.fees)}
                           </td>
                           {MONTHS_2025.map((m) => {
@@ -1804,32 +1804,32 @@ export default function InstallmentsTab() {
                           <td className="p-2 text-center text-black whitespace-nowrap">
                             {i + 1}
                           </td>
-                          <td className="p-1 text-center font-semibold text-black whitespace-nowrap">
+                          <td className="p-1 text-center font-semibold text-black whitespace-nowrap bg-fuchsia-50/70">
                             <input
                               value={r.name || ""}
                               onChange={(e) =>
                                 update2026CellValue(originalIndex, "name", e.target.value)
                               }
-                              className="w-full min-w-32 bg-transparent text-center text-black outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              className="w-full min-w-32 bg-transparent text-center text-black text-[11px] sm:text-xs outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
                             />
                           </td>
-                          <td className="p-1 text-center text-black whitespace-nowrap">
+                          <td className="p-1 text-center text-black whitespace-nowrap bg-violet-50/70">
                             <input
                               value={r.batch || ""}
                               onChange={(e) =>
                                 update2026CellValue(originalIndex, "batch", e.target.value)
                               }
-                              className="w-full min-w-20 bg-transparent text-center text-black outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              className="w-full min-w-20 bg-transparent text-center text-black text-[11px] sm:text-xs outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
                               placeholder="—"
                             />
                           </td>
-                          <td className="p-1 text-center text-black whitespace-nowrap">
+                          <td className="p-1 text-center text-black whitespace-nowrap bg-purple-50/70">
                             <input
                               value={r.specialty || ""}
                               onChange={(e) =>
                                 update2026CellValue(originalIndex, "specialty", e.target.value)
                               }
-                              className="w-full min-w-24 bg-transparent text-center text-black outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              className="w-full min-w-24 bg-transparent text-center text-black text-[11px] sm:text-xs outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
                               placeholder="—"
                             />
                           </td>
@@ -1840,17 +1840,17 @@ export default function InstallmentsTab() {
                               onChange={(e) =>
                                 update2026CellValue(originalIndex, "prevDue", e.target.value)
                               }
-                              className="w-full min-w-20 bg-transparent text-center text-black outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              className="w-full min-w-20 bg-transparent text-center text-black text-[11px] sm:text-xs outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
                             />
                           </td>
-                          <td className="p-1 text-center font-mono text-black font-bold whitespace-nowrap">
+                          <td className="p-1 text-center font-mono text-black font-bold whitespace-nowrap bg-indigo-50/70">
                             <input
                               type="number"
                               value={r.fees || 0}
                               onChange={(e) =>
                                 update2026CellValue(originalIndex, "fees", e.target.value)
                               }
-                              className="w-full min-w-20 bg-transparent text-center text-black outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
+                              className="w-full min-w-20 bg-transparent text-center text-black text-[11px] sm:text-xs outline-none focus:bg-white focus:ring-1 ring-purple-300 rounded px-1 py-1"
                             />
                           </td>
                           {MONTHS_2026.map((m) => {
