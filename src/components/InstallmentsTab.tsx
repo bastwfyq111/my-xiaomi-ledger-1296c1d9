@@ -22,7 +22,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import TabActions from "./TabActions";
-import { exportStudentStatementPdf, printHtmlContent } from "@/lib/<Exporter";
+import { exportStudentStatementPdf, printHtmlContent } from "@/lib/pdfExporter";
 
 const MONTHS_2025 = [
   "يونيو 2024",
@@ -783,7 +783,7 @@ export default function InstallmentsTab() {
         ...editRowData,
         remaining: Math.max(
           0,
-          cleanNumber(editRowData.prevDue) - cleanNumber(editRowData.totalPaid),
+          (cleanNumber(editRowData.prevDue) + cleanNumber(editRowData.fees)) - cleanNumber(editRowData.totalPaid),
         ),
       };
       list[editRowModal.index] = updatedRow;
@@ -874,7 +874,7 @@ export default function InstallmentsTab() {
       ...row,
       payments,
       totalPaid,
-      remaining: Math.max(0, cleanNumber(row.prevDue) - totalPaid),
+      remaining: Math.max(0, (cleanNumber(row.prevDue) + cleanNumber(row.fees)) - totalPaid),
     };
   };
 
@@ -885,7 +885,7 @@ export default function InstallmentsTab() {
     const numericKeys = ["prevDue", "fees", "totalPaid", "remaining"];
     const nextValue: any = numericKeys.includes(key) ? cleanNumber(value) : value;
     list[rowIndex] =
-      key === "prevDue"
+      (key === "prevDue" || key === "fees")
         ? recalculate2026Row({ ...current, [key]: nextValue })
         : { ...current, [key]: nextValue };
     updateInstallments(list);
@@ -957,7 +957,7 @@ export default function InstallmentsTab() {
         ...s,
         payments,
         totalPaid,
-        remaining: Math.max(0, cleanNumber(s.prevDue) - totalPaid),
+        remaining: Math.max(0, (cleanNumber(s.prevDue) + cleanNumber(s.fees)) - totalPaid),
       };
     });
     updateInstallments(updated);
@@ -986,7 +986,7 @@ export default function InstallmentsTab() {
           ...s,
           payments,
           totalPaid,
-          remaining: Math.max(0, cleanNumber(s.prevDue) - totalPaid),
+          remaining: Math.max(0, (cleanNumber(s.prevDue) + cleanNumber(s.fees)) - totalPaid),
         };
       });
       updateInstallments(updated);
@@ -1029,7 +1029,7 @@ export default function InstallmentsTab() {
         ...s,
         payments,
         totalPaid,
-        remaining: Math.max(0, cleanNumber(s.prevDue) - totalPaid),
+        remaining: Math.max(0, (cleanNumber(s.prevDue) + cleanNumber(s.fees)) - totalPaid),
       };
     });
     updateInstallments(updated);
@@ -1049,7 +1049,7 @@ export default function InstallmentsTab() {
         ...s,
         payments,
         totalPaid,
-        remaining: Math.max(0, cleanNumber(s.prevDue) - totalPaid),
+        remaining: Math.max(0, (cleanNumber(s.prevDue) + cleanNumber(s.fees)) - totalPaid),
       };
     });
     updateInstallments(updated);
@@ -1133,7 +1133,7 @@ export default function InstallmentsTab() {
     const fees = cleanNumber(row.fees);
     const prevDue = cleanNumber(row.prevDue);
     const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
-    const dueTotal = year === 2026 ? prevDue || fees : fees;
+    const dueTotal = year === 2026 ? prevDue + fees : fees;
     const remaining = dueTotal - totalPaid;
 
     // استخراج اسم آمن ليستخدمه المتصفح كاسم افتراضي عند الحفظ PDF
