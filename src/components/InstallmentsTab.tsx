@@ -22,7 +22,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import TabActions from "./TabActions";
-import { exportStudentStatementPdf, printHtmlContent } from "@/lib/pdfExporter";
+import { openPrintDocument } from "@/lib/printDocument";
 
 const MONTHS_2025 = [
   "يونيو 2024",
@@ -643,126 +643,77 @@ export default function InstallmentsTab() {
               "حالة",
             ];
 
-      const html = `
-        <html dir="rtl" lang="ar">
-        <head>
-          <meta charset="utf-8" />
-          <title>تقرير الأقساط ${year}</title>
-          <style>
-            /* 2. ضبط إعدادات الصفحة وتقليل الهوامش لأقصى حد لزيادة المساحة المتاحة للجدول */
-            @page { size: A3 landscape; margin: 3mm; }
-            * { box-sizing: border-box; }
-            html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
-            body { 
-              font-family: 'Cairo', sans-serif; 
-              direction: rtl; 
-              margin: 0; 
-              padding: 0; 
-              background: white; 
-              color: #000; 
-            }
-            .header { 
-              text-align: center; 
-              margin-bottom: 5px; 
-              border-bottom: 2px solid #b8860b; 
-              padding-bottom: 5px; 
-            }
-            .header h1 { color: #000; margin: 0; font-size: 18px; font-weight: 900; }
-            .header p { color: #000; margin: 2px 0 0; font-size: 11px; font-weight: 700; }
-            
-            table {
-              width: 100%;
-              max-width: 100%; /* ضمان عدم تجاوز الجدول لعرض الشاشة/الورقة */
-              border-collapse: collapse;
-              font-size: ${fontSizePx}px;
-              border: 2px solid #000000;
-              table-layout: auto; 
-            }
-            
-            /* 3. منع انقسام الصفوف بين الصفحات عند الطباعة */
-            tr {
-              page-break-inside: avoid;
-            }
-
-            th, td {
-              /* هوامش شبه معدومة لتوفير المساحة */
-              padding: 1px !important; 
-              margin: 0 !important;
-              border: 1px solid #000000;
-              text-align: center;
-              color: #000000 !important;
-              font-weight: 900 !important;
-            }
-
-            /* خلايا البيانات الرقمية لا تلتف لتحافظ على التنسيق */
-            td {
-              white-space: nowrap; 
-            }
-            
-            /* رؤوس الأعمدة مسموح لها بالالتفاف قليلاً إذا لزم الأمر لكي لا تدفع الجدول للخارج */
-            th {
-              background: linear-gradient(180deg, #ffe066 0%, #d4af37 50%, #b8860b 100%) !important;
-              font-size: ${headerFontSizePx}px;
-              white-space: normal;
-              word-wrap: break-word;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            
-            /* عمود الاسم مسموح له بالالتفاف ويأخذ مساحة مناسبة */
-            .wrap-text {
-              white-space: normal !important;
-              word-wrap: break-word;
-              min-width: 80px; /* تقليل الحد الأدنى ليتناسب مع المساحة */
-            }
-
-            .total-row td {
-              background: #fef3c7 !important;
-              border-top: 2px solid #92400e !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-
-            /* أوامر مخصصة لوقت الطباعة الفعلي */
-            @media print {
-              html, body { width: 100%; }
-              body { padding: 0; margin: 0; color: #000 !important; }
-              table { width: 100% !important; max-width: 100% !important; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>المجلس اليمني للاختصاصات الطبية</h1>
-            <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
-            <p>تاريخ التقرير: ${date}</p>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                ${headers.map((h) => `<th>${h}</th>`).join("")}
-              </tr>
-            </thead>
-            <tbody>
-              ${generateTableRows()}
-              ${generateTotalRow()}
-            </tbody>
-          </table>
-        </body>
-        </html>
+      const reportCss = `
+        .doc-header {
+          text-align: center;
+          margin-bottom: 6px;
+          border-bottom: 1.5pt solid #b8860b;
+          padding-bottom: 5px;
+        }
+        .doc-header h1 { font-size: 16px; font-weight: 800; }
+        .doc-header p { margin: 2px 0 0; font-size: 10.5px; font-weight: 600; }
+        table { font-size: ${fontSizePx}px; table-layout: auto; border: 1pt solid #000; }
+        th, td { padding: 2.5px 3px; border: 0.5pt solid #000; }
+        td { font-weight: 500; white-space: nowrap; }
+        th {
+          background: #f5deb3;
+          font-size: ${headerFontSizePx}px;
+          font-weight: 700;
+          white-space: normal;
+          word-wrap: break-word;
+        }
+        .wrap-text {
+          white-space: normal !important;
+          word-break: break-word;
+          min-width: 90px;
+          text-align: right;
+          padding-right: 5px;
+        }
+        .total-row td {
+          background: #fef3c7;
+          font-weight: 700;
+          border-top: 1pt solid #92400e;
+        }
       `;
-      const w = window.open("", "", "width=1200,height=800");
-      if (w) {
-        w.document.write(html);
-        w.document.close();
-        // إعطاء وقت إضافي للمتصفح لمعالجة الخطوط قبل فتح نافذة الطباعة
-        setTimeout(() => w.print(), 800);
-        toast.success("تم فتح التقرير للطباعة");
+
+      const body = `
+        <div class="doc-header">
+          <h1>المجلس اليمني للاختصاصات الطبية</h1>
+          <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
+          <p>تاريخ التقرير: ${date}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${generateTableRows()}
+            ${generateTotalRow()}
+          </tbody>
+        </table>
+      `;
+
+      const ok = openPrintDocument({
+        title: `تقرير_الأقساط_والمدفوعات_${year}`,
+        body,
+        css: reportCss,
+        pageSize: year === 2026 ? "A3" : "A4",
+        orientation: "landscape",
+        margin: "6mm",
+      });
+
+      if (ok) {
+        toast.success("تم فتح التقرير — اختر «حفظ كـ PDF» للحصول على ملف عالي الجودة");
+      } else {
+        toast.error("تم منع فتح نافذة الطباعة، يرجى السماح بالنوافذ المنبثقة");
       }
     } catch (error) {
       toast.error("فشل إنشاء التقرير");
     }
   };
+
 
 
   const saveRowEdit = (e: React.FormEvent) => {
@@ -1172,125 +1123,107 @@ export default function InstallmentsTab() {
           ? "الرصيد الإضافي (له)"
           : "الحالة: تم السداد بالكامل";
 
-    // إضافة <!DOCTYPE html> واسم <title> ليستخدم كاسم افتراضي للملف
-    return `<!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-      <head>
-        <meta charset="utf-8" />
-        <title>${escapeHtml(`كشف_حساب_${safeName}_${year}`)}</title>
-        <style>
-          * { margin: 0; padding: 0; }
-          @page { size: A4 portrait; margin: 0mm; padding: 0; }
-          html { margin: 0; padding: 0; }
-          @font-face { font-family: 'CairoLocal'; src: url('/Cairo-Regular.ttf') format('truetype'); font-display: swap; }
-          body { font-family: 'CairoLocal', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; margin: 0; padding: 8px; background-color: white; width: 100%; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: #000 !important; font-weight: 900 !important; }
-          .container { width: 100%; background: white; padding: 0; box-sizing: border-box; display: flex; flex-direction: column; }
-          .header { background: #15803d !important; color: #000 !important; padding: 15px; border-radius: 6px; text-align: center; margin-bottom: 15px; border: 1px solid #000; }
-          .header h1 { margin: 0; font-size: 22px; font-weight: 800; }
-          .header p { margin: 5px 0 0; font-size: 16px; opacity: 1; }
-          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-          .info-box { border: 1px solid #000; padding: 8px; border-radius: 6px; text-align: center; }
-          .info-lbl { font-size: 12px; color: #000 !important; font-weight: 900; }
-          .info-val { font-size: 15px; color: #000 !important; font-weight: 900; margin-top: 2px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 3px; table-layout: fixed; }
-          th {
-            background-color: #1e3a5f !important;
-            color: #000000 !important;
-            padding:3px;
-            font-size: 15px;
-            border: 1px solid #000;
-            text-align: center;
-            font-weight: 900;
-          }
-          td {padding:3px; border: 1px solid #000; text-align: center; font-size: 15px; overflow: hidden; word-wrap: break-word; color: #000 !important; font-weight: 900 !important; }
-          .lbl { text-align: center; padding-right: 3px;  font-weight: 900; color: #000 !important; }
-          .num { text-align: center ; padding-left: 3px; font-weight: 900; color: #000 !important; font-family: monospace; font-size: 20px; }
-          .row-fees { background-color: #dbeafe !important; }
-          .row-due-old { background-color: #fde68a !important; }
-          .row-total-due { background-color: #fca5a5 !important; }
-          .row-total-paid { background-color: #a7f3d0 !important; }
-          .row-final { background-color: #fecaca !important; font-size: 22px; border: 2px solid #000 !important; }
-          @media print { 
-            * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            body { background: white; margin: 0; padding: 8px; color: #000 !important; font-weight: 900 !important; } 
-            .container { box-shadow: none; padding: 0; width: 100%; margin: 0; }
-            .header { background: #15803d !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            th {
-              background-color: #1e3a5f !important;
-              color: #000000 !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              font-weight: 900 !important;
-            }
-            td { color: #000 !important; font-weight: 900 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>المجلس اليمني للاختصاصات الطبية</h1>
-            <p>كشف حساب متدرب-للعام 
-            ${year}م</p>
-          </div>
-          <div class="info-grid">
-            ${infoCard("اسم المتدرب", row.name)}
-            ${infoCard("الدفعة", row.batch)}
-            ${infoCard("المساق", row.specialty)}
-            ${infoCard("رقم الهاتف", row.phone)}
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 60%">البيان</th>
-                <th style="width: 40%">المبلغ</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="row-fees"><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${escapeHtml(fmt(fees))}</td></tr>
-              ${prevRow}
-              <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${escapeHtml(fmt(dueTotal))}</td></tr>
-              ${paidRows}
-              <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${escapeHtml(fmt(totalPaid))}</td></tr>
-              <tr class="row-final"><td class="lbl">${escapeHtml(remainingLabel)}</td><td class="num">${escapeHtml(fmt(Math.abs(remaining)))}</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <script>
-          function printWhenReady() {
-            window.focus();
-            setTimeout(function() { window.print(); }, 250);
-          }
-          if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(printWhenReady).catch(printWhenReady);
-          } else {
-            window.onload = printWhenReady;
-          }
-        </script>
-      </body>
-      </html>
+    const statementCss = `
+      body { padding: 4mm; font-size: 13px; }
+      .header {
+        background: #0f766e;
+        color: #fff;
+        padding: 12px;
+        border-radius: 6px;
+        text-align: center;
+        margin-bottom: 12px;
+      }
+      .header h1 { font-size: 20px; font-weight: 800; color: #fff; }
+      .header p { margin: 4px 0 0; font-size: 14px; font-weight: 600; color: #fff; }
+      .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+      .info-box { border: 0.5pt solid #94a3b8; background: #f8fafc; padding: 8px; border-radius: 6px; text-align: center; }
+      .info-lbl { font-size: 11px; font-weight: 600; color: #475569; }
+      .info-val { font-size: 14px; font-weight: 700; margin-top: 2px; }
+      table { table-layout: fixed; margin-top: 4px; }
+      th {
+        background: #0f766e;
+        color: #fff;
+        padding: 7px 4px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      td { padding: 7px 6px; font-size: 13.5px; word-wrap: break-word; }
+      .lbl { text-align: right; font-weight: 600; }
+      .num { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+      .row-fees td { background: #eff6ff; }
+      .row-due-old td { background: #fef3c7; color: #b91c1c; }
+      .row-total-due td { background: #fee2e2; font-weight: 700; }
+      .row-paid td { color: #1d4ed8; }
+      .row-total-paid td { background: #d1fae5; font-weight: 700; }
+      .row-final td { background: #fee2e2; font-size: 16px; font-weight: 800; color: #b91c1c; border-top: 1pt solid #b91c1c; }
+      .foot { margin-top: 14px; display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 600; }
     `;
+
+    const body = `
+      <div class="container">
+        <div class="header">
+          <h1>المجلس اليمني للاختصاصات الطبية</h1>
+          <p>كشف حساب متدرب - للعام ${year}م</p>
+        </div>
+        <div class="info-grid">
+          ${infoCard("اسم المتدرب", row.name)}
+          ${infoCard("الدفعة", row.batch)}
+          ${infoCard("المساق", row.specialty)}
+          ${infoCard("رقم الهاتف", row.phone)}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 60%">البيان</th>
+              <th style="width: 40%">المبلغ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="row-fees"><td class="lbl">إجمالي الرسوم المستحقة</td><td class="num">${escapeHtml(fmt(fees))}</td></tr>
+            ${prevRow}
+            <tr class="row-total-due"><td class="lbl">إجمالي المبلغ المطلوب</td><td class="num">${escapeHtml(fmt(dueTotal))}</td></tr>
+            ${paidRows}
+            <tr class="row-total-paid"><td class="lbl">إجمالي المسدد (له)</td><td class="num">${escapeHtml(fmt(totalPaid))}</td></tr>
+            <tr class="row-final"><td class="lbl">${escapeHtml(remainingLabel)}</td><td class="num">${escapeHtml(fmt(Math.abs(remaining)))}</td></tr>
+          </tbody>
+        </table>
+        <div class="foot">
+          <span>تاريخ الإصدار: ${escapeHtml(new Date().toLocaleDateString("ar-EG-u-nu-latn"))}</span>
+          <span>التوقيع: ________________</span>
+        </div>
+      </div>
+    `;
+
+    return {
+      title: `كشف_حساب_${safeName}_${year}`,
+      body,
+      css: statementCss,
+    };
   };
 
-  // تصدير PDF متوافق مع هواتف شاومي وأندرويد
+  // فتح كشف الحساب في نافذة طباعة عالية الجودة (يمكن حفظه كـ PDF)
   const handleExportPdf = async (row: any, year: number) => {
-    try {
-      toast.info("جاري إنشاء ملف PDF...");
-      await exportStudentStatementPdf(row, year);
-      toast.success("تم بدء تنزيل الملف");
-    } catch (error) {
-      console.error("PDF Export Error:", error);
-      toast.error("فشل إنشاء ملف PDF، سيتم فتح نافذة الطباعة كبديل");
-      const html = generateAccountStatement(row, year);
-      printHtmlContent(html);
+    const { title, body, css } = generateAccountStatement(row, year);
+    const ok = openPrintDocument({
+      title,
+      body,
+      css,
+      pageSize: "A4",
+      orientation: "portrait",
+      margin: "8mm",
+    });
+    if (ok) {
+      toast.success("اختر «حفظ كـ PDF» من نافذة الطباعة للحصول على ملف واضح");
+    } else {
+      toast.error("تم منع فتح نافذة الطباعة، يرجى السماح بالنوافذ المنبثقة");
     }
   };
 
-  // وظيفة الطباعة التقليدية
+  // وظيفة الطباعة
   const printStatement = (row: any, year: number) => {
-    const html = generateAccountStatement(row, year);
-    printHtmlContent(html);
+    void handleExportPdf(row, year);
   };
+
 
   const stats2025 = [
     {
