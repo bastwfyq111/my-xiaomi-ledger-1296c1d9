@@ -530,7 +530,7 @@ export default function InstallmentsTab() {
 
       // 1. تصغير حجم الخط ديناميكياً: 
       // عام 2026 يحتوي أعمدة أكثر، لذا نستخدم خط أصغر (8px) لضمان اتساع الصفحة، و(9.5px) لعام 2025.
-      const fontSizePx = year === 2026 ? 8 : 9.5;
+      const fontSizePx = year === 2026 ? 8 : 13.5;
       const headerFontSizePx = fontSizePx + 1;
 
       // دالة توليد صفوف البيانات
@@ -1081,14 +1081,11 @@ export default function InstallmentsTab() {
   // تم تعديل هذه الدالة لتتوافق بشكل أفضل مع صيغة حفظ PDF واللغة العربية
   const generateAccountStatement = (row: any, year: number) => {
     const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-    const fees = cleanNumber(row.fees);
+        const fees = cleanNumber(row.fees);
     const prevDue = cleanNumber(row.prevDue);
     const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
-    const dueTotal = year === 2026 ? prevDue + fees : fees;
-    const remaining: Math.max(
-        0,
-        (Number(newRowData2026.prevDue) || 0) + (Number(newRowData2026.fees) || 0)
-      ),
+    const dueTotal = year === 2026 ? cleanNumber(prevDue) + cleanNumber(fees) : cleanNumber(fees);
+    const remaining = dueTotal - totalPaid;
 
     // استخراج اسم آمن ليستخدمه المتصفح كاسم افتراضي عند الحفظ PDF
     const safeName = safePdfFileName(row.name);
