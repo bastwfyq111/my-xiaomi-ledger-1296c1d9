@@ -1080,13 +1080,35 @@ export default function InstallmentsTab() {
 
   // تم تعديل هذه الدالة لتتوافق بشكل أفضل مع صيغة حفظ PDF واللغة العربية
   const generateAccountStatement = (row: any, year: number) => {
-    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-        const fees = cleanNumber(row.fees);
-    const prevDue = cleanNumber(row.prevDue);
-    const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
-    const dueTotal = year === 2026 ? cleanNumber(prevDue) + cleanNumber(fees) : cleanNumber(fees);
-    const remaining = dueTotal - totalPaid;
+  // 1. تحديد قائمة الأشهر بناءً على السنة المختارة
+  const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
 
+  // 2. تنظيف وتحويل الرسوم والمستحقات السابقة إلى أرقام صحيحة
+  const fees = cleanNumber(row?.fees);
+  const prevDue = cleanNumber(row?.prevDue);
+
+  // 3. حساب إجمالي المدفوعات عبر المرور على قائمة الأشهر
+  const totalPaid = monthsList.reduce((sum, month) => {
+    const payment = Number(row?.payments?.[month]) || 0;
+    return sum + payment;
+  }, 0);
+
+  // 4. حساب إجمالي المستحق: 
+  // إذا كانت السنة 2026 يتم إضافة المتبقي السابق إلى الرسوم الحالية، وإلا تُحسب الرسوم فقط.
+  const dueTotal = year === 2026 ? prevDue + fees : fees;
+
+  // 5. حساب المبلغ المتبقي
+  const remaining = dueTotal - totalPaid;
+
+  // إرجاع النتيجة ككائن شامل
+  return {
+    fees,
+    prevDue,
+    totalPaid,
+    dueTotal,
+    remaining
+  };
+};
     // استخراج اسم آمن ليستخدمه المتصفح كاسم افتراضي عند الحفظ PDF
     const safeName = safePdfFileName(row.name);
 
@@ -1137,7 +1159,7 @@ export default function InstallmentsTab() {
       .header p { margin: 4px 0 0; font-size: 14px; font-weight: 600; color: #fff; }
       .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
       .info-box { border: 0.5pt solid #94a3b8; background: #f8fafc; padding: 8px; border-radius: 6px; text-align: center; }
-      .info-lbl { font-size: 11px; font-weight: 600; color: #475569; }
+      .info-lbl { font-size: 14px; font-weight: 600; color: #475569; text-align:center}
       .info-val { font-size: 14px; font-weight: 700; margin-top: 2px; }
       table { table-layout: fixed; margin-top: 4px; }
       th {
@@ -1148,7 +1170,7 @@ export default function InstallmentsTab() {
         font-weight: 700;
       }
       td { padding: 7px 6px; font-size: 16.5px; word-wrap: break-word; }
-      .lbl { text-align: center; font-weight: 600; }
+      .lbl { text-align: center; font-weight: 1000; }
       .num { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
       .row-fees td { background: #eff6ff; }
       .row-due-old td { background: #fef3c7; color: #b91c1c; }
