@@ -643,126 +643,77 @@ export default function InstallmentsTab() {
               "حالة",
             ];
 
-      const html = `
-        <html dir="rtl" lang="ar">
-        <head>
-          <meta charset="utf-8" />
-          <title>تقرير الأقساط ${year}</title>
-          <style>
-            /* 2. ضبط إعدادات الصفحة وتقليل الهوامش لأقصى حد لزيادة المساحة المتاحة للجدول */
-            @page { size: A3 landscape; margin: 3mm; }
-            * { box-sizing: border-box; }
-            html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
-            body { 
-              font-family: 'Cairo', sans-serif; 
-              direction: rtl; 
-              margin: 0; 
-              padding: 0; 
-              background: white; 
-              color: #000; 
-            }
-            .header { 
-              text-align: center; 
-              margin-bottom: 5px; 
-              border-bottom: 2px solid #b8860b; 
-              padding-bottom: 5px; 
-            }
-            .header h1 { color: #000; margin: 0; font-size: 18px; font-weight: 900; }
-            .header p { color: #000; margin: 2px 0 0; font-size: 11px; font-weight: 700; }
-            
-            table {
-              width: 100%;
-              max-width: 100%; /* ضمان عدم تجاوز الجدول لعرض الشاشة/الورقة */
-              border-collapse: collapse;
-              font-size: ${fontSizePx}px;
-              border: 2px solid #000000;
-              table-layout: auto; 
-            }
-            
-            /* 3. منع انقسام الصفوف بين الصفحات عند الطباعة */
-            tr {
-              page-break-inside: avoid;
-            }
-
-            th, td {
-              /* هوامش شبه معدومة لتوفير المساحة */
-              padding: 1px !important; 
-              margin: 0 !important;
-              border: 1px solid #000000;
-              text-align: center;
-              color: #000000 !important;
-              font-weight: 900 !important;
-            }
-
-            /* خلايا البيانات الرقمية لا تلتف لتحافظ على التنسيق */
-            td {
-              white-space: nowrap; 
-            }
-            
-            /* رؤوس الأعمدة مسموح لها بالالتفاف قليلاً إذا لزم الأمر لكي لا تدفع الجدول للخارج */
-            th {
-              background: linear-gradient(180deg, #ffe066 0%, #d4af37 50%, #b8860b 100%) !important;
-              font-size: ${headerFontSizePx}px;
-              white-space: normal;
-              word-wrap: break-word;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            
-            /* عمود الاسم مسموح له بالالتفاف ويأخذ مساحة مناسبة */
-            .wrap-text {
-              white-space: normal !important;
-              word-wrap: break-word;
-              min-width: 80px; /* تقليل الحد الأدنى ليتناسب مع المساحة */
-            }
-
-            .total-row td {
-              background: #fef3c7 !important;
-              border-top: 2px solid #92400e !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-
-            /* أوامر مخصصة لوقت الطباعة الفعلي */
-            @media print {
-              html, body { width: 100%; }
-              body { padding: 0; margin: 0; color: #000 !important; }
-              table { width: 100% !important; max-width: 100% !important; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>المجلس اليمني للاختصاصات الطبية</h1>
-            <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
-            <p>تاريخ التقرير: ${date}</p>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                ${headers.map((h) => `<th>${h}</th>`).join("")}
-              </tr>
-            </thead>
-            <tbody>
-              ${generateTableRows()}
-              ${generateTotalRow()}
-            </tbody>
-          </table>
-        </body>
-        </html>
+      const reportCss = `
+        .doc-header {
+          text-align: center;
+          margin-bottom: 6px;
+          border-bottom: 1.5pt solid #b8860b;
+          padding-bottom: 5px;
+        }
+        .doc-header h1 { font-size: 16px; font-weight: 800; }
+        .doc-header p { margin: 2px 0 0; font-size: 10.5px; font-weight: 600; }
+        table { font-size: ${fontSizePx}px; table-layout: auto; border: 1pt solid #000; }
+        th, td { padding: 2.5px 3px; border: 0.5pt solid #000; }
+        td { font-weight: 500; white-space: nowrap; }
+        th {
+          background: #f5deb3;
+          font-size: ${headerFontSizePx}px;
+          font-weight: 700;
+          white-space: normal;
+          word-wrap: break-word;
+        }
+        .wrap-text {
+          white-space: normal !important;
+          word-break: break-word;
+          min-width: 90px;
+          text-align: right;
+          padding-right: 5px;
+        }
+        .total-row td {
+          background: #fef3c7;
+          font-weight: 700;
+          border-top: 1pt solid #92400e;
+        }
       `;
-      const w = window.open("", "", "width=1200,height=800");
-      if (w) {
-        w.document.write(html);
-        w.document.close();
-        // إعطاء وقت إضافي للمتصفح لمعالجة الخطوط قبل فتح نافذة الطباعة
-        setTimeout(() => w.print(), 800);
-        toast.success("تم فتح التقرير للطباعة");
+
+      const body = `
+        <div class="doc-header">
+          <h1>المجلس اليمني للاختصاصات الطبية</h1>
+          <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
+          <p>تاريخ التقرير: ${date}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
+            </tr>
+          </thead>
+          <tbody>
+            ${generateTableRows()}
+            ${generateTotalRow()}
+          </tbody>
+        </table>
+      `;
+
+      const ok = openPrintDocument({
+        title: `تقرير_الأقساط_والمدفوعات_${year}`,
+        body,
+        css: reportCss,
+        pageSize: year === 2026 ? "A3" : "A4",
+        orientation: "landscape",
+        margin: "6mm",
+      });
+
+      if (ok) {
+        toast.success("تم فتح التقرير — اختر «حفظ كـ PDF» للحصول على ملف عالي الجودة");
+      } else {
+        toast.error("تم منع فتح نافذة الطباعة، يرجى السماح بالنوافذ المنبثقة");
       }
     } catch (error) {
       toast.error("فشل إنشاء التقرير");
     }
   };
+
 
 
   const saveRowEdit = (e: React.FormEvent) => {
