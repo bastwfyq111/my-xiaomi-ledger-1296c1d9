@@ -654,11 +654,11 @@ export default function InstallmentsTab() {
         .doc-header p { margin: 2px 0 0; font-size: 10.5px; font-weight: 600; }
         table { font-size: ${fontSizePx}px; table-layout: auto; border: 1pt solid #000; }
         th, td { padding: 2.5px 3px; border: 0.5pt solid #000; }
-        td { font-weight: 500; white-space: nowrap; }
+        td { font-weight: 1000; white-space: nowrap; }
         th {
           background: #f5deb3;
           font-size: ${headerFontSizePx}px;
-          font-weight: 700;
+          font-weight: 1000;
           white-space: normal;
           word-wrap: break-word;
         }
@@ -666,12 +666,12 @@ export default function InstallmentsTab() {
           white-space: normal !important;
           word-break: break-word;
           min-width: 90px;
-          text-align: right;
+          text-align: center;
           padding-right: 5px;
         }
         .total-row td {
           background: #fef3c7;
-          font-weight: 700;
+          font-weight: 1000;
           border-top: 1pt solid #92400e;
         }
       `;
@@ -1085,7 +1085,10 @@ export default function InstallmentsTab() {
     const prevDue = cleanNumber(row.prevDue);
     const totalPaid = monthsList.reduce((s, m) => s + (Number(row.payments?.[m]) || 0), 0);
     const dueTotal = year === 2026 ? prevDue + fees : fees;
-    const remaining = dueTotal - totalPaid;
+    const remaining: Math.max(
+        0,
+        (Number(newRowData2026.prevDue) || 0) + (Number(newRowData2026.fees) || 0)
+      ),
 
     // استخراج اسم آمن ليستخدمه المتصفح كاسم افتراضي عند الحفظ PDF
     const safeName = safePdfFileName(row.name);
@@ -1147,8 +1150,8 @@ export default function InstallmentsTab() {
         font-size: 14px;
         font-weight: 700;
       }
-      td { padding: 7px 6px; font-size: 13.5px; word-wrap: break-word; }
-      .lbl { text-align: right; font-weight: 600; }
+      td { padding: 7px 6px; font-size: 16.5px; word-wrap: break-word; }
+      .lbl { text-align: center; font-weight: 600; }
       .num { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
       .row-fees td { background: #eff6ff; }
       .row-due-old td { background: #fef3c7; color: #b91c1c; }
@@ -1755,7 +1758,7 @@ export default function InstallmentsTab() {
                           <td className="p-2 text-center text-black whitespace-nowrap">
                             {i + 1}
                           </td>
-                          <td className="p-1 text-center font-semibold text-black whitespace-nowrap bg-fuchsia-50/70">
+                          <td className="p-1 text-center font-bold text-black whitespace-nowrap bg-fuchsia-50/70">
                             <input
                               value={r.name || ""}
                               onChange={(e) =>
