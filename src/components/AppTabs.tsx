@@ -265,7 +265,9 @@ const AppTabs: React.FC = () => {
   };  
   
   const handleExportExcel = async () => {  
+    const ExcelJS = (await import("exceljs")).default;  
     const wb = new ExcelJS.Workbook();  
+
     const disp = wb.addWorksheet("عرض", { views: [{ rightToLeft: true }] });  
   
     disp.mergeCells(1, 1, 1, allCols.length);  
