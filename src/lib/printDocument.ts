@@ -26,6 +26,7 @@ const baseCss = (
   orientation: PrintOrientation,
   margin: string
 ) => `
+  /* وصف الطباعة العام */
   @page { size: ${pageSize} ${orientation}; margin: ${margin}; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: #fff; }
@@ -42,16 +43,31 @@ const baseCss = (
     print-color-adjust: exact;
   }
   h1, h2, h3 { font-weight: 700; margin: 0; }
-  table { width: 100%; border-collapse: collapse; }
+
+  /* جداول: محاولة الحفاظ على تنسيق واضح عبر الصفحات */
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; word-break: break-word; }
   thead { display: table-header-group; }
   tfoot { display: table-footer-group; }
-  tr { break-inside: avoid; page-break-inside: avoid; }
-  th, td { border: 0.5pt solid #000; text-align: center; vertical-align: middle; }
+  tr { break-inside: avoid; page-break-inside: avoid; page-break-after: auto; }
+  th, td { border: 0.5pt solid #000; text-align: center; vertical-align: middle; word-break: break-word; white-space: normal; padding: 4px; }
   th { font-weight: 700; }
+  img { max-width: 100%; height: auto; display: block; }
+
+  /* إخفاء عناصر غير مطبوعة صراحة */
   .no-print { display: none !important; }
+
+  /* تحسينات خاصة ��الـ print */
   @media print {
     html, body { width: 100%; }
     body { margin: 0; padding: 0; }
+    /* تأكيد تكرار ترويسة الجدول في كل صفحة */
+    thead { display: table-header-group; }
+    tfoot { display: table-footer-group; }
+    /* فواصل صفحات للاستخدام اليدوي داخل القالب */
+    .page-break { page-break-after: always; }
+    /* تقليل الخط لتحسين تناسق الجدول عبر صفحات متعددة */
+    body { font-size: 10px; line-height: 1.3; }
+    th, td { padding: 3px; }
   }
 `;
 
