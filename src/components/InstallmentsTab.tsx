@@ -22,7 +22,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import TabActions from "./TabActions";
-import { exportStudentStatementPdf, printHtmlContent } from "@/lib/pdfExporter";
+import { openPrintDocument } from "@/lib/printDocument";
 
 const MONTHS_2025 = [
   "يونيو 2024",
