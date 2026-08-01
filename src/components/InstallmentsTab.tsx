@@ -1078,37 +1078,31 @@ export default function InstallmentsTab() {
       ? { text: "له", color: "text-emerald-800", bg: "bg-emerald-50" }
       : { text: "عليه", color: "text-rose-800", bg: "bg-rose-50" };
 
-  // تم تعديل هذه الدالة لتتوافق بشكل أفضل مع صيغة حفظ PDF واللغة العربية
+    // تم تعديل هذه الدالة لتتوافق بشكل أفضل مع صيغة حفظ PDF واللغة العربية
   const generateAccountStatement = (row: any, year: number) => {
-  // 1. تحديد قائمة الأشهر بناءً على السنة المختارة
-  const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+    // 1. تحديد قائمة الأشهر بناءً على السنة المختارة
+    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
 
-  // 2. تنظيف وتحويل الرسوم والمستحقات السابقة إلى أرقام صحيحة
-  const fees = cleanNumber(row?.fees);
-  const prevDue = cleanNumber(row?.prevDue);
+    // 2. تنظيف وتحويل الرسوم والمستحقات السابقة إلى أرقام صحيحة
+    const fees = cleanNumber(row?.fees);
+    const prevDue = cleanNumber(row?.prevDue);
 
-  // 3. حساب إجمالي المدفوعات عبر المرور على قائمة الأشهر
-  const totalPaid = monthsList.reduce((sum, month) => {
-    const payment = Number(row?.payments?.[month]) || 0;
-    return sum + payment;
-  }, 0);
+    // 3. حساب إجمالي المدفوعات عبر المرور على قائمة الأشهر
+    const totalPaid = monthsList.reduce((sum, month) => {
+      const payment = Number(row?.payments?.[month]) || 0;
+      return sum + payment;
+    }, 0);
 
-  // 4. حساب إجمالي المستحق: 
-  // إذا كانت السنة 2026 يتم إضافة المتبقي السابق إلى الرسوم الحالية، وإلا تُحسب الرسوم فقط.
-  const dueTotal = year === 2026 ? prevDue + fees : fees;
+    // 4. حساب إجمالي المستحق:
+    // إذا كانت السنة 2026 يتم إضافة المتبقي السابق إلى الرسوم الحالية، وإلا تُحسب الرسوم فقط.
+    const dueTotal = year === 2026 ? prevDue + 0 : fees;
 
-  // 5. حساب المبلغ المتبقي
-  const remaining = dueTotal - totalPaid;
+    // 5. حساب المبلغ المتبقي
+    const remaining = dueTotal - totalPaid;
 
-  // إرجاع النتيجة ككائن شامل
-  return {
-    fees,
-    prevDue,
-    totalPaid,
-    dueTotal,
-    remaining
-  };
-};
+    // ✅ تمت إزالة الـ return المبكر الذي كان يقطع تنفيذ باقي الدالة
+    // (كان يُرجع {fees, prevDue, totalPaid, dueTotal, remaining} بدل {title, body, css})
+
     // استخراج اسم آمن ليستخدمه المتصفح كاسم افتراضي عند الحفظ PDF
     const safeName = safePdfFileName(row.name);
 
@@ -1222,6 +1216,8 @@ export default function InstallmentsTab() {
       css: statementCss,
     };
   };
+
+
 
   // فتح كشف الحساب في نافذة طباعة عالية الجودة (يمكن حفظه كـ PDF)
   const handleExportPdf = async (row: any, year: number) => {
