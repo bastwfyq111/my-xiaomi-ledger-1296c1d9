@@ -1097,7 +1097,7 @@ export default function InstallmentsTab() {
 
     // 4. حساب إجمالي المستحق:
     // إذا كانت السنة 2026 يتم إضافة المتبقي السابق إلى الرسوم الحالية، وإلا تُحسب الرسوم فقط.
-    const dueTotal = year === 2026 ? prevDue + fees : fees;
+    const dueTotal = year === 2026 ?   prevDue-0: prevDue;
 
     // 5. حساب المبلغ المتبقي
     const remaining = dueTotal - totalPaid;
