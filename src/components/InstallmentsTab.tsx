@@ -530,7 +530,7 @@ export default function InstallmentsTab() {
 
       // 1. تصغير حجم الخط ديناميكياً: 
       // عام 2026 يحتوي أعمدة أكثر، لذا نستخدم خط أصغر (8px) لضمان اتساع الصفحة، و(9.5px) لعام 2025.
-      const fontSizePx = year === 2026 ? 8 : 13.5;
+      const fontSizePx = year === 2026 ? Math.max(6, 8 - extraCols2026.length * 0.25) : 11;
       const headerFontSizePx = fontSizePx + 1;
 
       // دالة توليد صفوف البيانات
@@ -541,7 +541,7 @@ export default function InstallmentsTab() {
               return `
               <tr>
                 <td>${i + 1}</td>
-                <td class="wrap-text">${row.name || ""}</td>
+                <td class="name-cell">${row.name || ""}</td>
                 <td>${row.batch || ""}</td>
                 <td>${row.specialty || ""}</td>
                 <td>${fmt(row.fees)}</td>
@@ -560,7 +560,7 @@ export default function InstallmentsTab() {
               return `
               <tr>
                 <td>${i + 1}</td>
-                <td class="wrap-text">${row.name || ""}</td>
+                <td class="name-cell">${row.name || ""}</td>
                 <td>${row.batch || ""}</td>
                 <td>${row.specialty || ""}</td>
                 <td>${fmt(row.prevDue)}</td>
@@ -644,7 +644,8 @@ export default function InstallmentsTab() {
             ];
 
       const reportCss = `
-        @page { size: ${year === 2026 ? "A3" : "A4"} landscape; margin: 6mm; }
+        @page { size: ${year === 2026 ? "A3" : "A4"} landscape; margin: 5mm; }
+        html, body { width: 100%; }
         .doc-header {
           text-align: center;
           margin-bottom: 6px;
@@ -653,28 +654,42 @@ export default function InstallmentsTab() {
         }
         .doc-header h1 { font-size: 16px; font-weight: 800; }
         .doc-header p { margin: 2px 0 0; font-size: 10.5px; font-weight: 600; }
-        table { font-size: ${fontSizePx}px; table-layout: auto; border: 1pt solid #000; }
-        th, td { padding: 2.5px 3px; border: 0.5pt solid #000; }
-        td { font-weight: 1000; white-space: nowrap; }
+
+        /* احتواء الخلايا حسب حجم النص بدون التفاف */
+        table {
+          font-size: ${fontSizePx}px;
+          table-layout: auto !important;
+          width: auto !important;
+          max-width: 100%;
+          margin: 0 auto;
+          border: 1pt solid #000;
+          word-break: normal !important;
+        }
+        th, td {
+          padding: 2px 4px !important;
+          border: 0.5pt solid #000;
+          white-space: nowrap !important;
+          word-break: keep-all !important;
+          overflow-wrap: normal !important;
+          text-align: center;
+        }
+        td { font-weight: 700; }
         th {
           background: #f5deb3;
           font-size: ${headerFontSizePx}px;
-          font-weight: 1000;
-          white-space: normal;
-          word-wrap: break-word;
+          font-weight: 800;
         }
-        .wrap-text {
-          white-space: normal !important;
-          word-break: break-word;
-          min-width: 90px;
-          text-align: center;
-          padding-right: 5px;
-        }
+        .name-cell { text-align: right; }
+        thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
         .total-row td {
           background: #fef3c7;
-          font-weight: 1000;
+          font-weight: 800;
           border-top: 1pt solid #92400e;
+          white-space: nowrap !important;
+        }
+        @media print {
+          th, td { padding: 2px 4px !important; white-space: nowrap !important; }
         }
       `;
 
