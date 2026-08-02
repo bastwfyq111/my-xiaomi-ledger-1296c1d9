@@ -1936,13 +1936,17 @@ export default function InstallmentsTab() {
                         </tr>
                       );
                     })}
-                    <tr className="border-t-2 border-slate-400 bg-slate-100 font-bold">
-                      <td className="p-2 text-center text-black whitespace-nowrap" colSpan={5}>
+                    <tr className="border-t-2 border-black bg-amber-100 font-extrabold">
+                      <td className="p-2 text-center text-black whitespace-nowrap" colSpan={4}>
                         الإجماليات
+                      </td>
+                      <td className="p-2 text-center font-mono text-black whitespace-nowrap">
+                        {fmt(totals2026.prevDue)}
                       </td>
                       <td className="p-2 text-center font-mono text-black whitespace-nowrap">
                         {fmt(totals2026.fees)}
                       </td>
+
                       {MONTHS_2026.map((m) => (
                         <td
                           key={m}
