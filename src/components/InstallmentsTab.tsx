@@ -744,7 +744,7 @@ export default function InstallmentsTab() {
         css: reportCss,
         pageSize: year === 2026 ? "A3" : "A4",
         orientation: "landscape",
-        margin: "6mm",
+        margin: "0",
       });
 
       if (ok) {
