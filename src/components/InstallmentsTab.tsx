@@ -534,7 +534,6 @@ export default function InstallmentsTab() {
         (year === 2025 ? 4 : 5) + monthsList.length + extraCols.length + (year === 2025 ? 2 : 3);
       const fontSizePx = totalDataCols > 30 ? 8 : totalDataCols > 22 ? 9 : 10.5;
       const headerFontSizePx = fontSizePx + 0.5;
-      const cellPaddingMm = totalDataCols > 30 ? 0.5 : 0.8;
 
       // دالة توليد صفوف البيانات
       const generateTableRows = () => {
@@ -647,106 +646,95 @@ export default function InstallmentsTab() {
             ];
 
       const reportCss = `
-        @page { size: A4 landscape; margin: 8mm 6mm; }
-        html, body {
-          width: 100%;
-          margin: 0 !important;
-          padding: 0 !important;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-        * { box-sizing: border-box; }
+        @page { size: A4 landscape; margin: 0; }
+        html, body { width: 100%; margin: 0 !important; padding: 0 !important; }
+        .fit-wrap { transform-origin: top right; }
         .doc-header {
           text-align: center;
-          margin-bottom: 4px;
+          margin-bottom: 6px;
           border-bottom: 1.5pt solid #b8860b;
-          padding-bottom: 4px;
+          padding-bottom: 5px;
         }
-        .doc-header h1 { font-size: 15px; font-weight: 800; margin: 0; }
-        .doc-header p { margin: 2px 0 0; font-size: 9.5px; font-weight: 600; }
+        .doc-header h1 { font-size: 16px; font-weight: 800; }
+        .doc-header p { margin: 2px 0 0; font-size: 10.5px; font-weight: 600; }
 
-        /* عرض كل عمود يتحدد تلقائياً حسب طول النص بداخله (table-layout: auto) */
-        .report-wrap { width: 100%; overflow: visible; }
+        /* احتواء الخلايا حسب حجم النص بدون التفاف وبدون أي مسافات بادئة */
         table {
-          font-size: ${fontSizePx.toFixed(2)}px;
-          table-layout: auto;
-          width: auto;
+          font-size: ${fontSizePx}px;
+          table-layout: auto !important;
+          width: auto !important;
           max-width: 100%;
           margin: 0 auto;
-          border-collapse: collapse;
           border: 1pt solid #000;
+          word-break: normal !important;
         }
         th, td {
-          padding: ${cellPaddingMm}mm 2mm !important;
+          padding: 0 !important;
           border: 0.5pt solid #000;
-          white-space: nowrap;
+          white-space: nowrap !important;
+          word-break: keep-all !important;
+          overflow-wrap: normal !important;
           text-align: center;
-          line-height: 1.25;
         }
         td { font-weight: 700; }
         th {
-          background: #f5deb3 !important;
-          font-size: ${headerFontSizePx.toFixed(2)}px;
+          background: #f5deb3;
+          font-size: ${headerFontSizePx}px;
           font-weight: 800;
         }
-        .name-cell { text-align: right; padding-right: 4px !important; }
+        .name-cell { text-align: right; }
         thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
         .total-row td {
-          background: #fef3c7 !important;
+          background: #fef3c7;
           font-weight: 800;
           border-top: 1pt solid #92400e;
+          white-space: nowrap !important;
         }
         @media print {
-          th, td { white-space: nowrap; }
-          tr { page-break-inside: avoid; }
+          th, td { padding: 0 !important; white-space: nowrap !important; }
         }
       `;
 
       const body = `
+        <div class="fit-wrap">
         <div class="doc-header">
           <h1>المجلس اليمني للاختصاصات الطبية</h1>
           <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
           <p>تاريخ التقرير: ${date}</p>
         </div>
-        <div class="report-wrap">
-          <table id="reportTable">
-            <thead>
-              <tr>
-                ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
-              </tr>
-            </thead>
-            <tfoot>
-              ${generateTotalRow()}
-            </tfoot>
-            <tbody>
-              ${generateTableRows()}
-            </tbody>
-          </table>
+        <table>
+          <thead>
+            <tr>
+              ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
+            </tr>
+          </thead>
+          <tfoot>
+            ${generateTotalRow()}
+          </tfoot>
+          <tbody>
+            ${generateTableRows()}
+          </tbody>
+        </table>
         </div>
         <script>
           (function () {
-            // يقيس عرض الجدول الفعلي بعد أن يحسب المتصفح عرض كل عمود حسب نصه،
-            // ولو تجاوز عرض الصفحة يُصغّر حجم الخط تدريجياً حتى يتسع الجدول بالكامل
-            // مع الحفاظ على أن يبقى عرض كل خلية متناسباً مع طول محتواها.
-            function shrinkToFit() {
-              var wrap = document.querySelector('.report-wrap');
-              var table = document.getElementById('reportTable');
+            function fit() {
+              var wrap = document.querySelector('.fit-wrap');
+              var table = wrap && wrap.querySelector('table');
               if (!wrap || !table) return;
-              var avail = wrap.clientWidth;
-              var size = ${fontSizePx.toFixed(2)};
-              var minSize = 4.2;
-              var guard = 0;
-              while (table.scrollWidth > avail && size > minSize && guard < 60) {
-                size -= 0.15;
-                table.style.fontSize = size.toFixed(2) + 'px';
-                guard++;
+              wrap.style.transform = 'none';
+              var avail = document.documentElement.clientWidth;
+              var w = table.scrollWidth;
+              if (w > avail) {
+                var s = avail / w;
+                wrap.style.transform = 'scale(' + s + ')';
+                wrap.style.width = (100 / s) + '%';
               }
             }
-            shrinkToFit();
-            window.addEventListener('beforeprint', shrinkToFit);
-            window.addEventListener('resize', shrinkToFit);
-            setTimeout(shrinkToFit, 300);
+            fit();
+            window.addEventListener('beforeprint', fit);
+            setTimeout(fit, 400);
           })();
         <\/script>
       `;
@@ -758,7 +746,7 @@ export default function InstallmentsTab() {
         css: reportCss,
         pageSize: "A4",
         orientation: "landscape",
-        margin: "8mm 6mm",
+        margin: "0",
       });
 
       if (ok) {
