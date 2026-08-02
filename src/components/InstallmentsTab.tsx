@@ -546,7 +546,6 @@ export default function InstallmentsTab() {
       // اشتقاق حجم الخط من عرض العمود الفعلي المتاح (كلما زاد عدد الأعمدة صغر الخط تلقائياً)
       const fontSizePx = Math.max(5.5, Math.min(10, effectiveColWidthMm * 1.15));
       const headerFontSizePx = fontSizePx + 0.5;
-      const cellPaddingMm = totalDataCols > 30 ? 0.4 : 0.7;
 
       // دالة توليد صفوف البيانات
       const generateTableRows = () => {
@@ -643,9 +642,9 @@ export default function InstallmentsTab() {
 
       const headers =
         year === 2025
-          ? ["م", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
+          ? ["#", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
           : [
-              "م",
+              "#",
               "الاسم",
               "الدفعة",
               "المساق",
@@ -687,7 +686,7 @@ export default function InstallmentsTab() {
           border: 1pt solid #000;
         }
         th, td {
-          padding: ${cellPaddingMm}mm 1mm !important;
+          padding: 0 !important;
           border: 0.5pt solid #000;
           white-space: nowrap;
           overflow: hidden;
@@ -701,7 +700,7 @@ export default function InstallmentsTab() {
           font-size: ${headerFontSizePx.toFixed(2)}px;
           font-weight: 800;
         }
-        .name-cell { text-align: right; padding-right: 3px !important; }
+        .name-cell { text-align: right; }
         thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
         .total-row td {
@@ -710,7 +709,7 @@ export default function InstallmentsTab() {
           border-top: 1pt solid #92400e;
         }
         @media print {
-          th, td { white-space: nowrap; }
+          th, td { white-space: nowrap; padding: 0 !important; }
           tr { page-break-inside: avoid; }
         }
       `;
@@ -735,6 +734,7 @@ export default function InstallmentsTab() {
           </tbody>
         </table>
       `;
+
 
 
       const ok = openPrintDocument({
@@ -1689,7 +1689,7 @@ export default function InstallmentsTab() {
         </div>
 
         <div className="p-3 sm:p-4">
-          <StatsGrid stats={stats2026} columns={4} />
+          <StatsGrid stats={stats2026} columns={3} />
           <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
             <table className="w-full text-xs sm:text-sm">
               <thead className="bg-gradient-to-b from-yellow-300 via-amber-400 to-yellow-600 font-bold border-b-2 border-amber-700 text-black sticky top-0 z-20 shadow-md">
