@@ -547,53 +547,68 @@ export default function InstallmentsTab() {
       const fontSizePx = Math.max(5.5, Math.min(10, effectiveColWidthMm * 1.15));
       const headerFontSizePx = fontSizePx + 0.5;
 
-      // دالة توليد صفوف البيانات
+      // دالة مساعدة لاشتقاق حجم خط ديناميكي يعتمد على طول النص (قيمة تقريبية)
+      const computeCellFontSizeStyle = (text: any, baseFont = fontSizePx) => {
+        const s = String(text ?? "");
+        const len = s.length;
+        // كل 12 حرف إضافي نقلل بمقدار 0.8px، بحد أقصى تخفيض 4 نقاط
+        const reduceSteps = Math.max(0, Math.ceil(Math.max(0, len - 18) / 12));
+        const reducePx = Math.min(4, reduceSteps * 0.8);
+        const final = Math.max(6, baseFont - reducePx);
+        return `font-size:${final.toFixed(2)}px;line-height:1.05;`;
+      };
+
+      // دالة توليد صفوف البيانات (مع تطبيق لف خفيف أو تصغير الخط للخلايا الطويلة)
       const generateTableRows = () => {
         return rows
           .map((row: any, i: number) => {
             if (year === 2025) {
+              // name cell get wrapping + dynamic font
+              const nameStyle = computeCellFontSizeStyle(row.name);
+              const specStyle = computeCellFontSizeStyle(row.specialty);
               return `
               <tr>
                 <td>${i + 1}</td>
-                <td class="name-cell">${row.name || ""}</td>
-                <td>${row.batch || ""}</td>
-                <td>${row.specialty || ""}</td>
-                <td>${fmt(row.fees)}</td>
+                <td class="name-cell wrap" style="${nameStyle}">${escapeHtml(row.name || "")}</td>
+                <td class="wrap" style="${computeCellFontSizeStyle(row.batch)}">${escapeHtml(row.batch || "")}</td>
+                <td class="wrap" style="${specStyle}">${escapeHtml(row.specialty || "")}</td>
+                <td style="${computeCellFontSizeStyle(row.fees, fontSizePx - 1)}">${fmt(row.fees)}</td>
                 ${monthsList
                   .map(
                     (m) =>
-                      `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`
+                      `<td style="${computeCellFontSizeStyle(row.payments?.[m] ?? "", fontSizePx - 1)}">${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`
                   )
                   .join("")}
-                <td>${fmt(row.totalPaid)}</td>
-                <td>${fmt(row.remaining)}</td>
+                <td style="${computeCellFontSizeStyle(row.totalPaid, fontSizePx - 1)}">${fmt(row.totalPaid)}</td>
+                <td style="${computeCellFontSizeStyle(row.remaining, fontSizePx - 1)}">${fmt(row.remaining)}</td>
               </tr>
             `;
             } else {
               const status = row.remaining <= 0 ? "له" : "عليه";
+              const nameStyle = computeCellFontSizeStyle(row.name);
               return `
               <tr>
                 <td>${i + 1}</td>
-                <td class="name-cell">${row.name || ""}</td>
-                <td>${row.batch || ""}</td>
-                <td>${row.specialty || ""}</td>
-                <td>${fmt(row.prevDue)}</td>
-                <td>${fmt(row.fees)}</td>
+                <td class="name-cell wrap" style="${nameStyle}">${escapeHtml(row.name || "")}</td>
+                <td class="wrap" style="${computeCellFontSizeStyle(row.batch)}">${escapeHtml(row.batch || "")}</td>
+                <td class="wrap" style="${computeCellFontSizeStyle(row.specialty)}">${escapeHtml(row.specialty || "")}</td>
+                <td style="${computeCellFontSizeStyle(row.prevDue, fontSizePx - 1)}">${fmt(row.prevDue)}</td>
+                <td style="${computeCellFontSizeStyle(row.fees, fontSizePx - 1)}">${fmt(row.fees)}</td>
                 ${monthsList
                   .map(
                     (m) =>
-                      `<td>${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`
+                      `<td style="${computeCellFontSizeStyle(row.payments?.[m] ?? "", fontSizePx - 1)}">${row.payments?.[m] ? fmt(row.payments[m]) : "—"}</td>`
                   )
                   .join("")}
                 ${extraCols
                   .map((col) => {
                     if (col.type === "formula")
-                      return `<td>${evaluateFormula(col.formula || "", row)}</td>`;
-                    return `<td>${row.customData?.[col.name] || "—"}</td>`;
+                      return `<td style="${computeCellFontSizeStyle(evaluateFormula(col.formula || "", row), fontSizePx - 1)}">${evaluateFormula(col.formula || "", row)}</td>`;
+                    return `<td style="${computeCellFontSizeStyle(row.customData?.[col.name] || "", fontSizePx - 1)}">${escapeHtml(row.customData?.[col.name] || "—")}</td>`;
                   })
                   .join("")}
-                <td>${fmt(row.totalPaid)}</td>
-                <td>${fmt(row.remaining)}</td>
+                <td style="${computeCellFontSizeStyle(row.totalPaid, fontSizePx - 1)}">${fmt(row.totalPaid)}</td>
+                <td style="${computeCellFontSizeStyle(row.remaining, fontSizePx - 1)}">${fmt(row.remaining)}</td>
                 <td style="background-color: ${status === "عليه" ? "#fecaca" : "#a7f3d0"};">${status}</td>
               </tr>
             `;
@@ -685,6 +700,8 @@ export default function InstallmentsTab() {
           border-collapse: collapse;
           border: 1pt solid #000;
         }
+        /* الخلايا الافتراضية تمنع التفاف النص لضمان عدم تمدد الأعمدة،
+           لكن نعطي فئات خاصة (wrap) للسماح باللف الخفيف عند الحاجة */
         th, td {
           padding: 0 !important;
           border: 0.5pt solid #000;
@@ -693,6 +710,13 @@ export default function InstallmentsTab() {
           text-overflow: ellipsis;
           text-align: center;
           line-height: 1.25;
+        }
+        /* عند الضرورة نسمح باللف الخفيف داخل هذه الخلايا */
+        .wrap {
+          white-space: normal !important;
+          word-break: break-word;
+          overflow-wrap: anywhere;
+          padding: 2px 4px !important;
         }
         td { font-weight: 700; }
         th {
@@ -711,6 +735,8 @@ export default function InstallmentsTab() {
         @media print {
           th, td { white-space: nowrap; padding: 0 !important; }
           tr { page-break-inside: avoid; }
+          /* For wrapped cells allow normal white-space on small screens when printing */
+          .wrap { white-space: normal !important; }
         }
       `;
 
