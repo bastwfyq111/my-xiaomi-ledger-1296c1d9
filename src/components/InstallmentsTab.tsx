@@ -528,12 +528,25 @@ export default function InstallmentsTab() {
       const extraCols = year === 2026 ? extraCols2026 : [];
       const date = new Date().toLocaleDateString("ar-SA");
 
-      // 1. حجم خط مبدئي (سيتم ضبطه تلقائياً وبدقة عبر سكريبت القياس الفعلي بالأسفل
-      //    حتى يحتوي الجدول بالكامل داخل عرض صفحة A4 مع بقاء عرض كل خلية حسب طول نصها)
+      // 1. حساب عدد الأعمدة الإجمالي لتحديد حجم الخط المناسب بدقة
+      //    بحيث يتسع الجدول دائماً داخل عرض صفحة A4 أفقي (297mm) مهما زاد عدد الأشهر/الأعمدة.
+      const fixedColsCount = year === 2025 ? 4 : 5; // #, الاسم, الدفعة, المساق, (مدور+الرسوم لعام 2026)
       const totalDataCols =
-        (year === 2025 ? 4 : 5) + monthsList.length + extraCols.length + (year === 2025 ? 2 : 3);
-      const fontSizePx = totalDataCols > 30 ? 8 : totalDataCols > 22 ? 9 : 10.5;
+        fixedColsCount + monthsList.length + extraCols.length + (year === 2025 ? 2 : 3); // + المسدد/المتبقي/(حالة)
+
+      // عرض الصفحة الأفقي الفعّال بعد الهوامش (A4 = 297mm × 210mm)، نترك هامش صغير للأمان
+      const usablePageWidthMm = 287;
+      // أقل عرض عملي للخلية (مم) كي يبقى النص مقروءاً، مع سماح أكبر لعمود الاسم
+      const minColWidthMm = totalDataCols > 30 ? 6.5 : totalDataCols > 22 ? 7.5 : 9;
+      const nameColWidthMm = Math.max(minColWidthMm * 2.2, 18);
+      const avgColWidthMm =
+        (usablePageWidthMm - nameColWidthMm) / Math.max(1, totalDataCols - 1);
+      const effectiveColWidthMm = Math.min(avgColWidthMm, minColWidthMm * 1.6);
+
+      // اشتقاق حجم الخط من عرض العمود الفعلي المتاح (كلما زاد عدد الأعمدة صغر الخط تلقائياً)
+      const fontSizePx = Math.max(5.5, Math.min(10, effectiveColWidthMm * 1.15));
       const headerFontSizePx = fontSizePx + 0.5;
+      const cellPaddingMm = totalDataCols > 30 ? 0.4 : 0.7;
 
       // دالة توليد صفوف البيانات
       const generateTableRows = () => {
@@ -610,7 +623,7 @@ export default function InstallmentsTab() {
         } else {
           return `
             <tr class="total-row">
-              <td colspan="4">الإجمالي</td>
+              <td colspan="5">الإجمالي</td>
               <td>${fmt(totals2026.prevDue)}</td>
               <td>${fmt(totals2026.fees)}</td>
               ${monthsList
@@ -630,9 +643,9 @@ export default function InstallmentsTab() {
 
       const headers =
         year === 2025
-          ? ["#", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
+          ? ["م", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
           : [
-              "#",
+              "م",
               "الاسم",
               "الدفعة",
               "المساق",
@@ -646,58 +659,63 @@ export default function InstallmentsTab() {
             ];
 
       const reportCss = `
-        @page { size: A4 landscape; margin: 0; }
-        html, body { width: 100%; margin: 0 !important; padding: 0 !important; }
-        .fit-wrap { transform-origin: top right; }
+        @page { size: A4 landscape; margin: 8mm 6mm; }
+        html, body {
+          width: 100%;
+          margin: 0 !important;
+          padding: 0 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        * { box-sizing: border-box; }
         .doc-header {
           text-align: center;
-          margin-bottom: 6px;
+          margin-bottom: 4px;
           border-bottom: 1.5pt solid #b8860b;
-          padding-bottom: 5px;
+          padding-bottom: 4px;
         }
-        .doc-header h1 { font-size: 16px; font-weight: 800; }
-        .doc-header p { margin: 2px 0 0; font-size: 10.5px; font-weight: 600; }
+        .doc-header h1 { font-size: 15px; font-weight: 800; margin: 0; }
+        .doc-header p { margin: 2px 0 0; font-size: 9.5px; font-weight: 600; }
 
-        /* احتواء الخلايا حسب حجم النص بدون التفاف وبدون أي مسافات بادئة */
+        /* عرض ثابت للجدول = عرض الصفحة بالكامل، وتوزيع الأعمدة تلقائياً بالتساوي بحيث
+           لا يتجاوز الجدول عرض الورقة أبداً مهما زاد عدد الأشهر أو الأعمدة الإضافية */
         table {
-          font-size: ${fontSizePx}px;
-          table-layout: auto !important;
-          width: auto !important;
-          max-width: 100%;
-          margin: 0 auto;
+          font-size: ${fontSizePx.toFixed(2)}px;
+          table-layout: fixed !important;
+          width: 100% !important;
+          border-collapse: collapse;
           border: 1pt solid #000;
-          word-break: normal !important;
         }
         th, td {
-          padding: 0 !important;
+          padding: ${cellPaddingMm}mm 1mm !important;
           border: 0.5pt solid #000;
-          white-space: nowrap !important;
-          word-break: keep-all !important;
-          overflow-wrap: normal !important;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
           text-align: center;
+          line-height: 1.25;
         }
         td { font-weight: 700; }
         th {
-          background: #f5deb3;
-          font-size: ${headerFontSizePx}px;
+          background: #f5deb3 !important;
+          font-size: ${headerFontSizePx.toFixed(2)}px;
           font-weight: 800;
         }
-        .name-cell { text-align: right; }
+        .name-cell { text-align: right; padding-right: 3px !important; }
         thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
         .total-row td {
-          background: #fef3c7;
+          background: #fef3c7 !important;
           font-weight: 800;
           border-top: 1pt solid #92400e;
-          white-space: nowrap !important;
         }
         @media print {
-          th, td { padding: 0 !important; white-space: nowrap !important; }
+          th, td { white-space: nowrap; }
+          tr { page-break-inside: avoid; }
         }
       `;
 
       const body = `
-        <div class="fit-wrap">
         <div class="doc-header">
           <h1>المجلس اليمني للاختصاصات الطبية</h1>
           <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
@@ -716,27 +734,6 @@ export default function InstallmentsTab() {
             ${generateTableRows()}
           </tbody>
         </table>
-        </div>
-        <script>
-          (function () {
-            function fit() {
-              var wrap = document.querySelector('.fit-wrap');
-              var table = wrap && wrap.querySelector('table');
-              if (!wrap || !table) return;
-              wrap.style.transform = 'none';
-              var avail = document.documentElement.clientWidth;
-              var w = table.scrollWidth;
-              if (w > avail) {
-                var s = avail / w;
-                wrap.style.transform = 'scale(' + s + ')';
-                wrap.style.width = (100 / s) + '%';
-              }
-            }
-            fit();
-            window.addEventListener('beforeprint', fit);
-            setTimeout(fit, 400);
-          })();
-        <\/script>
       `;
 
 
@@ -746,7 +743,7 @@ export default function InstallmentsTab() {
         css: reportCss,
         pageSize: "A4",
         orientation: "landscape",
-        margin: "0",
+        margin: "8mm 6mm",
       });
 
       if (ok) {
@@ -1692,7 +1689,7 @@ export default function InstallmentsTab() {
         </div>
 
         <div className="p-3 sm:p-4">
-          <StatsGrid stats={stats2026} columns={3} />
+          <StatsGrid stats={stats2026} columns={4} />
           <div className="overflow-auto max-h-[65vh] rounded-lg border border-slate-200 shadow-sm relative">
             <table className="w-full text-xs sm:text-sm">
               <thead className="bg-gradient-to-b from-yellow-300 via-amber-400 to-yellow-600 font-bold border-b-2 border-amber-700 text-black sticky top-0 z-20 shadow-md">
