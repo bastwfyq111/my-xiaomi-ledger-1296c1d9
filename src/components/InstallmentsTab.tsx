@@ -644,8 +644,9 @@ export default function InstallmentsTab() {
             ];
 
       const reportCss = `
-        @page { size: ${year === 2026 ? "A3" : "A4"} landscape; margin: 5mm; }
-        html, body { width: 100%; }
+        @page { size: ${year === 2026 ? "A3" : "A4"} landscape; margin: 0; }
+        html, body { width: 100%; margin: 0 !important; padding: 0 !important; }
+        .fit-wrap { transform-origin: top right; }
         .doc-header {
           text-align: center;
           margin-bottom: 6px;
@@ -694,6 +695,7 @@ export default function InstallmentsTab() {
       `;
 
       const body = `
+        <div class="fit-wrap">
         <div class="doc-header">
           <h1>المجلس اليمني للاختصاصات الطبية</h1>
           <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
@@ -712,6 +714,27 @@ export default function InstallmentsTab() {
             ${generateTableRows()}
           </tbody>
         </table>
+        </div>
+        <script>
+          (function () {
+            function fit() {
+              var wrap = document.querySelector('.fit-wrap');
+              var table = wrap && wrap.querySelector('table');
+              if (!wrap || !table) return;
+              wrap.style.transform = 'none';
+              var avail = document.documentElement.clientWidth;
+              var w = table.scrollWidth;
+              if (w > avail) {
+                var s = avail / w;
+                wrap.style.transform = 'scale(' + s + ')';
+                wrap.style.width = (100 / s) + '%';
+              }
+            }
+            fit();
+            window.addEventListener('beforeprint', fit);
+            setTimeout(fit, 400);
+          })();
+        <\/script>
       `;
 
 
