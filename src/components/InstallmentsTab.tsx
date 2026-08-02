@@ -1514,7 +1514,7 @@ export default function InstallmentsTab() {
                         </tr>
                       );
                     })}
-                    <tr className="border-t-2 border-slate-400 bg-slate-100 font-bold">
+                    <tr className="border-t-2 border-black bg-amber-100 font-extrabold">
                       <td className="p-2 text-center text-black whitespace-nowrap" colSpan={4}>
                         الإجماليات
                       </td>
