@@ -520,7 +520,7 @@ export default function InstallmentsTab() {
 
 
 
-  // تصدير PDF للجدول (معدل: احتواء الجدول بالكامل داخل حدود صفحة الطباعة)
+  // تصدير PDF للجدول (معدل: احتواء الجدول بالكامل داخل حدود صفحة A4 أفقي بشكل موثوق)
   const exportToPDF = (year: number) => {
     try {
       const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
@@ -528,10 +528,25 @@ export default function InstallmentsTab() {
       const extraCols = year === 2026 ? extraCols2026 : [];
       const date = new Date().toLocaleDateString("ar-SA");
 
-      // 1. تصغير حجم الخط ديناميكياً: 
-      // عام 2026 يحتوي أعمدة أكثر، لذا نستخدم خط أصغر (8px) لضمان اتساع الصفحة، و(9.5px) لعام 2025.
-      const fontSizePx = year === 2026 ? Math.max(6, 8 - extraCols2026.length * 0.25) : 11;
-      const headerFontSizePx = fontSizePx + 1;
+      // 1. حساب عدد الأعمدة الإجمالي لتحديد حجم الخط المناسب بدقة
+      //    بحيث يتسع الجدول دائماً داخل عرض صفحة A4 أفقي (297mm) مهما زاد عدد الأشهر/الأعمدة.
+      const fixedColsCount = year === 2025 ? 4 : 5; // #, الاسم, الدفعة, المساق, (مدور+الرسوم لعام 2026)
+      const totalDataCols =
+        fixedColsCount + monthsList.length + extraCols.length + (year === 2025 ? 2 : 3); // + المسدد/المتبقي/(حالة)
+
+      // عرض الصفحة الأفقي الفعّال بعد الهوامش (A4 = 297mm × 210mm)، نترك هامش صغير للأمان
+      const usablePageWidthMm = 287;
+      // أقل عرض عملي للخلية (مم) كي يبقى النص مقروءاً، مع سماح أكبر لعمود الاسم
+      const minColWidthMm = totalDataCols > 30 ? 6.5 : totalDataCols > 22 ? 7.5 : 9;
+      const nameColWidthMm = Math.max(minColWidthMm * 2.2, 18);
+      const avgColWidthMm =
+        (usablePageWidthMm - nameColWidthMm) / Math.max(1, totalDataCols - 1);
+      const effectiveColWidthMm = Math.min(avgColWidthMm, minColWidthMm * 1.6);
+
+      // اشتقاق حجم الخط من عرض العمود الفعلي المتاح (كلما زاد عدد الأعمدة صغر الخط تلقائياً)
+      const fontSizePx = Math.max(5.5, Math.min(10, effectiveColWidthMm * 1.15));
+      const headerFontSizePx = fontSizePx + 0.5;
+      const cellPaddingMm = totalDataCols > 30 ? 0.4 : 0.7;
 
       // دالة توليد صفوف البيانات
       const generateTableRows = () => {
@@ -644,58 +659,63 @@ export default function InstallmentsTab() {
             ];
 
       const reportCss = `
-        @page { size: ${year === 2026 ? "A3" : "A4"} landscape; margin: 0; }
-        html, body { width: 100%; margin: 0 !important; padding: 0 !important; }
-        .fit-wrap { transform-origin: top right; }
+        @page { size: A4 landscape; margin: 8mm 6mm; }
+        html, body {
+          width: 100%;
+          margin: 0 !important;
+          padding: 0 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        * { box-sizing: border-box; }
         .doc-header {
           text-align: center;
-          margin-bottom: 6px;
+          margin-bottom: 4px;
           border-bottom: 1.5pt solid #b8860b;
-          padding-bottom: 5px;
+          padding-bottom: 4px;
         }
-        .doc-header h1 { font-size: 16px; font-weight: 800; }
-        .doc-header p { margin: 2px 0 0; font-size: 10.5px; font-weight: 600; }
+        .doc-header h1 { font-size: 15px; font-weight: 800; margin: 0; }
+        .doc-header p { margin: 2px 0 0; font-size: 9.5px; font-weight: 600; }
 
-        /* احتواء الخلايا حسب حجم النص بدون التفاف */
+        /* عرض ثابت للجدول = عرض الصفحة بالكامل، وتوزيع الأعمدة تلقائياً بالتساوي بحيث
+           لا يتجاوز الجدول عرض الورقة أبداً مهما زاد عدد الأشهر أو الأعمدة الإضافية */
         table {
-          font-size: ${fontSizePx}px;
-          table-layout: auto !important;
-          width: auto !important;
-          max-width: 100%;
-          margin: 0 auto;
+          font-size: ${fontSizePx.toFixed(2)}px;
+          table-layout: fixed !important;
+          width: 100% !important;
+          border-collapse: collapse;
           border: 1pt solid #000;
-          word-break: normal !important;
         }
         th, td {
-          padding: 2px 4px !important;
+          padding: ${cellPaddingMm}mm 1mm !important;
           border: 0.5pt solid #000;
-          white-space: nowrap !important;
-          word-break: keep-all !important;
-          overflow-wrap: normal !important;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
           text-align: center;
+          line-height: 1.25;
         }
         td { font-weight: 700; }
         th {
-          background: #f5deb3;
-          font-size: ${headerFontSizePx}px;
+          background: #f5deb3 !important;
+          font-size: ${headerFontSizePx.toFixed(2)}px;
           font-weight: 800;
         }
-        .name-cell { text-align: right; }
+        .name-cell { text-align: right; padding-right: 3px !important; }
         thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
         .total-row td {
-          background: #fef3c7;
+          background: #fef3c7 !important;
           font-weight: 800;
           border-top: 1pt solid #92400e;
-          white-space: nowrap !important;
         }
         @media print {
-          th, td { padding: 2px 4px !important; white-space: nowrap !important; }
+          th, td { white-space: nowrap; }
+          tr { page-break-inside: avoid; }
         }
       `;
 
       const body = `
-        <div class="fit-wrap">
         <div class="doc-header">
           <h1>المجلس اليمني للاختصاصات الطبية</h1>
           <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
@@ -714,27 +734,6 @@ export default function InstallmentsTab() {
             ${generateTableRows()}
           </tbody>
         </table>
-        </div>
-        <script>
-          (function () {
-            function fit() {
-              var wrap = document.querySelector('.fit-wrap');
-              var table = wrap && wrap.querySelector('table');
-              if (!wrap || !table) return;
-              wrap.style.transform = 'none';
-              var avail = document.documentElement.clientWidth;
-              var w = table.scrollWidth;
-              if (w > avail) {
-                var s = avail / w;
-                wrap.style.transform = 'scale(' + s + ')';
-                wrap.style.width = (100 / s) + '%';
-              }
-            }
-            fit();
-            window.addEventListener('beforeprint', fit);
-            setTimeout(fit, 400);
-          })();
-        <\/script>
       `;
 
 
@@ -742,9 +741,9 @@ export default function InstallmentsTab() {
         title: `تقرير_الأقساط_والمدفوعات_${year}`,
         body,
         css: reportCss,
-        pageSize: year === 2026 ? "A3" : "A4",
+        pageSize: "A4",
         orientation: "landscape",
-        margin: "0",
+        margin: "8mm 6mm",
       });
 
       if (ok) {
