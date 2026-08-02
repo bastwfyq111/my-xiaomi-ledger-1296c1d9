@@ -671,7 +671,7 @@ export default function InstallmentsTab() {
         th, td {
           padding: 0 !important;
           border: 0.5pt solid #000;
-          white-space: normal !important;
+          white-space: nowrap !important;
           word-break: keep-all !important;
           overflow-wrap: normal !important;
           text-align: center;
@@ -682,14 +682,14 @@ export default function InstallmentsTab() {
           font-size: ${headerFontSizePx}px;
           font-weight: 800;
         }
-        .name-cell { text-align: center; }
+        .name-cell { text-align: right; }
         thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
         .total-row td {
           background: #fef3c7;
           font-weight: 800;
           border-top: 1pt solid #92400e;
-          white-space: normal !important;
+          white-space: nowrap !important;
         }
         @media print {
           th, td { padding: 0 !important; white-space: nowrap !important; }
