@@ -644,6 +644,7 @@ export default function InstallmentsTab() {
             ];
 
       const reportCss = `
+        @page { size: ${year === 2026 ? "A3" : "A4"} landscape; margin: 6mm; }
         .doc-header {
           text-align: center;
           margin-bottom: 6px;
@@ -669,6 +670,7 @@ export default function InstallmentsTab() {
           text-align: center;
           padding-right: 5px;
         }
+        tfoot { display: table-footer-group; }
         .total-row td {
           background: #fef3c7;
           font-weight: 1000;
@@ -688,12 +690,15 @@ export default function InstallmentsTab() {
               ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
             </tr>
           </thead>
+          <tfoot>
+            ${generateTotalRow()}
+          </tfoot>
           <tbody>
             ${generateTableRows()}
-            ${generateTotalRow()}
           </tbody>
         </table>
       `;
+
 
       const ok = openPrintDocument({
         title: `تقرير_الأقساط_والمدفوعات_${year}`,
