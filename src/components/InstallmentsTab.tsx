@@ -1755,7 +1755,7 @@ export default function InstallmentsTab() {
                 {filteredRows2026.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={9 + MONTHS_2026.length + extraCols2026.length}
+                      colSpan={10 + MONTHS_2026.length + extraCols2026.length}
                       className="p-6 text-center text-slate-400"
                     >
                       لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)
