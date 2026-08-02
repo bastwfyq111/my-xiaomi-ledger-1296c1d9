@@ -1432,7 +1432,7 @@ export default function InstallmentsTab() {
               <tbody>
                 {filteredRows2025.length === 0 ? (
                   <tr>
-                    <td colSpan={9 + MONTHS_2025.length} className="p-6 text-center text-slate-400">
+                    <td colSpan={8 + MONTHS_2025.length} className="p-6 text-center text-slate-400">
                       لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)
                     </td>
                   </tr>
