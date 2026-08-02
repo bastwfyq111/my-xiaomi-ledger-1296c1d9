@@ -519,59 +519,66 @@ export default function InstallmentsTab() {
   };
 
 
+const exportToPDF = (year: number) => {
+  try {
+    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
+    const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
+    const extraCols = year === 2026 ? extraCols2026 : [];
+    const date = new Date().toLocaleDateString("ar-SA");
 
-  // تصدير PDF للجدول (معدل: احتواء الجدول بالكامل داخل حدود صفحة A4 أفقي بشكل موثوق)
-  const exportToPDF = (year: number) => {
-    try {
-      const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-      const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
-      const extraCols = year === 2026 ? extraCols2026 : [];
-      const date = new Date().toLocaleDateString("ar-SA");
+    // تجهيز عناوين الأعمدة (نستخدمها لاحقاً للتأكد من توافق صف الإجمالي)
+    const headers =
+      year === 2025
+        ? ["م", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
+        : [
+            "م",
+            "الاسم",
+            "الدفعة",
+            "المساق",
+            "مدور 2025",
+            "الرسوم",
+            ...monthsList,
+            ...extraCols.map((c) => c.name),
+            "المسدد",
+            "المتبقي",
+            "حالة",
+          ];
 
-      // 1. حساب عدد الأعمدة الإجمالي لتحديد حجم الخط المناسب بدقة
-      //    بحيث يتسع الجدول دائماً داخل عرض صفحة A4 أفقي (297mm) مهما زاد عدد الأشهر/الأعمدة.
-      const fixedColsCount = year === 2025 ? 4 : 5; // #, الاسم, الدفعة, المساق, (مدور+الرسوم لعام 2026)
-      const totalDataCols =
-        fixedColsCount + monthsList.length + extraCols.length + (year === 2025 ? 2 : 3); // + المسدد/المتبقي/(حالة)
+    // 1. حساب عدد الأعمدة الإجمالي لتحديد حجم الخط المناسب بدقة
+    const fixedColsCount = year === 2025 ? 4 : 5; // عدد الأعمدة الثابتة قبل عمود الرسوم
+    const totalDataCols = headers.length; // استخدمنا الهيدر الفعلي ليعكس أي أعمدة إضافية
 
-      // عرض الصفحة الأفقي الفعّال بعد الهوامش (A4 = 297mm × 210mm)، نترك هامش صغير للأمان
-      const usablePageWidthMm = 287;
-      // أقل عرض عملي للخلية (مم) كي يبقى النص مقروءاً، مع سماح أكبر لعمود الاسم
-      const minColWidthMm = totalDataCols > 30 ? 6.5 : totalDataCols > 22 ? 7.5 : 9;
-      const nameColWidthMm = Math.max(minColWidthMm * 2.2, 18);
-      const avgColWidthMm =
-        (usablePageWidthMm - nameColWidthMm) / Math.max(1, totalDataCols - 1);
-      const effectiveColWidthMm = Math.min(avgColWidthMm, minColWidthMm * 1.6);
+    // عرض الصفحة الأفقي الفعّال بعد الهوامش (A4 = 297mm × 210mm)، نترك هامش صغير للأمان
+    const usablePageWidthMm = 287;
+    const minColWidthMm = totalDataCols > 30 ? 6.5 : totalDataCols > 22 ? 7.5 : 9;
+    const nameColWidthMm = Math.max(minColWidthMm * 2.2, 18);
+    const avgColWidthMm = (usablePageWidthMm - nameColWidthMm) / Math.max(1, totalDataCols - 1);
+    const effectiveColWidthMm = Math.min(avgColWidthMm, minColWidthMm * 1.6);
 
-      // اشتقاق حجم الخط من عرض العمود الفعلي المتاح (كلما زاد عدد الأعمدة صغر الخط تلقائياً)
-      const fontSizePx = Math.max(5.5, Math.min(10, effectiveColWidthMm * 1.15));
-      const headerFontSizePx = fontSizePx + 0.5;
+    const fontSizePx = Math.max(5.5, Math.min(10, effectiveColWidthMm * 1.15));
+    const headerFontSizePx = fontSizePx + 0.5;
 
-      // دالة مساعدة لاشتقاق حجم خط ديناميكي يعتمد على طول النص (قيمة تقريبية)
-      const computeCellFontSizeStyle = (text: any, baseFont = fontSizePx) => {
-        const s = String(text ?? "");
-        const len = s.length;
-        // كل 12 حرف إضافي نقلل بمقدار 0.8px، بحد أقصى تخفيض 4 نقاط
-        const reduceSteps = Math.max(0, Math.ceil(Math.max(0, len - 18) / 12));
-        const reducePx = Math.min(4, reduceSteps * 0.8);
-        const final = Math.max(6, baseFont - reducePx);
-        return `font-size:${final.toFixed(2)}px;line-height:1.05;`;
-      };
+    const computeCellFontSizeStyle = (text: any, baseFont = fontSizePx) => {
+      const s = String(text ?? "");
+      const len = s.length;
+      const reduceSteps = Math.max(0, Math.ceil(Math.max(0, len - 18) / 12));
+      const reducePx = Math.min(4, reduceSteps * 0.8);
+      const final = Math.max(6, baseFont - reducePx);
+      return `font-size:${final.toFixed(2)}px;line-height:1.05;`;
+    };
 
-      // دالة توليد صفوف البيانات (مع تطبيق لف خفيف أو تصغير الخط للخلايا الطويلة)
-      const generateTableRows = () => {
-        return rows
-          .map((row: any, i: number) => {
-            if (year === 2025) {
-              // name cell get wrapping + dynamic font
-              const nameStyle = computeCellFontSizeStyle(row.name);
-              const specStyle = computeCellFontSizeStyle(row.specialty);
-              return `
+    // دالة توليد صفوف البيانات (مع تطبيق لف خفيف أو تصغير الخط للخلايا الطويلة)
+    const generateTableRows = () => {
+      return rows
+        .map((row: any, i: number) => {
+          if (year === 2025) {
+            const nameStyle = computeCellFontSizeStyle(row.name);
+            return `
               <tr>
                 <td>${i + 1}</td>
                 <td class="name-cell wrap" style="${nameStyle}">${escapeHtml(row.name || "")}</td>
                 <td class="wrap" style="${computeCellFontSizeStyle(row.batch)}">${escapeHtml(row.batch || "")}</td>
-                <td class="wrap" style="${specStyle}">${escapeHtml(row.specialty || "")}</td>
+                <td class="wrap" style="${computeCellFontSizeStyle(row.specialty)}">${escapeHtml(row.specialty || "")}</td>
                 <td style="${computeCellFontSizeStyle(row.fees, fontSizePx - 1)}">${fmt(row.fees)}</td>
                 ${monthsList
                   .map(
@@ -583,10 +590,10 @@ export default function InstallmentsTab() {
                 <td style="${computeCellFontSizeStyle(row.remaining, fontSizePx - 1)}">${fmt(row.remaining)}</td>
               </tr>
             `;
-            } else {
-              const status = row.remaining <= 0 ? "له" : "عليه";
-              const nameStyle = computeCellFontSizeStyle(row.name);
-              return `
+          } else {
+            const status = row.remaining <= 0 ? "له" : "عليه";
+            const nameStyle = computeCellFontSizeStyle(row.name);
+            return `
               <tr>
                 <td>${i + 1}</td>
                 <td class="name-cell wrap" style="${nameStyle}">${escapeHtml(row.name || "")}</td>
@@ -612,178 +619,143 @@ export default function InstallmentsTab() {
                 <td style="background-color: ${status === "عليه" ? "#fecaca" : "#a7f3d0"};">${status}</td>
               </tr>
             `;
-            }
-          })
+          }
+        })
+        .join("");
+    };
+
+    // دالة توليد صف الإجمالي المتوافق تماماً مع headers (يشمل الأشهر والأعمدة المضافة)
+    const generateTotalRow = () => {
+      if (year === 2025) {
+        // ندمج أول 4 أعمدة لعرض "الإجمالي" ثم نضع القيم المتسلسلة لباقي الأعمدة
+        const leftColSpan = 4;
+        const feesCell = `<td>${fmt(totals2025.fees)}</td>`;
+        const monthsCells = monthsList
+          .map((m) => `<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`)
           .join("");
-      };
-
-      // دالة توليد صف الإجمالي
-      const generateTotalRow = () => {
-        if (year === 2025) {
-          return `
-            <tr class="total-row">
-              <td colspan="4">الإجمالي</td>
-              <td>${fmt(totals2025.fees)}</td>
-              ${monthsList
-                .map(
-                  (m) =>
-                    `<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`
-                )
-                .join("")}
-              <td>${fmt(totals2025.paid)}</td>
-              <td>${fmt(totals2025.remaining)}</td>
-            </tr>
-          `;
-        } else {
-          return `
-            <tr class="total-row">
-              <td colspan="5">الإجمالي</td>
-              <td>${fmt(totals2026.prevDue)}</td>
-              <td>${fmt(totals2026.fees)}</td>
-              ${monthsList
-                .map(
-                  (m) =>
-                    `<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`
-                )
-                .join("")}
-              ${extraCols.map(() => `<td>—</td>`).join("")}
-              <td>${fmt(totals2026.paid)}</td>
-              <td>${fmt(totals2026.remaining)}</td>
-              <td></td>
-            </tr>
-          `;
-        }
-      };
-
-      const headers =
-        year === 2025
-          ? ["#", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
-          : [
-              "#",
-              "الاسم",
-              "الدفعة",
-              "المساق",
-              "مدور 2025",
-              "الرسوم",
-              ...monthsList,
-              ...extraCols.map((c) => c.name),
-              "المسدد",
-              "المتبقي",
-              "حالة",
-            ];
-
-      const reportCss = `
-        @page { size: A4 landscape; margin: 8mm 6mm; }
-        html, body {
-          width: 100%;
-          margin: 0 !important;
-          padding: 0 !important;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-        * { box-sizing: border-box; }
-        .doc-header {
-          text-align: center;
-          margin-bottom: 4px;
-          border-bottom: 1.5pt solid #b8860b;
-          padding-bottom: 4px;
-        }
-        .doc-header h1 { font-size: 15px; font-weight: 800; margin: 0; }
-        .doc-header p { margin: 2px 0 0; font-size: 9.5px; font-weight: 600; }
-
-        /* عرض ثابت للجدول = عرض الصفحة بالكامل، وتوزيع الأعمدة تلقائياً بالتساوي بحيث
-           لا يتجاوز الجدول عرض الورقة أبداً مهما زاد عدد الأشهر أو الأعمدة الإضافية */
-        table {
-          font-size: ${fontSizePx.toFixed(2)}px;
-          table-layout: fixed !important;
-          width: 100% !important;
-          border-collapse: collapse;
-          border: 1pt solid #000;
-        }
-        /* الخلايا الافتراضية تمنع التفاف النص لضمان عدم تمدد الأعمدة،
-           لكن نعطي فئات خاصة (wrap) للسماح باللف الخفيف عند الحاجة */
-        th, td {
-          padding: 0 !important;
-          border: 0.5pt solid #000;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          text-align: center;
-          line-height: 1.25;
-        }
-        /* عند الضرورة نسمح باللف الخفيف داخل هذه الخلايا */
-        .wrap {
-          white-space: normal !important;
-          word-break: break-word;
-          overflow-wrap: anywhere;
-          padding: 2px 4px !important;
-        }
-        td { font-weight: 700; }
-        th {
-          background: #f5deb3 !important;
-          font-size: ${headerFontSizePx.toFixed(2)}px;
-          font-weight: 800;
-        }
-        .name-cell { text-align: right; }
-        thead { display: table-header-group; }
-        tfoot { display: table-footer-group; }
-        .total-row td {
-          background: #fef3c7 !important;
-          font-weight: 800;
-          border-top: 1pt solid #92400e;
-        }
-        @media print {
-          th, td { white-space: nowrap; padding: 0 !important; }
-          tr { page-break-inside: avoid; }
-          /* For wrapped cells allow normal white-space on small screens when printing */
-          .wrap { white-space: normal !important; }
-        }
-      `;
-
-      const body = `
-        <div class="doc-header">
-          <h1>المجلس اليمني للاختصاصات الطبية</h1>
-          <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
-          <p>تاريخ التقرير: ${date}</p>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tfoot>
-            ${generateTotalRow()}
-          </tfoot>
-          <tbody>
-            ${generateTableRows()}
-          </tbody>
-        </table>
-      `;
-
-
-
-      const ok = openPrintDocument({
-        title: `تقرير_الأقساط_والمدفوعات_${year}`,
-        body,
-        css: reportCss,
-        pageSize: "A4",
-        orientation: "landscape",
-        margin: "8mm 6mm",
-      });
-
-      if (ok) {
-        toast.success("تم فتح التقرير — اختر «حفظ كـ PDF» للحصول على ملف عالي الجودة");
+        const paidCell = `<td>${fmt(totals2025.paid)}</td>`;
+        const remainingCell = `<td>${fmt(totals2025.remaining)}</td>`;
+        return `<tr class="total-row"><td colspan="${leftColSpan}">الإجمالي</td>${feesCell}${monthsCells}${paidCell}${remainingCell}</tr>`;
       } else {
-        toast.error("تم منع فتح نافذة الطباعة، يرجى السماح بالنوافذ المنبثقة");
+        // ندمج أول 5 أعمدة لعرض "الإجمالي" ثم نضع القيم لباقي الأعمدة بما في ذلك الأعمدة الإضافية كعناصر مكانية
+        const leftColSpan = 5;
+        const prevDueCell = `<td>${fmt(totals2026.prevDue)}</td>`;
+        const feesCell = `<td>${fmt(totals2026.fees)}</td>`;
+        const monthsCells = monthsList
+          .map((m) => `<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`)
+          .join("");
+        const extraColsPlaceholders = extraCols.map(() => `<td>—</td>`).join("");
+        const paidCell = `<td>${fmt(totals2026.paid)}</td>`;
+        const remainingCell = `<td>${fmt(totals2026.remaining)}</td>`;
+        // أخيراً عمود الحالة (قد نتركه فارغاً)
+        const statusCell = `<td></td>`;
+        return `<tr class="total-row"><td colspan="${leftColSpan}">الإجمالي</td>${prevDueCell}${feesCell}${monthsCells}${extraColsPlaceholders}${paidCell}${remainingCell}${statusCell}</tr>`;
       }
-    } catch (error) {
-      toast.error("فشل إنشاء التقرير");
+    };
+
+    const reportCss = `
+      @page { size: A4 landscape; margin: 8mm 6mm; }
+      html, body {
+        width: 100%;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      * { box-sizing: border-box; }
+      .doc-header {
+        text-align: center;
+        margin-bottom: 4px;
+        border-bottom: 1.5pt solid #b8860b;
+        padding-bottom: 4px;
+      }
+      .doc-header h1 { font-size: 15px; font-weight: 800; margin: 0; }
+      .doc-header p { margin: 2px 0 0; font-size: 9.5px; font-weight: 600; }
+
+      table {
+        font-size: ${fontSizePx.toFixed(2)}px;
+        table-layout: fixed !important;
+        width: 100% !important;
+        border-collapse: collapse;
+        border: 1pt solid #000;
+      }
+      th, td {
+        padding: 0 !important;
+        border: 0.5pt solid #000;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
+        line-height: 1.25;
+      }
+      .wrap {
+        white-space: normal !important;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        padding: 0px 0px !important;
+      }
+      td { font-weight: 1000; }
+      th {
+        background: #f5deb3 !important;
+        font-size: ${headerFontSizePx.toFixed(2)}px;
+        font-weight: 800;
+      }
+      .name-cell { text-align: center; }
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
+      .total-row td {
+        background: #fef3c7 !important;
+        font-weight: 800;
+        border-top: 1pt solid #92400e;
+      }
+      @media print {
+        th, td { white-space: nowrap; padding: 0 !important; }
+        tr { page-break-inside: avoid; }
+        .wrap { white-space: normal !important; }
+      }
+    `;
+
+    const body = `
+      <div class="doc-header">
+        <h1>المجلس اليمني للاختصاصات الطبية</h1>
+        <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
+        <p>تاريخ التقرير: ${date}</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
+          </tr>
+        </thead>
+        <tfoot>
+          ${generateTotalRow()}
+        </tfoot>
+        <tbody>
+          ${generateTableRows()}
+        </tbody>
+      </table>
+    `;
+
+    const ok = openPrintDocument({
+      title: `تقرير_الأقساط_والمدفوعات_${year}`,
+      body,
+      css: reportCss,
+      pageSize: "A4",
+      orientation: "landscape",
+      margin: "8mm 6mm",
+    });
+
+    if (ok) {
+      toast.success("تم فتح التقرير — اختر «حفظ كـ PDF» للحصول على ملف عالي الجودة");
+    } else {
+      toast.error("تم منع فتح نافذة الطباعة، يرجى السماح بالنوافذ المنبثقة");
     }
-  };
+  } catch (error) {
+    toast.error("فشل إنشاء التقرير");
+  }
+};
 
-
-
+  
   const saveRowEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editRowModal) return;
