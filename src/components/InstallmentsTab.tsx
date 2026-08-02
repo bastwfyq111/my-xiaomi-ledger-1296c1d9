@@ -644,6 +644,7 @@ export default function InstallmentsTab() {
             ];
 
       const reportCss = `
+        @page { size: ${year === 2026 ? "A3" : "A4"} landscape; margin: 6mm; }
         .doc-header {
           text-align: center;
           margin-bottom: 6px;
@@ -669,6 +670,7 @@ export default function InstallmentsTab() {
           text-align: center;
           padding-right: 5px;
         }
+        tfoot { display: table-footer-group; }
         .total-row td {
           background: #fef3c7;
           font-weight: 1000;
@@ -688,12 +690,15 @@ export default function InstallmentsTab() {
               ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
             </tr>
           </thead>
+          <tfoot>
+            ${generateTotalRow()}
+          </tfoot>
           <tbody>
             ${generateTableRows()}
-            ${generateTotalRow()}
           </tbody>
         </table>
       `;
+
 
       const ok = openPrintDocument({
         title: `تقرير_الأقساط_والمدفوعات_${year}`,
@@ -1427,7 +1432,7 @@ export default function InstallmentsTab() {
               <tbody>
                 {filteredRows2025.length === 0 ? (
                   <tr>
-                    <td colSpan={9 + MONTHS_2025.length} className="p-6 text-center text-slate-400">
+                    <td colSpan={8 + MONTHS_2025.length} className="p-6 text-center text-slate-400">
                       لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)
                     </td>
                   </tr>
@@ -1509,7 +1514,7 @@ export default function InstallmentsTab() {
                         </tr>
                       );
                     })}
-                    <tr className="border-t-2 border-slate-400 bg-slate-100 font-bold">
+                    <tr className="border-t-2 border-black bg-amber-100 font-extrabold">
                       <td className="p-2 text-center text-black whitespace-nowrap" colSpan={4}>
                         الإجماليات
                       </td>
@@ -1750,7 +1755,7 @@ export default function InstallmentsTab() {
                 {filteredRows2026.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={9 + MONTHS_2026.length + extraCols2026.length}
+                      colSpan={10 + MONTHS_2026.length + extraCols2026.length}
                       className="p-6 text-center text-slate-400"
                     >
                       لا توجد بيانات (يرجى التأكد من استيراد الملف أو تعديل البحث)
@@ -1931,13 +1936,17 @@ export default function InstallmentsTab() {
                         </tr>
                       );
                     })}
-                    <tr className="border-t-2 border-slate-400 bg-slate-100 font-bold">
-                      <td className="p-2 text-center text-black whitespace-nowrap" colSpan={5}>
+                    <tr className="border-t-2 border-black bg-amber-100 font-extrabold">
+                      <td className="p-2 text-center text-black whitespace-nowrap" colSpan={4}>
                         الإجماليات
+                      </td>
+                      <td className="p-2 text-center font-mono text-black whitespace-nowrap">
+                        {fmt(totals2026.prevDue)}
                       </td>
                       <td className="p-2 text-center font-mono text-black whitespace-nowrap">
                         {fmt(totals2026.fees)}
                       </td>
+
                       {MONTHS_2026.map((m) => (
                         <td
                           key={m}
