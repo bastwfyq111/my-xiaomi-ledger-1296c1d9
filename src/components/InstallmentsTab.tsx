@@ -528,25 +528,13 @@ export default function InstallmentsTab() {
       const extraCols = year === 2026 ? extraCols2026 : [];
       const date = new Date().toLocaleDateString("ar-SA");
 
-      // 1. حساب عدد الأعمدة الإجمالي لتحديد حجم الخط المناسب بدقة
-      //    بحيث يتسع الجدول دائماً داخل عرض صفحة A4 أفقي (297mm) مهما زاد عدد الأشهر/الأعمدة.
-      const fixedColsCount = year === 2025 ? 4 : 5; // #, الاسم, الدفعة, المساق, (مدور+الرسوم لعام 2026)
+      // 1. حجم خط مبدئي (سيتم ضبطه تلقائياً وبدقة عبر سكريبت القياس الفعلي بالأسفل
+      //    حتى يحتوي الجدول بالكامل داخل عرض صفحة A4 مع بقاء عرض كل خلية حسب طول نصها)
       const totalDataCols =
-        fixedColsCount + monthsList.length + extraCols.length + (year === 2025 ? 2 : 3); // + المسدد/المتبقي/(حالة)
-
-      // عرض الصفحة الأفقي الفعّال بعد الهوامش (A4 = 297mm × 210mm)، نترك هامش صغير للأمان
-      const usablePageWidthMm = 287;
-      // أقل عرض عملي للخلية (مم) كي يبقى النص مقروءاً، مع سماح أكبر لعمود الاسم
-      const minColWidthMm = totalDataCols > 30 ? 6.5 : totalDataCols > 22 ? 7.5 : 9;
-      const nameColWidthMm = Math.max(minColWidthMm * 2.2, 18);
-      const avgColWidthMm =
-        (usablePageWidthMm - nameColWidthMm) / Math.max(1, totalDataCols - 1);
-      const effectiveColWidthMm = Math.min(avgColWidthMm, minColWidthMm * 1.6);
-
-      // اشتقاق حجم الخط من عرض العمود الفعلي المتاح (كلما زاد عدد الأعمدة صغر الخط تلقائياً)
-      const fontSizePx = Math.max(5.5, Math.min(10, effectiveColWidthMm * 1.15));
+        (year === 2025 ? 4 : 5) + monthsList.length + extraCols.length + (year === 2025 ? 2 : 3);
+      const fontSizePx = totalDataCols > 30 ? 8 : totalDataCols > 22 ? 9 : 10.5;
       const headerFontSizePx = fontSizePx + 0.5;
-      const cellPaddingMm = totalDataCols > 30 ? 0.4 : 0.7;
+      const cellPaddingMm = totalDataCols > 30 ? 0.5 : 0.8;
 
       // دالة توليد صفوف البيانات
       const generateTableRows = () => {
@@ -677,21 +665,21 @@ export default function InstallmentsTab() {
         .doc-header h1 { font-size: 15px; font-weight: 800; margin: 0; }
         .doc-header p { margin: 2px 0 0; font-size: 9.5px; font-weight: 600; }
 
-        /* عرض ثابت للجدول = عرض الصفحة بالكامل، وتوزيع الأعمدة تلقائياً بالتساوي بحيث
-           لا يتجاوز الجدول عرض الورقة أبداً مهما زاد عدد الأشهر أو الأعمدة الإضافية */
+        /* عرض كل عمود يتحدد تلقائياً حسب طول النص بداخله (table-layout: auto) */
+        .report-wrap { width: 100%; overflow: visible; }
         table {
           font-size: ${fontSizePx.toFixed(2)}px;
-          table-layout: fixed !important;
-          width: 100% !important;
+          table-layout: auto;
+          width: auto;
+          max-width: 100%;
+          margin: 0 auto;
           border-collapse: collapse;
           border: 1pt solid #000;
         }
         th, td {
-          padding: ${cellPaddingMm}mm 1mm !important;
+          padding: ${cellPaddingMm}mm 2mm !important;
           border: 0.5pt solid #000;
           white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
           text-align: center;
           line-height: 1.25;
         }
@@ -701,7 +689,7 @@ export default function InstallmentsTab() {
           font-size: ${headerFontSizePx.toFixed(2)}px;
           font-weight: 800;
         }
-        .name-cell { text-align: right; padding-right: 3px !important; }
+        .name-cell { text-align: right; padding-right: 4px !important; }
         thead { display: table-header-group; }
         tfoot { display: table-footer-group; }
         .total-row td {
@@ -721,19 +709,46 @@ export default function InstallmentsTab() {
           <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
           <p>تاريخ التقرير: ${date}</p>
         </div>
-        <table>
-          <thead>
-            <tr>
-              ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
-            </tr>
-          </thead>
-          <tfoot>
-            ${generateTotalRow()}
-          </tfoot>
-          <tbody>
-            ${generateTableRows()}
-          </tbody>
-        </table>
+        <div class="report-wrap">
+          <table id="reportTable">
+            <thead>
+              <tr>
+                ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
+              </tr>
+            </thead>
+            <tfoot>
+              ${generateTotalRow()}
+            </tfoot>
+            <tbody>
+              ${generateTableRows()}
+            </tbody>
+          </table>
+        </div>
+        <script>
+          (function () {
+            // يقيس عرض الجدول الفعلي بعد أن يحسب المتصفح عرض كل عمود حسب نصه،
+            // ولو تجاوز عرض الصفحة يُصغّر حجم الخط تدريجياً حتى يتسع الجدول بالكامل
+            // مع الحفاظ على أن يبقى عرض كل خلية متناسباً مع طول محتواها.
+            function shrinkToFit() {
+              var wrap = document.querySelector('.report-wrap');
+              var table = document.getElementById('reportTable');
+              if (!wrap || !table) return;
+              var avail = wrap.clientWidth;
+              var size = ${fontSizePx.toFixed(2)};
+              var minSize = 4.2;
+              var guard = 0;
+              while (table.scrollWidth > avail && size > minSize && guard < 60) {
+                size -= 0.15;
+                table.style.fontSize = size.toFixed(2) + 'px';
+                guard++;
+              }
+            }
+            shrinkToFit();
+            window.addEventListener('beforeprint', shrinkToFit);
+            window.addEventListener('resize', shrinkToFit);
+            setTimeout(shrinkToFit, 300);
+          })();
+        <\/script>
       `;
 
 
