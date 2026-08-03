@@ -364,33 +364,33 @@ export default function MonthlyStatementTab() {
               <tr>
                 <th
                   rowSpan={2}
-                  className="border border-black px-3 py-3 text-center  bg-slate-100 text-slate-900 font-extrabold break-words whitespace-normal"
+                  className="border border-black px-2 py-2 text-center  bg-slate-100 text-slate-900 font-extrabold"
                 >
                   بيان الحسابات (طبقاً للنظام المحاسبي الموحد)
                 </th>
                 <th
                   colSpan={2}
-                  className="border border-black px-2 py-2 text-center bg-slate-200/60 font-bold text-slate-800 whitespace-normal"
+                  className="border border-black px-2 py-2 text-center bg-slate-200/60 font-bold text-slate-800"
                 >
                   الرصيد الافتتاحي / السابق في{" "}
                   {startMonth === 1 ? `1/1/${year}` : `${year}/${startMonth}/1`}م
                 </th>
                 <th
                   colSpan={2}
-                  className="border border-black px-2 py-2 text-center bg-teal-50 text-teal-900 font-bold whitespace-normal"
+                  className="border border-black px-2 py-2 text-center bg-teal-50 text-teal-900 font-bold"
                 >
                   حركة عمليات التبويب الحالية (
                   {mode === "month" ? `شهر ${MONTH_NAMES[month - 1]}` : `الربع ${quarter}`})
                 </th>
                 <th
                   colSpan={2}
-                  className="border border-black px-2 py-2 text-center bg-slate-200/60 font-bold text-slate-800 whitespace-normal"
+                  className="border border-black px-2 py-2 text-center bg-slate-200/60 font-bold text-slate-800"
                 >
                   الجملــــــــــــة التراكمية
                 </th>
                 <th
                   colSpan={2}
-                  className="border border-black px-2 py-2 text-center bg-amber-50 text-amber-900 font-extrabold whitespace-normal"
+                  className="border border-black px-2 py-2 text-center bg-amber-50 text-amber-900 font-extrabold"
                 >
                   الرصيد الختامي في {year}/{endMonth}/{lastDayOfMonth(year, endMonth)}م
                 </th>
@@ -433,7 +433,7 @@ export default function MonthlyStatementTab() {
                     <tr className="bg-slate-100/80 font-bold">
                       <td
                         colSpan={9}
-                        className="border border-black px-3 py-2 text-center text-slate-900 font-bold text-sm bg-slate-200/50 whitespace-normal"
+                        className="border border-black px-2 py-2 text-center text-slate-900 font-bold text-sm bg-slate-200/50"
                       >
                         📁 {g.title}
                       </td>
@@ -644,7 +644,7 @@ export default function MonthlyStatementTab() {
                 <tr className="bg-slate-900 text-white font-extrabold">
                   <td
                     colSpan={3}
-                    className="border border-black px-3 py-2 text-center whitespace-normal"
+                    className="border border-black px-2 py-2 text-center"
                   >
                     الإجمالي العام لرموز الإيراد
                   </td>

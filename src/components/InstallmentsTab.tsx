@@ -1072,7 +1072,7 @@ export default function InstallmentsTab() {
         line-height: 1;
       }
       .wrap {
-        white-space:wrap !important;
+        white-space: nowrap !important;
         padding: 0px 0px !important;
       }
       td { font-weight: 1000;
@@ -1096,9 +1096,9 @@ export default function InstallmentsTab() {
       }
 
       @media print {
-        th, td { white-space:normal; padding: 0 !important; }
+        th, td { white-space: nowrap; padding: 0 !important; }
         tr { page-break-inside: avoid; }
-        .wrap { white-space: normal!important; }
+        .wrap { white-space: nowrap !important; }
       }
     `;
       
