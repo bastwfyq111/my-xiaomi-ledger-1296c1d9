@@ -626,42 +626,55 @@ const exportToPDF = (year: number) => {
 
     // دالة توليد صف الإجمالي المتوافق تماماً مع headers (يشمل الأشهر والأعمدة المضافة)
     const generateTotalRow = () => {
-      // الأعمدة المدموجة: م + الاسم + الدفعة + المساق (4 في كلا العامين)
-      const leftColSpan = 4;
-      let cells = "";
-      let cellCount = leftColSpan;
+      // تُحسب الإجماليات من نفس الصفوف المطبوعة لضمان التطابق
+      const sum = (fn: (r: any) => any) =>
+        (rows || []).reduce((s: number, r: any) => s + cleanNumber(fn(r)), 0);
+      const monthTotal = (m: string) => sum((r) => r.payments?.[m]);
 
-      const push = (html: string) => {
-        cells += html;
-        cellCount += 1;
-      };
+      const leftColSpan = 4; // م + الاسم + الدفعة + المساق
+      const cellsArr: string[] = [];
+      const push = (v: any, extra = "") =>
+        cellsArr.push(`<td${extra ? ` style="${extra}"` : ""}>${v}</td>`);
 
       if (year === 2025) {
-        push(`<td>${fmt(totals2025.fees)}</td>`);
-        monthsList.forEach((m) =>
-          push(`<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`)
-        );
-        push(`<td>${fmt(totals2025.paid)}</td>`);
-        push(`<td>${fmt(totals2025.remaining)}</td>`);
+        push(fmt(sum((r) => r.fees)));
+        monthsList.forEach((m) => {
+          const t = monthTotal(m);
+          push(t > 0 ? fmt(t) : "—");
+        });
+        push(fmt(sum((r) => r.totalPaid)));
+        push(fmt(sum((r) => r.remaining)));
       } else {
-        push(`<td>${fmt(totals2026.prevDue)}</td>`);
-        push(`<td>${fmt(totals2026.fees)}</td>`);
-        monthsList.forEach((m) =>
-          push(`<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`)
-        );
-        extraCols.forEach(() => push(`<td>—</td>`));
-        push(`<td>${fmt(totals2026.paid)}</td>`);
-        push(`<td>${fmt(totals2026.remaining)}</td>`);
-        push(`<td></td>`); // عمود الحالة
+        push(fmt(sum((r) => r.prevDue)));
+        push(fmt(sum((r) => r.fees)));
+        monthsList.forEach((m) => {
+          const t = monthTotal(m);
+          push(t > 0 ? fmt(t) : "—");
+        });
+        extraCols.forEach((col) => {
+          if (col.type === "formula") {
+            const t = (rows || []).reduce(
+              (s: number, r: any) => s + cleanNumber(evaluateFormula(col.formula || "", r)),
+              0,
+            );
+            push(t !== 0 ? fmt(t) : "—");
+          } else {
+            push("—");
+          }
+        });
+        push(fmt(sum((r) => r.totalPaid)));
+        push(fmt(sum((r) => r.remaining)));
+        push(""); // عمود الحالة
       }
 
-      // ضمان تطابق عدد الخلايا مع عدد الرؤوس (يمنع انزياح الأعمدة)
-      while (cellCount < headers.length) {
-        push(`<td></td>`);
-      }
+      // ضبط عدد الخلايا بدقة ليطابق عدد الرؤوس (يمنع أي انزياح)
+      const needed = headers.length - leftColSpan;
+      while (cellsArr.length < needed) cellsArr.push("<td></td>");
+      if (cellsArr.length > needed) cellsArr.length = needed;
 
-      return `<tr class="total-row"><td colspan="${leftColSpan}">الإجمالي</td>${cells}</tr>`;
+      return `<tr class="total-row"><td colspan="${leftColSpan}">الإجمالي</td>${cellsArr.join("")}</tr>`;
     };
+
 
 
     const reportCss = `
