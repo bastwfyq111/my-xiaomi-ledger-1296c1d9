@@ -715,10 +715,12 @@ const exportToPDF = (year: number) => {
       thead { display: table-header-group; }
       tfoot { display: table-footer-group; }
       .total-row td {
-        background: #fef3c7 !important;
-        font-weight: 800;
-        border-top: 1pt solid #92400e;
+        background: #fde68a !important;
+        font-weight: 1000;
+        white-space: nowrap !important;
+        border-top: 1.2pt solid #000;
       }
+
       @media print {
         th, td { white-space: nowrap; padding: 0 !important; }
         tr { page-break-inside: avoid; }
