@@ -706,14 +706,14 @@ const exportToPDF = (year: number) => {
       th, td {
         padding: 0 !important;
         border: 0.5pt solid #000;
-        white-space: nowrap;
+        white-space: normal;
         overflow: hidden;
         text-overflow: ellipsis;
         text-align: center;
-        line-height: 1.25;
+        line-height: 1;
       }
       .wrap {
-        white-space: nowrap !important;
+        white-space:normal !important;
         padding: 0px 0px !important;
       }
       td { font-weight: 1000; }
@@ -728,14 +728,14 @@ const exportToPDF = (year: number) => {
       .total-row td {
         background: #fde68a !important;
         font-weight: 1000;
-        white-space: nowrap !important;
+        white-space: normal !important;
         border-top: 1.2pt solid #000;
       }
 
       @media print {
-        th, td { white-space: nowrap; padding: 0 !important; }
+        th, td { white-space:normal; padding: 0 !important; }
         tr { page-break-inside: avoid; }
-        .wrap { white-space: nowrap !important; }
+        .wrap { white-space: normal!important; }
       }
     `;
 
@@ -764,7 +764,7 @@ const exportToPDF = (year: number) => {
       css: reportCss,
       pageSize: "A4",
       orientation: "landscape",
-      margin: "8mm 6mm",
+      margin: "2mm 2mm",
     });
 
     if (ok) {
@@ -1225,7 +1225,7 @@ const exportToPDF = (year: number) => {
         font-size: 14px;
         font-weight: 700;
       }
-      td { padding: 7px 6px; font-size: 16.5px; word-wrap: break-word; }
+      td { padding: 0px 0px; font-size: 16.5px; word-wrap: break-word; }
       .lbl { text-align: center; font-weight: 1000; }
       .num { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
       .row-fees td { background: #eff6ff; }
