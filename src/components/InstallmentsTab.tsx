@@ -1053,8 +1053,8 @@ export default function InstallmentsTab() {
 
       table {
         font-size: ${fontSizePx.toFixed(2)}px;
-        table-layout:fixed !important;
-        width: auto !important;
+        table-layout:fixed!important;
+        width:100%!important;
         border-collapse: collapse;
         border: 1pt solid #000;
         white-space: nowrap;
