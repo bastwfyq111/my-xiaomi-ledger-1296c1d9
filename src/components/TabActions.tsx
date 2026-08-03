@@ -13,6 +13,7 @@ type Props = {
   onClear?: () => void;
   numericKeys?: string[];
   className?: string;
+  printLabel?: string;
 };
 
 const escapeHtml = (s: any) =>
@@ -30,6 +31,7 @@ export default function TabActions({
   onClear,
   numericKeys = [],
   className = "",
+  printLabel = "طباعة",
 }: Props) {
   const handlePrint = () => {
     if (!rows.length) {
@@ -42,27 +44,87 @@ export default function TabActions({
     const head = `
       <meta charset="utf-8" />
       <title>${escapeHtml(title)}</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       <style>
-        * { margin: 0; padding: 0; }
-        @page { size: A4 landscape; margin: 0mm; padding: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { size: A4 landscape; margin: 6mm; }
         html { margin: 0; padding: 0; }
-        body { font-family: 'Tajawal','Cairo',Tahoma,Arial,sans-serif; padding: 8px; color: #000 !important; direction: rtl; margin: 0; width: 100%; box-sizing: border-box; font-weight: 700 !important; }
-        h1 { text-align: center; color: #000 !important; margin: 0 0 2px; font-size: 22px; font-weight: 800; }
-        .sub { text-align: center; color: #000 !important; margin-bottom: 3px; font-size: 18px; font-weight: 700 !important; }
-        table { width: 100%; border-collapse: collapse; font-size: 18px; }
-        th, td { 
-          border: 2px solid #000; 
-          padding: 2px 2px; 
-          text-align: center; 
+        body {
+          font-family: 'Cairo', 'Tajawal', Tahoma, Arial, sans-serif;
+          padding: 4mm 6mm;
+          color: #000 !important;
+          direction: rtl;
+          margin: 0;
+          width: 100%;
+          box-sizing: border-box;
+          font-weight: 600;
+          font-size: 10px;
+          line-height: 1.35;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        h1 {
+          text-align: center;
+          color: #000 !important;
+          margin: 0 0 3px;
+          font-size: 15px;
+          font-weight: 800;
+        }
+        .sub {
+          text-align: center;
+          color: #000 !important;
+          margin-bottom: 5px;
+          font-size: 9.5px;
+          font-weight: 700;
+          border-bottom: 1.5pt solid #b8860b;
+          padding-bottom: 4px;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
+          font-size: 10px;
+        }
+        th, td {
+          border: 0.75pt solid #000;
+          padding: 2.5px 3px;
+          text-align: center;
           white-space: nowrap;
           color: #000 !important;
-          font-weight: 700 !important;
+          font-weight: 700;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
-        thead th { background: #e2da84; color: #000 !important; font-weight: 700 !important; }
-        tbody tr:nth-child(even) { background: #f1f5f9; }
-        .num { font-family: 'Courier New', monospace; text-align: center; direction: ltr; color: #000 !important; font-weight: 700 !important; }
-        .idx { width: 36px; text-align: center; color: #000 !important; font-weight: 700 !important; }
-        @media print { * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } body { margin: 0; padding: 8px; color: #000 !important; font-weight: 700 !important; } th, td { color: #000 !important; font-weight: 700 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+        thead th {
+          background: #f5deb3 !important;
+          color: #000 !important;
+          font-weight: 800;
+          font-size: 10px;
+        }
+        tbody tr:nth-child(even) td { background: #f8fafc !important; }
+        .num {
+          font-family: 'Courier New', monospace;
+          text-align: center;
+          direction: ltr;
+          color: #000 !important;
+          font-weight: 700;
+        }
+        .idx { width: 28px; text-align: center; color: #000 !important; font-weight: 700; }
+        .total-row td {
+          background: #fef3c7 !important;
+          font-weight: 800;
+          border-top: 1.5pt solid #92400e;
+        }
+        thead { display: table-header-group; }
+        tfoot { display: table-footer-group; }
+        tr { page-break-inside: avoid; }
+        @media print {
+          * { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body { margin: 0; padding: 4mm 6mm; color: #000 !important; font-weight: 600; }
+          th, td { color: #000 !important; font-weight: 700; }
+        }
       </style>
     `;
 
@@ -78,7 +140,7 @@ export default function TabActions({
       }
     });
 
-    const totalRow = `<tr style="background: #e2da84; font-weight: 800; border-top: 3px solid #000;">${columns
+    const totalRow = `<tr class="total-row"><td class="idx"></td>${columns
       .map((c) => {
         if (numericKeys.includes(c.key)) {
           return `<td class="num">${escapeHtml(fmt(totals[c.key] || 0))}</td>`;
@@ -171,7 +233,7 @@ export default function TabActions({
         className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#10528e] border border-[#10528e]/30 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-50 active:scale-95 transition-all cursor-pointer"
         title="طباعة هذا التبويب"
       >
-        <Printer className="w-4 h-4" /> طباعة
+        <Printer className="w-4 h-4" /> {printLabel}
       </button>
       <button
         onClick={handleExcel}
