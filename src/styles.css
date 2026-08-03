@@ -102,8 +102,8 @@
   table th, table td {
     text-align: center;         /* محاذاة أفقية إلى الوسط */
     vertical-align: middle;       /* محاذاة عمودية إلى الوسط */
-    white-space: nowrap;          /* منع التفاف النص نهائياً */
-    padding: 10px 14px;           /* حشوة متناسقة ومناسبة للارتفاع والعرض */
+    white-space: nowrap !important; /* منع التفاف النص نهائياً */
+    padding: 6px 4px;           /* حشوة مدمجة بدون هوامش كبيرة */
     border: 1px solid #000 !important; /* حدود سوداء موحدة */
   }
 
@@ -136,10 +136,10 @@
     font-size: 12px; 
   }
   table th, table td {
-    padding: 6px 8px; /* حشوة أصغر للموبايل */
+    padding: 4px 3px; /* حشوة أصغر للموبايل بدون هوامش */
   }
   /* Ensure inputs inside table filter rows don't trigger zoom but stay compact visually */
-  table input { font-size: 14px; padding: 4px 6px; }
+  table input { font-size: 14px; padding: 3px 4px; }
 }
 
 @media print {
