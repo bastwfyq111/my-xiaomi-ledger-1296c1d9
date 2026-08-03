@@ -1053,17 +1053,17 @@ export default function InstallmentsTab() {
 
       table {
         font-size: ${fontSizePx.toFixed(2)}px;
-        table-layout:auto !important;
-        width: 100% !important;
+        table-layout:fixed !important;
+        width: auto !important;
         border-collapse: collapse;
         border: 1pt solid #000;
       }
       th, td {
         padding: 0 !important;
         border: 0.5pt solid #000;
-        white-space:wrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        white-space:normal;
+        overflow:ellipsis ;
+        text-overflow:ellipsis;
         text-align: center;
         line-height: 1;
       }
@@ -1071,7 +1071,11 @@ export default function InstallmentsTab() {
         white-space:wrap !important;
         padding: 0px 0px !important;
       }
-      td { font-weight: 1000; }
+      td { font-weight: 1000;
+      white-space: nowrap;
+  font-size: clamp(10px, 4cqw, 16px); /* يتدرج حجم الخط بين 10px و 16px حسب حجم الخلية */
+        
+      }
       th {
         background: #f5deb3 !important;
         font-size: ${headerFontSizePx.toFixed(2)}px;
