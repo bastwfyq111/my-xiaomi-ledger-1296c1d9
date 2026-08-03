@@ -50,7 +50,7 @@ export function exportToPdf(opts: {
     }
     th, td { 
       border: 1.5px solid #000; 
-      padding: 6px 4px; 
+      padding: 0px 0px; 
       text-align: center; 
       vertical-align: middle;
       white-space: normal;
@@ -79,7 +79,7 @@ export function exportToPdf(opts: {
       font-size: 13px;
       color: #000 !important;
       font-weight: 900 !important;
-      margin: 6px 0 8px;
+      margin: 2px 0 2px;
     }
     .total-row td {
       background: #1f7fb8 !important;
@@ -358,7 +358,7 @@ export function monthlyStatementPdf(opts: {
     .period { 
       font-weight: 900 !important; 
       color: #000 !important; 
-      margin: 4px 0 8px;
+      margin: 2px 0 2px;
       font-size: 13px;
     }
     table { 
@@ -366,11 +366,11 @@ export function monthlyStatementPdf(opts: {
       border-collapse: collapse; 
       font-size: 10px; 
       table-layout: fixed;
-      margin-top: 8px;
+      margin-top: 2px;
     }
     th, td { 
       border: 1.5px solid #000; 
-      padding: 4px 3px; 
+      padding: 1px 1px; 
       text-align: center;
       vertical-align: middle;
       white-space: normal;
@@ -384,7 +384,7 @@ export function monthlyStatementPdf(opts: {
       background: #1f7fb8;
       color: #000 !important;
       font-weight: 900 !important;
-      padding: 5px 3px;
+      padding: 1px 1px;
     }
     td.acc { 
       text-align: center; 
@@ -564,7 +564,7 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
     .period { 
       font-weight: 900 !important; 
       color: #000 !important; 
-      margin: 4px 0 8px;
+      margin: 1px 0 1px;
       font-size: 13px;
     }
     table { 
@@ -576,7 +576,7 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
     }
     th, td { 
       border: 1.5px solid #000; 
-      padding: 4px 3px; 
+      padding: 1px 1px; 
       text-align: center;
       vertical-align: middle;
       white-space: normal;
@@ -590,7 +590,7 @@ export function revenuePdf(revenue: Record<string, number>, year: number, month:
       background: #1f7fb8;
       color: #000 !important;
       font-weight: 900 !important;
-      padding: 5px 3px;
+      padding: 1px 1px;
     }
     td.acc { 
       text-align: center; 
