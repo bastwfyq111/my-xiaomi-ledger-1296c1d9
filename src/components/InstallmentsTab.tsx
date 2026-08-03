@@ -1061,14 +1061,14 @@ export default function InstallmentsTab() {
       th, td {
         padding: 0 !important;
         border: 0.5pt solid #000;
-        white-space: normal;
+        white-space:wrap;
         overflow: hidden;
         text-overflow: ellipsis;
         text-align: center;
         line-height: 1;
       }
       .wrap {
-        white-space:normal !important;
+        white-space:wrap !important;
         padding: 0px 0px !important;
       }
       td { font-weight: 1000; }
