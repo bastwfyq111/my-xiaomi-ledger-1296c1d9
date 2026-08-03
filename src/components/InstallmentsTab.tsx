@@ -1047,6 +1047,7 @@ export default function InstallmentsTab() {
         margin-bottom: 4px;
         border-bottom: 1.5pt solid #b8860b;
         padding-bottom: 4px;
+        table-layout:fixed!important;
       }
       .doc-header h1 { font-size: 15px; font-weight: 800; margin: 0; }
       .doc-header p { margin: 2px 0 0; font-size: 9.5px; font-weight: 600; }
