@@ -74,7 +74,7 @@
     width: 100%;
     border-collapse: collapse;
     page-break-inside: avoid;
-    margin: 10px 0 !important;
+    margin: 6px 0 !important;
     font-size: 11px;
   }
 
@@ -98,18 +98,20 @@
     color: white !important;
     font-weight: 700 !important;
     border: 1.5px solid #000 !important;
-    padding: 6px 4px !important;
+    padding: 4px 2px !important;
     text-align: center !important;
     vertical-align: middle !important;
+    white-space: nowrap !important;
     page-break-inside: avoid;
   }
 
   /* خلايا الجداول */
   td {
     border: 1.5px solid #000 !important;
-    padding: 5px 4px !important;
+    padding: 3px 2px !important;
     text-align: center !important;
     vertical-align: middle !important;
+    white-space: nowrap !important;
     page-break-inside: avoid;
     color: #000 !important;
     font-weight: 700 !important;
@@ -258,8 +260,8 @@
   .alert,
   .warning {
     border: 1px solid #000;
-    padding: 6px 4px !important;
-    margin: 8px 0 !important;
+    padding: 4px 2px !important;
+    margin: 6px 0 !important;
     page-break-inside: avoid;
   }
 
@@ -271,6 +273,7 @@
   /* تحسين وضوح النصوص الصغيرة */
   small {
     font-size: 9px;
+    white-space: nowrap;
   }
 
   /* تحسين وضوح الأرقام */
