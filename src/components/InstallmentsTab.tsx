@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from "react";
-import { useStore, type InstallmentCustomColumn } from "@/lib/store";
+import React, { useMemo,
+  useState } from "react";
+import { useStore,
+  type InstallmentCustomColumn } from "@/lib/store";
 import { fmt } from "@/lib/format";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -56,28 +58,38 @@ const MONTHS_2026 = [
 ];
 
 // دالة تنظيف الأرقام واستخراج القيم العددية
-const cleanNumber = (val: any): number => {
-  if (!val || isNaN(Number(String(val).replace(/[^0-9.-]/g, "")))) return 0;
-  return Number(String(val).replace(/[^0-9.-]/g, "")) || 0;
-};
+const cleanNumber = (val: any):
+  number => {
+    if (!val || isNaN(Number(String(val)
+        .replace(/[^0-9.-]/g, ""))))
+      return 0;
+    return Number(String(val).replace(
+      /[^0-9.-]/g, "")) || 0;
+  };
 
-const escapeHtml = (value: any): string =>
+const escapeHtml = (value: any):
+  string =>
   String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#39;");
 
-const safePdfFileName = (value: any): string =>
+const safePdfFileName = (value: any):
+  string =>
   String(value || "متدرب")
-    .replace(/[\\/:*?"<>|]/g, "-")
-    .replace(/\s+/g, "_")
-    .trim() || "متدرب";
+  .replace(/[\\/:*?"<>|]/g, "-")
+  .replace(/\s+/g, "_")
+  .trim() || "متدرب";
 
 // شبكة إحصائيات علوية
-const StatsGrid = ({ stats, columns = 3 }: { stats: any[]; columns?: number }) => {
-  const colClass = columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-1 sm:grid-cols-3";
+const StatsGrid = ({ stats, columns =
+    3 }: { stats: any[];columns ? :
+    number }) => {
+  const colClass = columns === 4 ?
+    "grid-cols-2 sm:grid-cols-4" :
+    "grid-cols-1 sm:grid-cols-3";
   return (
     <div className={`grid ${colClass} gap-2 mb-4`}>
       {stats.map((stat, idx) => (
@@ -131,16 +143,18 @@ const SortIcon = ({
   sortConfig,
   columnKey,
 }: {
-  sortConfig: { key: string; direction: "asc" | "desc" } | null;
+  sortConfig: { key: string;direction: "asc" |
+      "desc" } | null;
   columnKey: string;
 }) => {
   if (sortConfig?.key !== columnKey)
     return <ArrowUpDown className="w-3 h-3 text-slate-700 opacity-60" />;
-  return sortConfig.direction === "asc" ? (
-    <ArrowUp className="w-3 h-3 text-emerald-700" />
-  ) : (
-    <ArrowDown className="w-3 h-3 text-emerald-700" />
-  );
+  return sortConfig.direction ===
+    "asc" ? (
+      <ArrowUp className="w-3 h-3 text-emerald-700" />
+    ) : (
+      <ArrowDown className="w-3 h-3 text-emerald-700" />
+    );
 };
 
 export default function InstallmentsTab() {
@@ -153,122 +167,192 @@ export default function InstallmentsTab() {
     setInstallmentCustomColumns2026,
     setInstallmentConditionalRules2026,
   } = useStore() as any;
-
-  const [paymentModal, setPaymentModal] = useState<{ row: any; month: string } | null>(null);
-  const [payAmount, setPayAmount] = useState("");
-  const [newPaymentModal, setNewPaymentModal] = useState(false);
-  const [newStudentName, setNewStudentName] = useState("");
-  const [newStudentAmount, setNewStudentAmount] = useState("");
-  const [newStudentMonth, setNewStudentMonth] = useState("");
-  const [editPaymentModal, setEditPaymentModal] = useState<{
+  
+  const [paymentModal,
+  setPaymentModal] = useState <
+    { row: any;month: string } | null >
+    (null);
+  const [payAmount, setPayAmount] =
+  useState("");
+  const [newPaymentModal,
+    setNewPaymentModal
+  ] = useState(false);
+  const [newStudentName,
+    setNewStudentName
+  ] = useState("");
+  const [newStudentAmount,
+    setNewStudentAmount
+  ] = useState("");
+  const [newStudentMonth,
+    setNewStudentMonth
+  ] = useState("");
+  const [editPaymentModal,
+    setEditPaymentModal
+  ] = useState < {
     row: any;
     month: string;
     amount: number;
-  } | null>(null);
-  const [editAmount, setEditAmount] = useState("");
-  const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [, setHoveredCell] = useState<string | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
-
-  const [search2025, setSearch2025] = useState("");
-  const [search2026, setSearch2026] = useState("");
-
-  const [sortConfig2025, setSortConfig2025] = useState<{
+  } | null > (null);
+  const [editAmount, setEditAmount] =
+  useState("");
+  const [nameSuggestions,
+    setNameSuggestions
+  ] = useState < string[] > ([]);
+  const [showSuggestions,
+    setShowSuggestions
+  ] = useState(false);
+  const [, setHoveredCell] = useState <
+    string | null > (null);
+  const [importError, setImportError] =
+  useState < string | null > (null);
+  
+  const [search2025, setSearch2025] =
+  useState("");
+  const [search2026, setSearch2026] =
+  useState("");
+  
+  const [sortConfig2025,
+    setSortConfig2025
+  ] = useState < {
     key: string;
     direction: "asc" | "desc";
-  } | null>(null);
-  const [sortConfig2026, setSortConfig2026] = useState<{
+  } | null > (null);
+  const [sortConfig2026,
+    setSortConfig2026
+  ] = useState < {
     key: string;
     direction: "asc" | "desc";
-  } | null>(null);
-
-  const [editRowModal, setEditRowModal] = useState<{
+  } | null > (null);
+  
+  const [editRowModal,
+  setEditRowModal] = useState < {
     year: number;
     row: any;
     index: number;
-  } | null>(null);
-  const [editRowData, setEditRowData] = useState<any>({});
-
-  const extraCols2026 = (installmentCustomColumns2026 || []) as InstallmentCustomColumn[];
-  const [newColModal, setNewColModal] = useState(false);
-  const [newColName, setNewColName] = useState("");
-  const [newColType, setNewColType] = useState<"text" | "select" | "formula">("text");
-  const [newColOptions, setNewColOptions] = useState("");
-  const [newColFormula, setNewColFormula] = useState("");
-
-  const [editColModal, setEditColModal] = useState<{
+  } | null > (null);
+  const [editRowData, setEditRowData] =
+  useState < any > ({});
+  
+  const extraCols2026 = (
+    installmentCustomColumns2026 || []
+    ) as InstallmentCustomColumn[];
+  const [newColModal, setNewColModal] =
+  useState(false);
+  const [newColName, setNewColName] =
+  useState("");
+  const [newColType, setNewColType] =
+  useState < "text" | "select" |
+    "formula" > ("text");
+  const [newColOptions,
+    setNewColOptions] = useState("");
+  const [newColFormula,
+    setNewColFormula] = useState("");
+  
+  const [editColModal,
+  setEditColModal] = useState < {
     oldName: string;
     name: string;
-    type: "text" | "select" | "formula";
+    type: "text" | "select" |
+      "formula";
     options: string;
     formula: string;
-  } | null>(null);
-
-  const [condFormatModal, setCondFormatModal] = useState(false);
-  const [condFormatParams, setCondFormatParams] = useState({ text: "", color: "bg-yellow-100" });
-  const condFormatRules = (installmentConditionalRules2026 || []) as Array<{
+  } | null > (null);
+  
+  const [condFormatModal,
+    setCondFormatModal
+  ] = useState(false);
+  const [condFormatParams,
+    setCondFormatParams
+  ] = useState({ text: "",
+    color: "bg-yellow-100" });
+  const condFormatRules = (
+    installmentConditionalRules2026 ||
+    []) as Array < {
     text: string;
     color: string;
-  }>;
-
-  const [newRowModal2026, setNewRowModal2026] = useState(false);
-  const [newRowData2026, setNewRowData2026] = useState({
+  } > ;
+  
+  const [newRowModal2026,
+    setNewRowModal2026
+  ] = useState(false);
+  const [newRowData2026,
+    setNewRowData2026
+  ] = useState({
     name: "",
     batch: "",
     specialty: "",
     prevDue: 0,
     fees: 0,
   });
-
-  const controls2026 = useTableControls(installments || [], [
-    "name",
-    "batch",
-    "specialty",
-    "fees",
-    "prevDue",
-    "totalPaid",
-    "remaining",
-  ]);
-  const controls2025 = useTableControls(installments2025 || [], [
-    "name",
-    "batch",
-    "specialty",
-    "fees",
-    "totalPaid",
-    "remaining",
-  ]);
-
-  const evaluateFormula = (formula: string, row: any) => {
+  
+  const controls2026 = useTableControls(
+    installments || [], [
+      "name",
+      "batch",
+      "specialty",
+      "fees",
+      "prevDue",
+      "totalPaid",
+      "remaining",
+    ]);
+  const controls2025 = useTableControls(
+    installments2025 || [], [
+      "name",
+      "batch",
+      "specialty",
+      "fees",
+      "totalPaid",
+      "remaining",
+    ]);
+  
+  const evaluateFormula = (formula:
+    string, row: any) => {
     if (!formula) return "";
     try {
       let parsedFormula = formula;
-      const variables: Record<string, number> = {
-        fees: cleanNumber(row.fees),
-        prevDue: cleanNumber(row.prevDue),
-        totalPaid: cleanNumber(row.totalPaid),
-        remaining: cleanNumber(row.remaining),
-      };
-
+      const variables: Record <
+        string, number > = {
+          fees: cleanNumber(row.fees),
+          prevDue: cleanNumber(row
+            .prevDue),
+          totalPaid: cleanNumber(row
+            .totalPaid),
+          remaining: cleanNumber(row
+            .remaining),
+        };
+      
       extraCols2026.forEach((col) => {
-        if (col.type !== "formula") {
-          variables[col.name] = cleanNumber(row.customData?.[col.name]);
+        if (col.type !==
+          "formula") {
+          variables[col.name] =
+            cleanNumber(row
+              .customData?.[col
+                .name
+              ]);
         }
       });
-
-      Object.keys(variables).forEach((key) => {
-        const regex = new RegExp(`\\b${key}\\b`, "g");
-        parsedFormula = parsedFormula.replace(regex, variables[key].toString());
+      
+      Object.keys(variables).forEach((
+        key) => {
+        const regex = new RegExp(
+          `\\b${key}\\b`, "g");
+        parsedFormula =
+          parsedFormula.replace(
+            regex, variables[key]
+            .toString());
       });
-
-      const result = new Function(`return ${parsedFormula}`)();
-      return isNaN(result) ? "خطأ" : Number(result).toFixed(2);
+      
+      const result = new Function(
+        `return ${parsedFormula}`)();
+      return isNaN(result) ? "خطأ" :
+        Number(result).toFixed(2);
     } catch (e) {
       return "صيغة غير صالحة";
     }
   };
-
-  const getConditionalRowClass = (row: any) => {
+  
+  const getConditionalRowClass = (row:
+    any) => {
     const searchableValues = [
       row.name,
       row.batch,
@@ -277,303 +361,531 @@ export default function InstallmentsTab() {
       row.fees,
       row.totalPaid,
       row.remaining,
-      ...Object.values(row.payments || {}),
-      ...Object.values(row.customData || {}),
-    ].map((val) => String(val ?? "").toLowerCase());
-
-    const matchedRule = condFormatRules.find((rule) => {
-      const term = rule.text.trim().toLowerCase();
-      return term && searchableValues.some((value) => value.includes(term));
-    });
-
-    return matchedRule?.color || "hover:bg-slate-50/80";
+      ...Object.values(row
+        .payments || {}),
+      ...Object.values(row
+        .customData || {}),
+    ].map((val) => String(val ?? "")
+      .toLowerCase());
+    
+    const matchedRule =
+      condFormatRules.find((rule) => {
+        const term = rule.text
+        .trim().toLowerCase();
+        return term &&
+          searchableValues.some((
+              value) => value
+            .includes(term));
+      });
+    
+    return matchedRule?.color ||
+      "hover:bg-slate-50/80";
   };
-
+  
   const addConditionalRule = () => {
-    if (!condFormatParams.text.trim()) return toast.error("يرجى إدخال نص الشرط");
-    setInstallmentConditionalRules2026([
-      ...condFormatRules,
-      { ...condFormatParams, text: condFormatParams.text.trim() },
-    ]);
-    setCondFormatParams({ text: "", color: "bg-yellow-100" });
-    toast.success("تمت إضافة قاعدة التنسيق");
+    if (!condFormatParams.text.trim())
+      return toast.error(
+        "يرجى إدخال نص الشرط");
+    setInstallmentConditionalRules2026
+      ([
+        ...condFormatRules,
+        { ...condFormatParams,
+          text: condFormatParams
+            .text.trim() },
+      ]);
+    setCondFormatParams({ text: "",
+      color: "bg-yellow-100" });
+    toast.success(
+      "تمت إضافة قاعدة التنسيق");
   };
-
-  const deleteConditionalRule = (index: number) => {
-    setInstallmentConditionalRules2026(condFormatRules.filter((_, i) => i !== index));
+  
+  const deleteConditionalRule = (index:
+    number) => {
+    setInstallmentConditionalRules2026
+      (condFormatRules.filter((_,
+        i) => i !== index));
   };
-
-  const filteredRows2025 = useMemo(() => {
-    let result = controls2025.rows || [];
+  
+  const filteredRows2025 = useMemo(
+() => {
+    let result = controls2025
+      .rows || [];
     if (search2025) {
-      const term = search2025.toLowerCase();
+      const term = search2025
+        .toLowerCase();
       result = result.filter(
         (r: any) =>
-          (r.name && r.name.toLowerCase().includes(term)) ||
-          (r.batch && String(r.batch).toLowerCase().includes(term)) ||
-          (r.specialty && r.specialty.toLowerCase().includes(term)),
+        (r.name && r.name
+          .toLowerCase().includes(
+            term)) ||
+        (r.batch && String(r
+            .batch).toLowerCase()
+          .includes(term)) ||
+        (r.specialty && r
+          .specialty.toLowerCase()
+          .includes(term)),
       );
     }
     if (sortConfig2025) {
-      result = [...result].sort((a: any, b: any) => {
-        let aVal = a[sortConfig2025.key];
-        let bVal = b[sortConfig2025.key];
-        if (["fees", "totalPaid", "remaining"].includes(sortConfig2025.key)) {
-          aVal = cleanNumber(aVal);
-          bVal = cleanNumber(bVal);
+      result = [...result].sort((a:
+        any, b: any) => {
+        let aVal = a[
+          sortConfig2025.key];
+        let bVal = b[
+          sortConfig2025.key];
+        if (["fees",
+            "totalPaid",
+            "remaining"
+          ].includes(
+            sortConfig2025.key
+            )) {
+          aVal = cleanNumber(
+            aVal);
+          bVal = cleanNumber(
+            bVal);
         } else {
-          aVal = aVal ? String(aVal).toLowerCase() : "";
-          bVal = bVal ? String(bVal).toLowerCase() : "";
+          aVal = aVal ? String(
+            aVal)
+          .toLowerCase() : "";
+          bVal = bVal ? String(
+            bVal)
+          .toLowerCase() : "";
         }
-        if (aVal < bVal) return sortConfig2025.direction === "asc" ? -1 : 1;
-        if (aVal > bVal) return sortConfig2025.direction === "asc" ? 1 : -1;
+        if (aVal < bVal)
+        return sortConfig2025
+          .direction ===
+          "asc" ? -1 : 1;
+        if (aVal > bVal)
+        return sortConfig2025
+          .direction ===
+          "asc" ? 1 : -1;
         return 0;
       });
     }
     return result;
-  }, [controls2025.rows, search2025, sortConfig2025]);
-
-  const filteredRows2026 = useMemo(() => {
-    let result = controls2026.rows || [];
+  }, [controls2025.rows, search2025,
+    sortConfig2025
+  ]);
+  
+  const filteredRows2026 = useMemo(
+() => {
+    let result = controls2026
+      .rows || [];
     if (search2026) {
-      const term = search2026.toLowerCase();
+      const term = search2026
+        .toLowerCase();
       result = result.filter(
         (r: any) =>
-          (r.name && r.name.toLowerCase().includes(term)) ||
-          (r.batch && String(r.batch).toLowerCase().includes(term)) ||
-          (r.specialty && r.specialty.toLowerCase().includes(term)) ||
-          (r.customData &&
-            Object.values(r.customData).some((val) => String(val).toLowerCase().includes(term))),
+        (r.name && r.name
+          .toLowerCase().includes(
+            term)) ||
+        (r.batch && String(r
+            .batch).toLowerCase()
+          .includes(term)) ||
+        (r.specialty && r
+          .specialty.toLowerCase()
+          .includes(term)) ||
+        (r.customData &&
+          Object.values(r
+            .customData).some((
+              val) => String(val)
+            .toLowerCase()
+            .includes(term))),
       );
     }
     if (sortConfig2026) {
-      result = [...result].sort((a: any, b: any) => {
-        let aVal = a[sortConfig2026.key];
-        let bVal = b[sortConfig2026.key];
-        if (["prevDue", "fees", "totalPaid", "remaining"].includes(sortConfig2026.key)) {
-          aVal = cleanNumber(aVal);
-          bVal = cleanNumber(bVal);
+      result = [...result].sort((a:
+        any, b: any) => {
+        let aVal = a[
+          sortConfig2026.key];
+        let bVal = b[
+          sortConfig2026.key];
+        if (["prevDue", "fees",
+            "totalPaid",
+            "remaining"
+          ].includes(
+            sortConfig2026.key
+            )) {
+          aVal = cleanNumber(
+            aVal);
+          bVal = cleanNumber(
+            bVal);
         } else {
-          aVal = aVal ? String(aVal).toLowerCase() : "";
-          bVal = bVal ? String(bVal).toLowerCase() : "";
+          aVal = aVal ? String(
+            aVal)
+          .toLowerCase() : "";
+          bVal = bVal ? String(
+            bVal)
+          .toLowerCase() : "";
         }
-        if (aVal < bVal) return sortConfig2026.direction === "asc" ? -1 : 1;
-        if (aVal > bVal) return sortConfig2026.direction === "asc" ? 1 : -1;
+        if (aVal < bVal)
+        return sortConfig2026
+          .direction ===
+          "asc" ? -1 : 1;
+        if (aVal > bVal)
+        return sortConfig2026
+          .direction ===
+          "asc" ? 1 : -1;
         return 0;
       });
     }
     return result;
-  }, [controls2026.rows, search2026, sortConfig2026]);
-
-  const handleSort2025 = (key: string) => {
-    let direction: "asc" | "desc" = "asc";
-    if (sortConfig2025 && sortConfig2025.key === key && sortConfig2025.direction === "asc")
-      direction = "desc";
-    setSortConfig2025({ key, direction });
-  };
-
-  const handleSort2026 = (key: string) => {
-    let direction: "asc" | "desc" = "asc";
-    if (sortConfig2026 && sortConfig2026.key === key && sortConfig2026.direction === "asc")
-      direction = "desc";
-    setSortConfig2026({ key, direction });
-  };
-
+  }, [controls2026.rows, search2026,
+    sortConfig2026
+  ]);
+  
+  const handleSort2025 = (key:
+    string) => {
+      let direction: "asc" | "desc" =
+        "asc";
+      if (sortConfig2025 &&
+        sortConfig2025.key === key &&
+        sortConfig2025.direction ===
+        "asc")
+        direction = "desc";
+      setSortConfig2025({ key,
+          direction });
+    };
+  
+  const handleSort2026 = (key:
+    string) => {
+      let direction: "asc" | "desc" =
+        "asc";
+      if (sortConfig2026 &&
+        sortConfig2026.key === key &&
+        sortConfig2026.direction ===
+        "asc")
+        direction = "desc";
+      setSortConfig2026({ key,
+          direction });
+    };
+  
   const totals2025 = useMemo(
     () => ({
-      fees: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
-      paid: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
-      remaining: (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
-      months: MONTHS_2025.reduce((acc, m) => {
-        acc[m] = (filteredRows2025 || []).reduce((s, r) => s + cleanNumber(r.payments?.[m]), 0);
-        return acc;
-      }, {} as Record<string, number>),
+      fees: (filteredRows2025 || [])
+        .reduce((s, r) => s +
+          cleanNumber(r.fees), 0),
+      paid: (filteredRows2025 || [])
+        .reduce((s, r) => s +
+          cleanNumber(r.totalPaid),
+          0),
+      remaining: (
+          filteredRows2025 || [])
+        .reduce((s, r) => s +
+          cleanNumber(r.remaining),
+          0),
+      months: MONTHS_2025.reduce((
+          acc, m) => {
+          acc[m] = (
+            filteredRows2025 ||
+            []).reduce((s, r) =>
+            s + cleanNumber(r
+              .payments?.[m]), 0
+            );
+          return acc;
+        }, {} as Record < string,
+        number > ),
     }),
     [filteredRows2025],
   );
-
+  
   const totals2026 = useMemo(
     () => ({
-      prevDue: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.prevDue), 0),
-      fees: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.fees), 0),
-      paid: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.totalPaid), 0),
-      remaining: (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.remaining), 0),
-      months: MONTHS_2026.reduce((acc, m) => {
-        acc[m] = (filteredRows2026 || []).reduce((s, r) => s + cleanNumber(r.payments?.[m]), 0);
-        return acc;
-      }, {} as Record<string, number>),
+      prevDue: (filteredRows2026 ||
+          []).reduce((s, r) => s +
+          cleanNumber(r.prevDue), 0
+          ),
+      fees: (filteredRows2026 || [])
+        .reduce((s, r) => s +
+          cleanNumber(r.fees), 0),
+      paid: (filteredRows2026 || [])
+        .reduce((s, r) => s +
+          cleanNumber(r.totalPaid),
+          0),
+      remaining: (
+          filteredRows2026 || [])
+        .reduce((s, r) => s +
+          cleanNumber(r.remaining),
+          0),
+      months: MONTHS_2026.reduce((
+          acc, m) => {
+          acc[m] = (
+            filteredRows2026 ||
+            []).reduce((s, r) =>
+            s + cleanNumber(r
+              .payments?.[m]), 0
+            );
+          return acc;
+        }, {} as Record < string,
+        number > ),
     }),
     [filteredRows2026],
   );
-
+  
   const allNames = useMemo(() => {
-    const n1 = (installments2025 || []).map((s: any) => s.name);
-    const n2 = (installments || []).map((s: any) => s.name);
-    return [...new Set([...n1, ...n2])];
-  }, [installments2025, installments]);
-
-  const handleNameChange = (val: string) => {
-    setNewStudentName(val);
-    setShowSuggestions(val.length > 0);
-    setNameSuggestions(
-      val.length > 0 ? allNames.filter((n) => n.toLowerCase().includes(val.toLowerCase())) : [],
-    );
-  };
-
-  const updateInstallments = (list: any[]) => useStore.setState({ installments: list });
-  const updateInstallments2025 = (list: any[]) => useStore.setState({ installments2025: list });
-
+    const n1 = (installments2025 ||
+      []).map((s: any) => s.name);
+    const n2 = (installments || [])
+      .map((s: any) => s.name);
+    return [...new Set([...n1, ...
+      n2])];
+  }, [installments2025,
+    installments]);
+  
+  const handleNameChange = (val:
+    string) => {
+      setNewStudentName(val);
+      setShowSuggestions(val.length >
+      0);
+      setNameSuggestions(
+        val.length > 0 ? allNames
+        .filter((n) => n.toLowerCase()
+          .includes(val.toLowerCase())
+          ) : [],
+      );
+    };
+  
+  const updateInstallments = (list:
+  any[]) => useStore
+.setState({ installments: list });
+  const updateInstallments2025 = (list:
+    any[]) => useStore
+.setState({ installments2025: list });
+  
   // تصدير ملف Excel مصحح ومكتمل
-  const exportToExcel = (year: number) => {
-    try {
-      const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-      const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
-      const extraCols = year === 2026 ? extraCols2026 : [];
-
-      const headers =
-        year === 2025
-          ? ["#", "اسم المتدرب", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
-          : [
-              "#",
-              "اسم المتدرب",
-              "الدفعة",
-              "المساق",
-              "المتبقي من 2025",
-              "الرسوم",
-              ...monthsList,
-              ...extraCols.map((c) => c.name),
-              "مسدد 2026",
-              "الرصيد المتبقي",
-              "الحالة",
-            ];
-
-      const data = rows.map((row: any, i: number) => {
-        if (year === 2025) {
-          return [
-            i + 1,
-            row.name || "",
-            row.batch || "",
-            row.specialty || "",
-            row.fees || 0,
-            ...monthsList.map((m) => row.payments?.[m] || 0),
-            row.totalPaid || 0,
-            row.remaining || 0,
-          ];
-        } else {
-          const status = row.remaining <= 0 ? "له" : "عليه";
-          return [
-            i + 1,
-            row.name || "",
-            row.batch || "",
-            row.specialty || "",
-            row.prevDue || 0,
-            row.fees || 0,
-            ...monthsList.map((m) => row.payments?.[m] || 0),
-            ...extraCols.map((col) => {
-              if (col.type === "formula") return evaluateFormula(col.formula || "", row);
-              return row.customData?.[col.name] || "";
-            }),
-            row.totalPaid || 0,
-            row.remaining || 0,
-            status,
-          ];
-        }
-      });
-
-      // إضافة صف الإجماليات
-      if (year === 2025) {
-        data.push([
-          "الإجمالي",
-          "",
-          "",
-          "",
-          totals2025.fees,
-          ...monthsList.map((m) => totals2025.months[m] || 0),
-          totals2025.paid,
-          totals2025.remaining,
-        ]);
-      } else {
-        data.push([
-          "الإجمالي",
-          "",
-          "",
-          "",
-          totals2026.prevDue,
-          totals2026.fees,
-          ...monthsList.map((m) => totals2026.months[m] || 0),
-          ...extraCols.map(() => ""),
-          totals2026.paid,
-          totals2026.remaining,
-          "",
-        ]);
-      }
-
-      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, `أقساط ${year}`);
-      XLSX.writeFile(workbook, `جدول_أقساط_${year}.xlsx`);
-      toast.success("تم تصدير ملف Excel بنجاح");
-    } catch (error) {
-      toast.error("حدث خطأ أثناء تصدير ملف Excel");
-    }
-  };
-
-
-const exportToPDF = (year: number) => {
-  try {
-    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-    const rows = year === 2025 ? filteredRows2025 : filteredRows2026;
-    const extraCols = year === 2026 ? extraCols2026 : [];
-    const date = new Date().toLocaleDateString("ar-SA");
-
-    // تجهيز عناوين الأعمدة (نستخدمها لاحقاً للتأكد من توافق صف الإجمالي)
-    const headers =
-      year === 2025
-        ? ["م", "الاسم", "الدفعة", "المساق", "الرسوم", ...monthsList, "المسدد", "المتبقي"]
-        : [
-            "م",
-            "الاسم",
+  const exportToExcel = (year:
+    number) => {
+      try {
+        const monthsList = year ===
+          2025 ? MONTHS_2025 :
+          MONTHS_2026;
+        const rows = year === 2025 ?
+          filteredRows2025 :
+          filteredRows2026;
+        const extraCols = year ===
+          2026 ? extraCols2026 : [];
+        
+        const headers =
+          year === 2025 ?
+          ["#", "اسم المتدرب", "الدفعة",
+            "المساق", "الرسوم", ...
+            monthsList, "المسدد",
+            "المتبقي"
+          ] :
+          [
+            "#",
+            "اسم المتدرب",
             "الدفعة",
             "المساق",
-            "مدور 2025",
+            "المتبقي من 2025",
             "الرسوم",
             ...monthsList,
-            ...extraCols.map((c) => c.name),
-            "المسدد",
-            "المتبقي",
-            "حالة",
+            ...extraCols.map((c) => c
+              .name),
+            "مسدد 2026",
+            "الرصيد المتبقي",
+            "الحالة",
           ];
-
-    // 1. حساب عدد الأعمدة الإجمالي لتحديد حجم الخط المناسب بدقة
-    const fixedColsCount = year === 2025 ? 4 : 5; // عدد الأعمدة الثابتة قبل عمود الرسوم
-    const totalDataCols = headers.length; // استخدمنا الهيدر الفعلي ليعكس أي أعمدة إضافية
-
-    // عرض الصفحة الأفقي الفعّال بعد الهوامش (A4 = 297mm × 210mm)، نترك هامش صغير للأمان
-    const usablePageWidthMm = 287;
-    const minColWidthMm = totalDataCols > 30 ? 6.5 : totalDataCols > 22 ? 7.5 : 9;
-    const nameColWidthMm = Math.max(minColWidthMm * 2.2, 18);
-    const avgColWidthMm = (usablePageWidthMm - nameColWidthMm) / Math.max(1, totalDataCols - 1);
-    const effectiveColWidthMm = Math.min(avgColWidthMm, minColWidthMm * 1.6);
-
-    const fontSizePx = Math.max(5.5, Math.min(10, effectiveColWidthMm * 1.15));
-    const headerFontSizePx = fontSizePx + 0.5;
-
-    const computeCellFontSizeStyle = (text: any, baseFont = fontSizePx) => {
-      const s = String(text ?? "");
-      const len = s.length;
-      const reduceSteps = Math.max(0, Math.ceil(Math.max(0, len - 18) / 12));
-      const reducePx = Math.min(4, reduceSteps * 0.8);
-      const final = Math.max(6, baseFont - reducePx);
-      return `font-size:${final.toFixed(2)}px;line-height:1.05;`;
-    };
-
-    // دالة توليد صفوف البيانات (مع تطبيق لف خفيف أو تصغير الخط للخلايا الطويلة)
-    const generateTableRows = () => {
-      return rows
-        .map((row: any, i: number) => {
+        
+        const data = rows.map((row: any,
+          i: number) => {
           if (year === 2025) {
-            const nameStyle = computeCellFontSizeStyle(row.name);
-            return `
+            return [
+              i + 1,
+              row.name || "",
+              row.batch || "",
+              row.specialty || "",
+              row.fees || 0,
+              ...monthsList.map((
+                  m) => row
+                .payments?.[m] ||
+                0),
+              row.totalPaid || 0,
+              row.remaining || 0,
+            ];
+          } else {
+            const status = row
+              .remaining <= 0 ?
+              "له" : "عليه";
+            return [
+              i + 1,
+              row.name || "",
+              row.batch || "",
+              row.specialty || "",
+              row.prevDue || 0,
+              row.fees || 0,
+              ...monthsList.map((
+                  m) => row
+                .payments?.[m] ||
+                0),
+              ...extraCols.map((
+                col) => {
+                if (col.type ===
+                  "formula")
+                  return evaluateFormula(
+                    col
+                    .formula ||
+                    "", row);
+                return row
+                  .customData?.[
+                    col.name
+                  ] || "";
+              }),
+              row.totalPaid || 0,
+              row.remaining || 0,
+              status,
+            ];
+          }
+        });
+        
+        // إضافة صف الإجماليات
+        if (year === 2025) {
+          data.push([
+            "الإجمالي",
+            "",
+            "",
+            "",
+            totals2025.fees,
+            ...monthsList.map((m) =>
+              totals2025.months[
+              m] || 0),
+            totals2025.paid,
+            totals2025.remaining,
+          ]);
+        } else {
+          data.push([
+            "الإجمالي",
+            "",
+            "",
+            "",
+            totals2026.prevDue,
+            totals2026.fees,
+            ...monthsList.map((m) =>
+              totals2026.months[
+              m] || 0),
+            ...extraCols.map(() =>
+              ""),
+            totals2026.paid,
+            totals2026.remaining,
+            "",
+          ]);
+        }
+        
+        const worksheet = XLSX.utils
+          .aoa_to_sheet([headers, ...
+            data
+          ]);
+        const workbook = XLSX.utils
+          .book_new();
+        XLSX.utils.book_append_sheet(
+          workbook, worksheet,
+          `أقساط ${year}`);
+        XLSX.writeFile(workbook,
+          `جدول_أقساط_${year}.xlsx`);
+        toast.success(
+          "تم تصدير ملف Excel بنجاح");
+      } catch (error) {
+        toast.error(
+          "حدث خطأ أثناء تصدير ملف Excel"
+          );
+      }
+    };
+  
+  
+  const exportToPDF = (year:
+  number) => {
+    try {
+      const monthsList = year ===
+        2025 ? MONTHS_2025 :
+        MONTHS_2026;
+      const rows = year === 2025 ?
+        filteredRows2025 :
+        filteredRows2026;
+      const extraCols = year ===
+        2026 ? extraCols2026 : [];
+      const date = new Date()
+        .toLocaleDateString("ar-SA");
+      
+      // تجهيز عناوين الأعمدة (نستخدمها لاحقاً للتأكد من توافق صف الإجمالي)
+      const headers =
+        year === 2025 ?
+        ["م", "الاسم", "الدفعة",
+          "المساق", "الرسوم", ...
+          monthsList, "المسدد",
+          "المتبقي"
+        ] :
+        [
+          "م",
+          "الاسم",
+          "الدفعة",
+          "المساق",
+          "مدور 2025",
+          "الرسوم",
+          ...monthsList,
+          ...extraCols.map((c) => c
+            .name),
+          "المسدد",
+          "المتبقي",
+          "حالة",
+        ];
+      
+      // 1. حساب عدد الأعمدة الإجمالي لتحديد حجم الخط المناسب بدقة
+      const fixedColsCount = year ===
+        2025 ? 4 :
+        5; // عدد الأعمدة الثابتة قبل عمود الرسوم
+      const totalDataCols = headers
+        .length; // استخدمنا الهيدر الفعلي ليعكس أي أعمدة إضافية
+      
+      // عرض الصفحة الأفقي الفعّال بعد الهوامش (A4 = 297mm × 210mm)، نترك هامش صغير للأمان
+      const usablePageWidthMm = 287;
+      const minColWidthMm =
+        totalDataCols > 30 ? 6.5 :
+        totalDataCols > 22 ? 7.5 : 9;
+      const nameColWidthMm = Math.max(
+        minColWidthMm * 2.2, 18);
+      const avgColWidthMm = (
+        usablePageWidthMm -
+        nameColWidthMm) / Math.max(
+        1, totalDataCols - 1);
+      const effectiveColWidthMm = Math
+        .min(avgColWidthMm,
+          minColWidthMm * 1.6);
+      
+      const fontSizePx = Math.max(5.5,
+        Math.min(10,
+          effectiveColWidthMm * 1.15
+          ));
+      const headerFontSizePx =
+        fontSizePx + 0.5;
+      
+      const computeCellFontSizeStyle =
+        (text: any, baseFont =
+          fontSizePx) => {
+          const s = String(text ??
+          "");
+          const len = s.length;
+          const reduceSteps = Math
+            .max(0, Math.ceil(Math
+              .max(0, len - 18) / 12
+              ));
+          const reducePx = Math.min(4,
+            reduceSteps * 0.8);
+          const final = Math.max(6,
+            baseFont - reducePx);
+          return `font-size:${final.toFixed(2)}px;line-height:1.05;`;
+        };
+      
+      // دالة توليد صفوف البيانات (مع تطبيق لف خفيف أو تصغير الخط للخلايا الطويلة)
+      const generateTableRows =
+    () => {
+        return rows
+          .map((row: any, i:
+            number) => {
+              if (year === 2025) {
+                const nameStyle =
+                  computeCellFontSizeStyle(
+                    row.name);
+                return `
               <tr>
                 <td>${i + 1}</td>
                 <td class="name-cell wrap" style="${nameStyle}">${escapeHtml(row.name || "")}</td>
@@ -590,10 +902,14 @@ const exportToPDF = (year: number) => {
                 <td style="${computeCellFontSizeStyle(row.remaining, fontSizePx - 1)}">${fmt(row.remaining)}</td>
               </tr>
             `;
-          } else {
-            const status = row.remaining <= 0 ? "له" : "عليه";
-            const nameStyle = computeCellFontSizeStyle(row.name);
-            return `
+              } else {
+                const status = row
+                  .remaining <= 0 ?
+                  "له" : "عليه";
+                const nameStyle =
+                  computeCellFontSizeStyle(
+                    row.name);
+                return `
               <tr>
                 <td>${i + 1}</td>
                 <td class="name-cell wrap" style="${nameStyle}">${escapeHtml(row.name || "")}</td>
@@ -619,65 +935,104 @@ const exportToPDF = (year: number) => {
                 <td style="background-color: ${status === "عليه" ? "#fecaca" : "#a7f3d0"};">${status}</td>
               </tr>
             `;
-          }
-        })
-        .join("");
-    };
-
-    // دالة توليد صف الإجمالي المتوافق تماماً مع headers (يشمل الأشهر والأعمدة المضافة)
-    const generateTotalRow = () => {
-      // تُحسب الإجماليات من نفس الصفوف المطبوعة لضمان التطابق
-      const sum = (fn: (r: any) => any) =>
-        (rows || []).reduce((s: number, r: any) => s + cleanNumber(fn(r)), 0);
-      const monthTotal = (m: string) => sum((r) => r.payments?.[m]);
-
-      const leftColSpan = year === 2025 ? 4 : 5; // للـ 2026 لدينا عمود إضافي (مدور/المتبقي من 2025)
-      const cellsArr: string[] = [];
-      const push = (v: any, extra = "") =>
-        cellsArr.push(`<td${extra ? ` style="${extra}"` : ""}>${v}</td>`);
-
-      if (year === 2025) {
-        push(fmt(sum((r) => r.fees)));
-        monthsList.forEach((m) => {
-          const t = monthTotal(m);
-          push(t > 0 ? fmt(t) : "—");
-        });
-        push(fmt(sum((r) => r.totalPaid)));
-        push(fmt(sum((r) => r.remaining)));
-      } else {
-        push(fmt(sum((r) => r.prevDue)));
-        push(fmt(sum((r) => r.fees)));
-        monthsList.forEach((m) => {
-          const t = monthTotal(m);
-          push(t > 0 ? fmt(t) : "—");
-        });
-        extraCols.forEach((col) => {
-          if (col.type === "formula") {
-            const t = (rows || []).reduce(
-              (s: number, r: any) => s + cleanNumber(evaluateFormula(col.formula || "", r)),
-              0,
+              }
+            })
+          .join("");
+      };
+      
+      // دالة توليد صف الإجمالي المتوافق تماماً مع headers (يشمل الأشهر والأعمدة المضافة)
+      const generateTotalRow = () => {
+        // تُحسب الإجماليات من نفس الصفوف المطبوعة لضمان التطابق
+        const sum = (fn: (r: any) =>
+            any) =>
+          (rows || []).reduce((s:
+              number, r: any) => s +
+            cleanNumber(fn(r)), 0);
+        const monthTotal = (m:
+          string) => sum((r) => r
+          .payments?.[m]);
+        
+        const leftColSpan = year ===
+          2025 ? 4 :
+          5; // للـ 2026 لدينا عمود إضافي (مدور/المتبقي من 2025)
+        const cellsArr:
+      string[] = [];
+        const push = (v: any,
+            extra = "") =>
+          cellsArr.push(
+            `<td${extra ? ` style="${extra}"` : ""}>${v}</td>`
             );
-            push(t !== 0 ? fmt(t) : "—");
-          } else {
-            push("—");
-          }
-        });
-        push(fmt(sum((r) => r.totalPaid)));
-        push(fmt(sum((r) => r.remaining)));
-        push(""); // عمود الحالة
-      }
-
-      // ضبط عدد الخلايا بدقة ليطابق عدد الرؤوس (يمنع أي انزياح)
-      const needed = headers.length - leftColSpan;
-      while (cellsArr.length < needed) cellsArr.push("<td></td>");
-      if (cellsArr.length > needed) cellsArr.length = needed;
-
-      return `<tr class="total-row"><td colspan="${leftColSpan}">الإجمالي</td>${cellsArr.join("")}</tr>`;
-    };
-
-
-
-    const reportCss = `
+        
+        if (year === 2025) {
+          push(fmt(sum((r) => r
+            .fees)));
+          monthsList.forEach((
+          m) => {
+            const t =
+              monthTotal(m);
+            push(t > 0 ? fmt(
+              t) : "—");
+          });
+          push(fmt(sum((r) => r
+            .totalPaid)));
+          push(fmt(sum((r) => r
+            .remaining)));
+        } else {
+          push(fmt(sum((r) => r
+            .prevDue)));
+          push(fmt(sum((r) => r
+            .fees)));
+          monthsList.forEach((
+          m) => {
+            const t =
+              monthTotal(m);
+            push(t > 0 ? fmt(
+              t) : "—");
+          });
+          extraCols.forEach((
+          col) => {
+            if (col.type ===
+              "formula") {
+              const t = (rows ||
+                []).reduce(
+                (s: number, r:
+                  any) => s +
+                cleanNumber(
+                  evaluateFormula(
+                    col
+                    .formula ||
+                    "", r)),
+                0,
+              );
+              push(t !== 0 ?
+                fmt(t) : "—");
+            } else {
+              push("—");
+            }
+          });
+          push(fmt(sum((r) => r
+            .totalPaid)));
+          push(fmt(sum((r) => r
+            .remaining)));
+          push(""); // عمود الحالة
+        }
+        
+        // ضبط عدد الخلايا بدقة ليطابق عدد الرؤوس (يمنع أي انزياح)
+        const needed = headers
+          .length - leftColSpan;
+        while (cellsArr.length <
+          needed) cellsArr.push(
+          "<td></td>");
+        if (cellsArr.length >
+          needed) cellsArr.length =
+          needed;
+        
+        return `<tr class="total-row"><td colspan="${leftColSpan}">الإجمالي</td>${cellsArr.join("")}</tr>`;
+      };
+      
+      
+      
+      const reportCss = `
       @page { size: A4 landscape; margin: 8mm 6mm; }
       html, body {
         width: 100%;
@@ -698,7 +1053,7 @@ const exportToPDF = (year: number) => {
 
       table {
         font-size: ${fontSizePx.toFixed(2)}px;
-        table-layout: fixed !important;
+        table-layout:auto !important;
         width: 100% !important;
         border-collapse: collapse;
         border: 1pt solid #000;
@@ -738,8 +1093,8 @@ const exportToPDF = (year: number) => {
         .wrap { white-space: normal!important; }
       }
     `;
-
-    const body = `
+      
+      const body = `
       <div class="doc-header">
         <h1>المجلس اليمني للاختصاصات الطبية</h1>
         <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
@@ -757,257 +1112,420 @@ const exportToPDF = (year: number) => {
         </tbody>
       </table>
     `;
-
-    const ok = openPrintDocument({
-      title: `تقرير_الأقساط_والمدفوعات_${year}`,
-      body,
-      css: reportCss,
-      pageSize: "A4",
-      orientation: "landscape",
-      margin: "2mm 2mm",
-    });
-
-    if (ok) {
-      toast.success("تم فتح التقرير — اختر «حفظ كـ PDF» للحصول على ملف عالي الجودة");
-    } else {
-      toast.error("تم منع فتح نافذة الطباعة، يرجى السماح بالنوافذ المنبثقة");
+      
+      const ok = openPrintDocument({
+        title: `تقرير_الأقساط_والمدفوعات_${year}`,
+        body,
+        css: reportCss,
+        pageSize: "A4",
+        orientation: "landscape",
+        margin: "2mm 2mm",
+      });
+      
+      if (ok) {
+        toast.success(
+          "تم فتح التقرير — اختر «حفظ كـ PDF» للحصول على ملف عالي الجودة"
+          );
+      } else {
+        toast.error(
+          "تم منع فتح نافذة الطباعة، يرجى السماح بالنوافذ المنبثقة"
+          );
+      }
+    } catch (error) {
+      toast.error(
+      "فشل إنشاء التقرير");
     }
-  } catch (error) {
-    toast.error("فشل إنشاء التقرير");
-  }
-};
-
+  };
   
-  const saveRowEdit = (e: React.FormEvent) => {
+  
+  const saveRowEdit = (e: React
+    .FormEvent) => {
     e.preventDefault();
     if (!editRowModal) return;
-
+    
     if (editRowModal.year === 2025) {
-      const list = [...(installments2025 || [])];
+      const list = [...(
+        installments2025 || [])];
       const updatedRow = {
         ...editRowData,
-        remaining: Math.max(0, cleanNumber(editRowData.fees) - cleanNumber(editRowData.totalPaid)),
+        remaining: Math.max(0,
+          cleanNumber(editRowData
+            .fees) - cleanNumber(
+            editRowData.totalPaid)
+          ),
       };
-      list[editRowModal.index] = updatedRow;
+      list[editRowModal.index] =
+        updatedRow;
       updateInstallments2025(list);
     } else {
-      const list = [...(installments || [])];
+      const list = [...(
+        installments || [])];
       const updatedRow = {
         ...editRowData,
         remaining: Math.max(
           0,
-          (cleanNumber(editRowData.prevDue) + cleanNumber(editRowData.fees)) - cleanNumber(editRowData.totalPaid),
+          (cleanNumber(editRowData
+              .prevDue) +
+            cleanNumber(
+              editRowData.fees)) -
+          cleanNumber(editRowData
+            .totalPaid),
         ),
       };
-      list[editRowModal.index] = updatedRow;
+      list[editRowModal.index] =
+        updatedRow;
       updateInstallments(list);
     }
-
-    toast.success("تم تحديث البيانات بنجاح");
+    
+    toast.success(
+      "تم تحديث البيانات بنجاح");
     setEditRowModal(null);
   };
-
-  const addCustomColumn = (e: React.FormEvent) => {
+  
+  const addCustomColumn = (e: React
+    .FormEvent) => {
     e.preventDefault();
     if (!newColName.trim()) return;
-    if (extraCols2026.some((c) => c.name === newColName))
-      return toast.error("اسم العمود موجود مسبقاً");
-
+    if (extraCols2026.some((c) => c
+        .name === newColName))
+      return toast.error(
+        "اسم العمود موجود مسبقاً");
+    
     setInstallmentCustomColumns2026([
       ...extraCols2026,
       {
         name: newColName,
         type: newColType,
-        options: newColType === "select" ? newColOptions.split(",").map((s) => s.trim()) : [],
-        formula: newColType === "formula" ? newColFormula : "",
+        options: newColType ===
+          "select" ? newColOptions
+          .split(",").map((s) => s
+            .trim()) : [],
+        formula: newColType ===
+          "formula" ?
+          newColFormula : "",
       },
     ]);
-
-    toast.success(`تم إضافة العمود: ${newColName}`);
+    
+    toast.success(
+      `تم إضافة العمود: ${newColName}`
+      );
     setNewColModal(false);
     setNewColName("");
     setNewColType("text");
     setNewColOptions("");
     setNewColFormula("");
   };
-
-  const saveCustomColumnEdit = (e: React.FormEvent) => {
+  
+  const saveCustomColumnEdit = (e: React
+    .FormEvent) => {
     e.preventDefault();
     if (!editColModal) return;
-
+    
     if (
-      editColModal.name !== editColModal.oldName &&
-      extraCols2026.some((c) => c.name === editColModal.name)
+      editColModal.name !==
+      editColModal.oldName &&
+      extraCols2026.some((c) => c
+        .name === editColModal.name)
     ) {
-      return toast.error("اسم العمود موجود مسبقاً");
+      return toast.error(
+        "اسم العمود موجود مسبقاً");
     }
-
-    const updatedCols = extraCols2026.map((c) => {
-      if (c.name === editColModal.oldName) {
-        return {
-          name: editColModal.name,
-          type: editColModal.type,
-          options:
-            editColModal.type === "select"
-              ? editColModal.options.split(",").map((s) => s.trim())
-              : [],
-          formula: editColModal.type === "formula" ? editColModal.formula : "",
-        };
-      }
-      return c;
-    });
-
-    if (editColModal.oldName !== editColModal.name) {
-      const list = [...(installments || [])];
+    
+    const updatedCols = extraCols2026
+      .map((c) => {
+        if (c.name === editColModal
+          .oldName) {
+          return {
+            name: editColModal.name,
+            type: editColModal.type,
+            options: editColModal
+              .type === "select" ?
+              editColModal.options
+              .split(",").map((s) =>
+                s.trim()) :
+              [],
+            formula: editColModal
+              .type === "formula" ?
+              editColModal.formula :
+              "",
+          };
+        }
+        return c;
+      });
+    
+    if (editColModal.oldName !==
+      editColModal.name) {
+      const list = [...(
+        installments || [])];
       list.forEach((row) => {
-        if (row.customData && row.customData[editColModal.oldName] !== undefined) {
-          row.customData[editColModal.name] = row.customData[editColModal.oldName];
-          delete row.customData[editColModal.oldName];
+        if (row.customData && row
+          .customData[editColModal
+            .oldName] !==
+          undefined) {
+          row.customData[
+              editColModal.name] =
+            row.customData[
+              editColModal.oldName
+              ];
+          delete row.customData[
+            editColModal.oldName
+            ];
         }
       });
       updateInstallments(list);
     }
-
-    setInstallmentCustomColumns2026(updatedCols);
+    
+    setInstallmentCustomColumns2026(
+      updatedCols);
     setEditColModal(null);
-    toast.success("تم تعديل العمود بنجاح");
+    toast.success(
+      "تم تعديل العمود بنجاح");
   };
-
-  const deleteCustomColumn = (colName: string) => {
-    if (!confirm(`هل أنت متأكد من حذف العمود "${colName}"؟`)) return;
-    setInstallmentCustomColumns2026(extraCols2026.filter((c) => c.name !== colName));
+  
+  const deleteCustomColumn = (colName:
+    string) => {
+    if (!confirm(
+        `هل أنت متأكد من حذف العمود "${colName}"؟`
+        )) return;
+    setInstallmentCustomColumns2026(
+      extraCols2026.filter((c) => c
+        .name !== colName));
     setEditColModal(null);
     toast.success("تم حذف العمود");
   };
-
-  const recalculate2026Row = (row: any) => {
-    const payments = { ...(row.payments || {}) };
-    const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
-    return {
-      ...row,
-      payments,
-      totalPaid,
-      remaining: Math.max(0, (cleanNumber(row.prevDue) + cleanNumber(row.fees)) - totalPaid),
+  
+  const recalculate2026Row = (row:
+    any) => {
+      const payments = { ...(row
+          .payments || {}) };
+      const totalPaid = MONTHS_2026
+        .reduce((sum, m) => sum + (
+            Number(payments[m]) || 0),
+          0);
+      return {
+        ...row,
+        payments,
+        totalPaid,
+        remaining: Math.max(0, (
+            cleanNumber(row.prevDue) +
+            cleanNumber(row.fees)) -
+          totalPaid),
+      };
     };
-  };
-
-  const update2026CellValue = (rowIndex: number, key: string, value: string) => {
+  
+  const update2026CellValue = (rowIndex:
+    number, key: string, value: string
+    ) => {
     if (rowIndex < 0) return;
-    const list = [...(installments || [])];
-    const current = { ...list[rowIndex] };
-    const numericKeys = ["prevDue", "fees", "totalPaid", "remaining"];
-    const nextValue: any = numericKeys.includes(key) ? cleanNumber(value) : value;
+    const list = [...(installments ||
+      [])];
+    const current = { ...list[
+        rowIndex] };
+    const numericKeys = ["prevDue",
+      "fees", "totalPaid",
+      "remaining"
+    ];
+    const nextValue: any = numericKeys
+      .includes(key) ? cleanNumber(
+        value) : value;
     list[rowIndex] =
-      (key === "prevDue" || key === "fees")
-        ? recalculate2026Row({ ...current, [key]: nextValue })
-        : { ...current, [key]: nextValue };
+      (key === "prevDue" || key ===
+        "fees") ?
+      recalculate2026Row({ ...current,
+        [key]: nextValue }) :
+      { ...current, [
+      key]: nextValue };
     updateInstallments(list);
   };
-
-  const update2026PaymentValue = (rowIndex: number, month: string, value: string) => {
+  
+  const update2026PaymentValue = (
+    rowIndex: number, month: string,
+    value: string) => {
     if (rowIndex < 0) return;
-    const list = [...(installments || [])];
-    const row = { ...list[rowIndex], payments: { ...(list[rowIndex]?.payments || {}) } };
-    row.payments[month] = cleanNumber(value);
-    list[rowIndex] = recalculate2026Row(row);
+    const list = [...(installments ||
+      [])];
+    const row = { ...list[rowIndex],
+      payments: { ...(list[rowIndex]
+          ?.payments || {}) } };
+    row.payments[month] = cleanNumber(
+      value);
+    list[rowIndex] =
+      recalculate2026Row(row);
     updateInstallments(list);
   };
-
-  const updateCustomColValue = (rowIndex: number, colName: string, value: string) => {
-    const list = [...(installments || [])];
-    const row = { ...list[rowIndex], customData: { ...(list[rowIndex]?.customData || {}) } };
+  
+  const updateCustomColValue = (
+    rowIndex: number, colName: string,
+    value: string) => {
+    const list = [...(installments ||
+      [])];
+    const row = { ...list[rowIndex],
+      customData: { ...(list[
+          rowIndex]?.customData ||
+        {}) } };
     row.customData[colName] = value;
     list[rowIndex] = row;
     updateInstallments(list);
   };
-
-  const deleteRow2026 = (rowIndex: number, name: string) => {
+  
+  const deleteRow2026 = (rowIndex:
+    number, name: string) => {
     if (rowIndex < 0) return;
-    if (!confirm(`هل أنت متأكد من حذف صف المتدرب "${name}" من جدول 2026؟`)) return;
-    updateInstallments((installments || []).filter((_: any, i: number) => i !== rowIndex));
+    if (!confirm(
+        `هل أنت متأكد من حذف صف المتدرب "${name}" من جدول 2026؟`
+        )) return;
+    updateInstallments((
+      installments || []).filter((
+        _: any, i: number) =>
+      i !== rowIndex));
     toast.success("تم حذف الصف");
   };
-
-  const addNewRow2026 = (e: React.FormEvent) => {
+  
+  const addNewRow2026 = (e: React
+    .FormEvent) => {
     e.preventDefault();
-    if (!newRowData2026.name) return toast.error("يرجى إدخال اسم المتدرب");
-
-    const payments = MONTHS_2026.reduce((acc, m) => ({ ...acc, [m]: 0 }), {} as any);
+    if (!newRowData2026.name)
+    return toast.error(
+        "يرجى إدخال اسم المتدرب");
+    
+    const payments = MONTHS_2026
+      .reduce((acc, m) => ({ ...acc, [
+          m
+        ]: 0 }), {} as any);
     const newRec = {
       name: newRowData2026.name,
       batch: newRowData2026.batch,
-      specialty: newRowData2026.specialty,
-      fees: Number(newRowData2026.fees) || 0,
-      prevDue: Number(newRowData2026.prevDue) || 0,
+      specialty: newRowData2026
+        .specialty,
+      fees: Number(newRowData2026
+        .fees) || 0,
+      prevDue: Number(newRowData2026
+        .prevDue) || 0,
       totalPaid: 0,
-      remaining: Number(newRowData2026.prevDue) || 0,
+      remaining: Number(
+          newRowData2026.prevDue) ||
+        0,
       notes: "",
       phone: "",
       payments,
       customData: {},
     };
-
-    updateInstallments([...(installments || []), newRec]);
-    toast.success("تم إضافة الصف بنجاح");
+    
+    updateInstallments([...(
+        installments || []),
+      newRec
+    ]);
+    toast.success(
+      "تم إضافة الصف بنجاح");
     setNewRowModal2026(false);
-    setNewRowData2026({ name: "", batch: "", specialty: "", prevDue: 0, fees: 0 });
+    setNewRowData2026({ name: "",
+      batch: "", specialty: "",
+      prevDue: 0, fees: 0 });
   };
-
-  const addPayment = (e: React.FormEvent) => {
+  
+  const addPayment = (e: React
+    .FormEvent) => {
     e.preventDefault();
-    if (!paymentModal || !payAmount) return toast.error("يرجى إدخال المبلغ");
-    const amount = Number(payAmount) || 0;
-    if (amount <= 0) return toast.error("مبلغ غير صحيح");
-    const list = [...(installments || [])];
+    if (!paymentModal || !payAmount)
+      return toast.error(
+        "يرجى إدخال المبلغ");
+    const amount = Number(
+      payAmount) || 0;
+    if (amount <= 0) return toast
+      .error("مبلغ غير صحيح");
+    const list = [...(installments ||
+      [])];
     const updated = list.map((s) => {
-      if (s.name !== paymentModal.row.name) return s;
+      if (s.name !== paymentModal
+        .row.name) return s;
       const payments = {
         ...s.payments,
-        [paymentModal.month]: (Number(s.payments[paymentModal.month]) || 0) + amount,
+        [paymentModal.month]: (
+            Number(s.payments[
+              paymentModal
+              .month]) || 0) +
+          amount,
       };
-      const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
+      const totalPaid =
+        MONTHS_2026.reduce((sum,
+          m) => sum + (Number(
+          payments[m]) || 0), 0);
       return {
         ...s,
         payments,
         totalPaid,
-        remaining: Math.max(0, (cleanNumber(s.prevDue) + cleanNumber(s.fees)) - totalPaid),
+        remaining: Math.max(0, (
+            cleanNumber(s
+              .prevDue) +
+            cleanNumber(s.fees)
+            ) - totalPaid),
       };
     });
     updateInstallments(updated);
-    toast.success(`تم تسجيل دفعة ${fmt(amount)}`);
+    toast.success(
+      `تم تسجيل دفعة ${fmt(amount)}`
+      );
     setPaymentModal(null);
     setPayAmount("");
   };
-
-  const addNewPayment = (e: React.FormEvent) => {
+  
+  const addNewPayment = (e: React
+    .FormEvent) => {
     e.preventDefault();
-    if (!newStudentName || !newStudentAmount || !newStudentMonth)
-      return toast.error("يرجى إدخال جميع البيانات");
-    const amount = Number(newStudentAmount) || 0;
-    if (amount <= 0) return toast.error("مبلغ غير صحيح");
-    const list = [...(installments || [])];
-    const exist = list.find((s) => s.name === newStudentName);
+    if (!newStudentName || !
+      newStudentAmount || !
+      newStudentMonth)
+      return toast.error(
+        "يرجى إدخال جميع البيانات");
+    const amount = Number(
+      newStudentAmount) || 0;
+    if (amount <= 0) return toast
+      .error("مبلغ غير صحيح");
+    const list = [...(installments ||
+      [])];
+    const exist = list.find((s) => s
+      .name === newStudentName);
     if (exist) {
-      const updated = list.map((s) => {
-        if (s.name !== newStudentName) return s;
+      const updated = list.map((
+      s) => {
+        if (s.name !==
+          newStudentName)
+      return s;
         const payments = {
           ...s.payments,
-          [newStudentMonth]: (Number(s.payments[newStudentMonth]) || 0) + amount,
+          [newStudentMonth]: (
+              Number(s.payments[
+                newStudentMonth
+                ]) || 0) +
+            amount,
         };
-        const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
+        const totalPaid =
+          MONTHS_2026.reduce((sum,
+              m) => sum + (Number(
+              payments[m]) || 0),
+            0);
         return {
           ...s,
           payments,
           totalPaid,
-          remaining: Math.max(0, (cleanNumber(s.prevDue) + cleanNumber(s.fees)) - totalPaid),
+          remaining: Math.max(0, (
+              cleanNumber(s
+                .prevDue) +
+              cleanNumber(s
+                .fees)) -
+            totalPaid),
         };
       });
       updateInstallments(updated);
     } else {
-      const payments = MONTHS_2026.reduce(
-        (acc, m) => ({ ...acc, [m]: m === newStudentMonth ? amount : 0 }),
-        {} as any,
-      );
+      const payments = MONTHS_2026
+        .reduce(
+          (acc, m) => ({ ...acc, [
+            m]: m ===
+              newStudentMonth ?
+              amount :
+              0 }), {} as any,
+        );
       const newRec = {
         name: newStudentName,
         batch: "",
@@ -1015,34 +1533,55 @@ const exportToPDF = (year: number) => {
         fees: 0,
         prevDue: 0,
         totalPaid: amount,
-        remaining: Math.max(0, 0 - amount),
+        remaining: Math.max(0, 0 -
+          amount),
         notes: "",
         phone: "",
         payments,
       };
-      updateInstallments([...list, newRec]);
+      updateInstallments([...list,
+        newRec
+      ]);
     }
-    toast.success(`تم إضافة دفعة ${fmt(amount)}`);
+    toast.success(
+      `تم إضافة دفعة ${fmt(amount)}`
+      );
     setNewPaymentModal(false);
     setNewStudentName("");
     setNewStudentAmount("");
     setNewStudentMonth("");
   };
-
-  const editPayment = (e: React.FormEvent) => {
+  
+  const editPayment = (e: React
+    .FormEvent) => {
     e.preventDefault();
-    if (!editPaymentModal || !editAmount) return;
-    const newAmount = Number(editAmount) || 0;
-    const list = [...(installments || [])];
+    if (!editPaymentModal || !
+      editAmount) return;
+    const newAmount = Number(
+      editAmount) || 0;
+    const list = [...(installments ||
+      [])];
     const updated = list.map((s) => {
-      if (s.name !== editPaymentModal.row.name) return s;
-      const payments = { ...s.payments, [editPaymentModal.month]: newAmount };
-      const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
+      if (s.name !==
+        editPaymentModal.row.name)
+        return s;
+      const payments = { ...s
+        .payments, [
+          editPaymentModal.month
+        ]: newAmount };
+      const totalPaid =
+        MONTHS_2026.reduce((sum,
+          m) => sum + (Number(
+          payments[m]) || 0), 0);
       return {
         ...s,
         payments,
         totalPaid,
-        remaining: Math.max(0, (cleanNumber(s.prevDue) + cleanNumber(s.fees)) - totalPaid),
+        remaining: Math.max(0, (
+            cleanNumber(s
+              .prevDue) +
+            cleanNumber(s.fees)
+            ) - totalPaid),
       };
     });
     updateInstallments(updated);
@@ -1050,127 +1589,248 @@ const exportToPDF = (year: number) => {
     setEditPaymentModal(null);
     setEditAmount("");
   };
-
-  const deletePayment = (row: any, month: string) => {
-    if (!confirm(`حذف قسط شهر ${month}؟`)) return;
-    const list = [...(installments || [])];
+  
+  const deletePayment = (row: any,
+    month: string) => {
+    if (!confirm(
+        `حذف قسط شهر ${month}؟`))
+      return;
+    const list = [...(installments ||
+      [])];
     const updated = list.map((s) => {
-      if (s.name !== row.name) return s;
-      const payments = { ...s.payments, [month]: 0 };
-      const totalPaid = MONTHS_2026.reduce((sum, m) => sum + (Number(payments[m]) || 0), 0);
+      if (s.name !== row.name)
+        return s;
+      const payments = { ...s
+        .payments, [month]: 0 };
+      const totalPaid =
+        MONTHS_2026.reduce((sum,
+          m) => sum + (Number(
+          payments[m]) || 0), 0);
       return {
         ...s,
         payments,
         totalPaid,
-        remaining: Math.max(0, (cleanNumber(s.prevDue) + cleanNumber(s.fees)) - totalPaid),
+        remaining: Math.max(0, (
+            cleanNumber(s
+              .prevDue) +
+            cleanNumber(s.fees)
+            ) - totalPaid),
       };
     });
     updateInstallments(updated);
-    toast.success(`تم حذف قسط شهر ${month}`);
-    if (editPaymentModal) setEditPaymentModal(null);
+    toast.success(
+      `تم حذف قسط شهر ${month}`);
+    if (editPaymentModal)
+      setEditPaymentModal(null);
   };
-
-  const importFile = (e: React.ChangeEvent<HTMLInputElement>, year: 2025 | 2026) => {
+  
+  const importFile = (e: React
+    .ChangeEvent < HTMLInputElement >
+    , year: 2025 | 2026) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(worksheet) as any[];
-
-        const formattedData = json.map((row: any) => {
-          const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-          const payments: any = {};
-          let totalPaid = 0;
-
-          monthsList.forEach((m) => {
-            const cleanTarget = m.trim();
-            const foundKey = Object.keys(row).find((k) => k.trim() === cleanTarget || k === m);
-            const amount = foundKey ? cleanNumber(row[foundKey]) : 0;
-            payments[m] = amount;
-            totalPaid += amount;
+        const data = new Uint8Array(
+          evt.target
+          ?.result as ArrayBuffer);
+        const workbook = XLSX.read(
+          data, { type: "array" });
+        const worksheet = workbook
+          .Sheets[workbook
+            .SheetNames[0]];
+        const json = XLSX.utils
+          .sheet_to_json(
+          worksheet) as any[];
+        
+        const formattedData = json
+          .map((row: any) => {
+            const monthsList =
+              year === 2025 ?
+              MONTHS_2025 :
+              MONTHS_2026;
+            const payments:
+            any = {};
+            let totalPaid = 0;
+            
+            monthsList.forEach((
+              m) => {
+                const
+                  cleanTarget =
+                  m.trim();
+                const foundKey =
+                  Object.keys(
+                    row).find((
+                      k) => k
+                    .trim() ===
+                    cleanTarget ||
+                    k === m);
+                const amount =
+                  foundKey ?
+                  cleanNumber(
+                    row[
+                      foundKey]
+                    ) : 0;
+                payments[m] =
+                  amount;
+                totalPaid +=
+                  amount;
+              });
+            
+            const nameKey = Object
+              .keys(row).find((
+                k) => k.includes(
+                  "اسم المتدرب")
+                ) || "name";
+            const batchKey =
+              Object.keys(row)
+              .find((k) => k
+                .includes(
+                  "رقم الدفعة")
+                ) || "batch";
+            const specialtyKey =
+              Object.keys(row)
+              .find((k) => k
+                .includes(
+                  "المساق")) ||
+              "specialty";
+            const feesKey = Object
+              .keys(row).find((
+                k) => k.includes(
+                  "مبلغ الرسوم")
+                ) || "fees";
+            const prevDueKey =
+              Object.keys(row)
+              .find((k) => k
+                .includes(
+                  "المتبقي عليهم من العام 2025"
+                  )) || "prevDue";
+            const remainingKey =
+              Object.keys(row)
+              .find((k) => k
+                .trim() ===
+                "المتبقي") ||
+              "remaining";
+            const notesKey =
+              Object.keys(row)
+              .find((k) => k
+                .includes(
+                  "ملاحظات")) ||
+              "notes";
+            const phoneKey =
+              Object.keys(row)
+              .find((k) => k
+                .includes(
+                  "رقم الهاتف")
+                ) || "phone";
+            
+            return {
+              name: row[
+                nameKey] ||
+                "بدون اسم",
+              batch: row[
+                batchKey] || "",
+              specialty: row[
+                  specialtyKey] ||
+                "",
+              fees: cleanNumber(
+                row[feesKey]),
+              prevDue: cleanNumber(
+                  row[prevDueKey]
+                  ),
+              totalPaid: row[
+                  "الإجمالي"] ?
+                cleanNumber(row[
+                  "الإجمالي"]) :
+                totalPaid,
+              remaining: cleanNumber(
+                  row[
+                    remainingKey]
+                  ),
+              notes: row[
+                notesKey] || "",
+              phone: row[
+                phoneKey] || "",
+              payments,
+              customData: {},
+            };
           });
-
-          const nameKey = Object.keys(row).find((k) => k.includes("اسم المتدرب")) || "name";
-          const batchKey = Object.keys(row).find((k) => k.includes("رقم الدفعة")) || "batch";
-          const specialtyKey = Object.keys(row).find((k) => k.includes("المساق")) || "specialty";
-          const feesKey = Object.keys(row).find((k) => k.includes("مبلغ الرسوم")) || "fees";
-          const prevDueKey =
-            Object.keys(row).find((k) => k.includes("المتبقي عليهم من العام 2025")) || "prevDue";
-          const remainingKey = Object.keys(row).find((k) => k.trim() === "المتبقي") || "remaining";
-          const notesKey = Object.keys(row).find((k) => k.includes("ملاحظات")) || "notes";
-          const phoneKey = Object.keys(row).find((k) => k.includes("رقم الهاتف")) || "phone";
-
-          return {
-            name: row[nameKey] || "بدون اسم",
-            batch: row[batchKey] || "",
-            specialty: row[specialtyKey] || "",
-            fees: cleanNumber(row[feesKey]),
-            prevDue: cleanNumber(row[prevDueKey]),
-            totalPaid: row["الإجمالي"] ? cleanNumber(row["الإجمالي"]) : totalPaid,
-            remaining: cleanNumber(row[remainingKey]),
-            notes: row[notesKey] || "",
-            phone: row[phoneKey] || "",
-            payments,
-            customData: {},
-          };
-        });
-
+        
         if (year === 2025) {
-          useStore.setState({ installments2025: formattedData });
+          useStore
+        .setState({ installments2025: formattedData });
         } else {
-          useStore.setState({ installments: formattedData });
+          useStore
+        .setState({ installments: formattedData });
         }
-
-        toast.success(`تم استيراد بيانات العام ${year} بنجاح!`);
+        
+        toast.success(
+          `تم استيراد بيانات العام ${year} بنجاح!`
+          );
         setImportError(null);
       } catch (error) {
-        setImportError("حدث خطأ في قراءة الملف.");
-        toast.error("فشل استيراد الملف");
+        setImportError(
+          "حدث خطأ في قراءة الملف."
+          );
+        toast.error(
+          "فشل استيراد الملف");
       }
     };
     reader.readAsArrayBuffer(file);
   };
-
+  
   const getStatusText = (rem: number) =>
-    rem <= 0
-      ? { text: "له", color: "text-emerald-800", bg: "bg-emerald-50" }
-      : { text: "عليه", color: "text-rose-800", bg: "bg-rose-50" };
-
-    // تم تعديل هذه الدالة لتتوافق بشكل أفضل مع صيغة حفظ PDF واللغة العربية
-  const generateAccountStatement = (row: any, year: number) => {
+    rem <= 0 ?
+    { text: "له",
+      color: "text-emerald-800",
+      bg: "bg-emerald-50" } :
+    { text: "عليه",
+      color: "text-rose-800",
+      bg: "bg-rose-50" };
+  
+  // تم تعديل هذه الدالة لتتوافق بشكل أفضل مع صيغة حفظ PDF واللغة العربية
+  const generateAccountStatement = (row:
+    any, year: number) => {
     // 1. تحديد قائمة الأشهر بناءً على السنة المختارة
-    const monthsList = year === 2025 ? MONTHS_2025 : MONTHS_2026;
-
+    const monthsList = year === 2025 ?
+      MONTHS_2025 : MONTHS_2026;
+    
     // 2. تنظيف وتحويل الرسوم والمستحقات السابقة إلى أرقام صحيحة
-    const fees = cleanNumber(row?.fees);
-    const prevDue = cleanNumber(row?.prevDue);
-
+    const fees = cleanNumber(row
+      ?.fees);
+    const prevDue = cleanNumber(row
+      ?.prevDue);
+    
     // 3. حساب إجمالي المدفوعات عبر المرور على قائمة الأشهر
-    const totalPaid = monthsList.reduce((sum, month) => {
-      const payment = Number(row?.payments?.[month]) || 0;
-      return sum + payment;
-    }, 0);
-
+    const totalPaid = monthsList
+      .reduce((sum, month) => {
+        const payment = Number(row
+            ?.payments?.[month]) ||
+          0;
+        return sum + payment;
+      }, 0);
+    
     // 4. حساب إجمالي المستحق:
     // إذا كانت السنة 2026 يتم إضافة المتبقي السابق إلى الرسوم الحالية، وإلا تُحسب الرسوم فقط.
-    const dueTotal = year === 2026 ? prevDue + 0 : fees;
-
+    const dueTotal = year === 2026 ?
+      prevDue + 0 : fees;
+    
     // 5. حساب المبلغ المتبقي
-    const remaining = dueTotal - totalPaid;
-
+    const remaining = dueTotal -
+      totalPaid;
+    
     // ✅ تمت إزالة الـ return المبكر الذي كان يقطع تنفيذ باقي الدالة
     // (كان يُرجع {fees, prevDue, totalPaid, dueTotal, remaining} بدل {title, body, css})
-
+    
     // استخراج اسم آمن ليستخدمه المتصفح كاسم افتراضي عند الحفظ PDF
-    const safeName = safePdfFileName(row.name);
-
+    const safeName = safePdfFileName(
+      row.name);
+    
     const paidRows = monthsList
       .map((m) => {
-        const amount = Number(row.payments?.[m]) || 0;
+        const amount = Number(row
+          .payments?.[m]) || 0;
         if (amount <= 0) return "";
         return `
           <tr>
@@ -1179,28 +1839,29 @@ const exportToPDF = (year: number) => {
           </tr>`;
       })
       .join("");
-
-    const infoCard = (label: string, value: string) =>
+    
+    const infoCard = (label: string,
+        value: string) =>
       `<div class="info-box">
         <div class="info-lbl">${escapeHtml(label)}</div>
         <div class="info-val">${escapeHtml(value || "—")}</div>
       </div>`;
-
+    
     const prevRow =
-      year === 2026
-        ? `<tr class="row-due-old">
+      year === 2026 ?
+      `<tr class="row-due-old">
           <td class="lbl">متبقي من العام 2025 (مدور)</td>
           <td class="num">${escapeHtml(fmt(prevDue))}</td>
-        </tr>`
-        : "";
-
+        </tr>` :
+      "";
+    
     const remainingLabel =
-      remaining > 0
-        ? "الرصيد المتبقي (عليه)"
-        : remaining < 0
-          ? "الرصيد الإضافي (له)"
-          : "الحالة: تم السداد بالكامل";
-
+      remaining > 0 ?
+      "الرصيد المتبقي (عليه)" :
+      remaining < 0 ?
+      "الرصيد الإضافي (له)" :
+      "الحالة: تم السداد بالكامل";
+    
     const statementCss = `
       body { padding: 4mm; font-size: 13px; }
       .header {
@@ -1236,7 +1897,7 @@ const exportToPDF = (year: number) => {
       .row-final td { background: #fee2e2; font-size: 16px; font-weight: 800; color: #b91c1c; border-top: 1pt solid #b91c1c; }
       .foot { margin-top: 14px; display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 600; }
     `;
-
+    
     const body = `
       <div class="container">
         <div class="header">
@@ -1271,19 +1932,22 @@ const exportToPDF = (year: number) => {
         </div>
       </div>
     `;
-
+    
     return {
       title: `كشف_حساب_${safeName}_${year}`,
       body,
       css: statementCss,
     };
   };
-
-
-
+  
+  
+  
   // فتح كشف الحساب في نافذة طباعة عالية الجودة (يمكن حفظه كـ PDF)
-  const handleExportPdf = async (row: any, year: number) => {
-    const { title, body, css } = generateAccountStatement(row, year);
+  const handleExportPdf = async (row:
+    any, year: number) => {
+    const { title, body, css } =
+    generateAccountStatement(row,
+      year);
     const ok = openPrintDocument({
       title,
       body,
@@ -1293,60 +1957,65 @@ const exportToPDF = (year: number) => {
       margin: "8mm",
     });
     if (ok) {
-      toast.success("اختر «حفظ كـ PDF» من نافذة الطباعة للحصول على ملف واضح");
+      toast.success(
+        "اختر «حفظ كـ PDF» من نافذة الطباعة للحصول على ملف واضح"
+        );
     } else {
-      toast.error("تم منع فتح نافذة الطباعة، يرجى السماح بالنوافذ المنبثقة");
+      toast.error(
+        "تم منع فتح نافذة الطباعة، يرجى السماح بالنوافذ المنبثقة"
+        );
     }
   };
-
+  
   // وظيفة الطباعة
-  const printStatement = (row: any, year: number) => {
+  const printStatement = (row: any,
+    year: number) => {
     void handleExportPdf(row, year);
   };
-
-
+  
+  
   const stats2025 = [
-    {
-      label: "إجمالي الرسوم التقديرية",
-      value: fmt(totals2025.fees),
-      bgClass: "bg-slate-50",
-      borderClass: "border-slate-200",
-    },
-    {
-      label: "إجمالي الأقساط المسددة",
-      value: fmt(totals2025.paid),
-      bgClass: "bg-emerald-50",
-      borderClass: "border-emerald-200",
-    },
-    {
-      label: "إجمالي المتبقي والأرشيف",
-      value: fmt(totals2025.remaining),
-      bgClass: "bg-rose-50",
-      borderClass: "border-rose-200",
-    },
-  ];
-
+  {
+    label: "إجمالي الرسوم التقديرية",
+    value: fmt(totals2025.fees),
+    bgClass: "bg-slate-50",
+    borderClass: "border-slate-200",
+  },
+  {
+    label: "إجمالي الأقساط المسددة",
+    value: fmt(totals2025.paid),
+    bgClass: "bg-emerald-50",
+    borderClass: "border-emerald-200",
+  },
+  {
+    label: "إجمالي المتبقي والأرشيف",
+    value: fmt(totals2025
+      .remaining),
+    bgClass: "bg-rose-50",
+    borderClass: "border-rose-200",
+  }, ];
+  
   const stats2026 = [
-    {
-      label: "المدور (متبقي 2025)",
-      value: fmt(totals2026.prevDue),
-      bgClass: "bg-amber-50",
-      borderClass: "border-amber-200",
-    },
-    {
-      label: "إجمالي مسدد 2026",
-      value: fmt(totals2026.paid),
-      bgClass: "bg-emerald-50",
-      borderClass: "border-emerald-200",
-    },
-    {
-      label: "صافي رصيد المتبقي",
-      value: fmt(totals2026.remaining),
-      bgClass: "bg-rose-50",
-      borderClass: "border-rose-200",
-    },
-  ];
-
+  {
+    label: "المدور (متبقي 2025)",
+    value: fmt(totals2026.prevDue),
+    bgClass: "bg-amber-50",
+    borderClass: "border-amber-200",
+  },
+  {
+    label: "إجمالي مسدد 2026",
+    value: fmt(totals2026.paid),
+    bgClass: "bg-emerald-50",
+    borderClass: "border-emerald-200",
+  },
+  {
+    label: "صافي رصيد المتبقي",
+    value: fmt(totals2026
+      .remaining),
+    bgClass: "bg-rose-50",
+    borderClass: "border-rose-200",
+  }, ];
+  
   return (
     <div className="w-full space-y-4 sm:space-y-6 p-0" dir="rtl">
       {/* ========== واجهة جدول 2025 ========== */}
