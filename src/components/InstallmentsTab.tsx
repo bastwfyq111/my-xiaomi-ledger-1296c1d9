@@ -713,9 +713,7 @@ const exportToPDF = (year: number) => {
         line-height: 1.25;
       }
       .wrap {
-        white-space: normal !important;
-        word-break: break-word;
-        overflow-wrap: anywhere;
+        white-space: nowrap !important;
         padding: 0px 0px !important;
       }
       td { font-weight: 1000; }
@@ -737,7 +735,7 @@ const exportToPDF = (year: number) => {
       @media print {
         th, td { white-space: nowrap; padding: 0 !important; }
         tr { page-break-inside: avoid; }
-        .wrap { white-space: normal !important; }
+        .wrap { white-space: nowrap !important; }
       }
     `;
 
@@ -1728,7 +1726,7 @@ const exportToPDF = (year: number) => {
                     </div>
                   </th>
                   <th
-                    className="p-2 text-center whitespace-normal cursor-pointer hover:brightness-95"
+                    className="p-2 text-center cursor-pointer hover:brightness-95"
                     onClick={() => handleSort2026("batch")}
                   >
                     <div className="flex items-center justify-center gap-1">
