@@ -712,7 +712,7 @@ const filteredWithBalance = useMemo(() => {
                   {COLS.map((c) => (
                     <th
                       key={c.key}
-                      className="p-2 border border-black whitespace-normal break-words min-w-[80px] cursor-pointer hover:bg-slate-200 transition-colors select-none sticky top-0 z-20 bg-slate-100"
+                      className="p-2 border border-black min-w-[80px] cursor-pointer hover:bg-slate-200 transition-colors select-none sticky top-0 z-20 bg-slate-100"
                       onClick={() => toggleSort(c.key)}
                     >
                       <div className="flex items-center justify-center gap-1.5">
@@ -759,31 +759,31 @@ const filteredWithBalance = useMemo(() => {
                       <td className="p-2 border border-black text-center font-mono bg-slate-50/50">
                         {index + 1}
                       </td>
-                      <td className="p-2 border border-black whitespace-normal break-words font-mono min-w-[85px] text-center">
+                      <td className="p-2 border border-black font-mono min-w-[85px] text-center">
                         {acc.date}
                       </td>
-                      <td className="p-2 border border-black whitespace-normal break-words font-mono font-bold text-center">
+                      <td className="p-2 border border-black font-mono font-bold text-center">
                         {acc.hafizaNo || "—"}
                       </td>
-                      <td className="p-2 border border-black whitespace-normal break-words font-mono text-center">
+                      <td className="p-2 border border-black font-mono text-center">
                         {acc.notifyNo || "—"}
                       </td>
-                      <td className="p-2 border border-black whitespace-normal break-words font-mono min-w-[85px] text-center">
+                      <td className="p-2 border border-black font-mono min-w-[85px] text-center">
                         {acc.notifyDate || "—"}
                       </td>
-                      <td className="p-2 border border-black whitespace-normal break-words font-mono text-center">
+                      <td className="p-2 border border-black font-mono text-center">
                         {acc.checkNo || "—"}
                       </td>
-                      <td className="p-2 border border-black whitespace-normal break-words font-mono min-w-[85px] text-center">
+                      <td className="p-2 border border-black font-mono min-w-[85px] text-center">
                         {acc.checkDate || "—"}
                       </td>
-                      <td className="p-2 border border-black whitespace-normal break-words min-w-[140px] text-slate-800">
+                      <td className="p-2 border border-black min-w-[140px] text-slate-800">
                         {acc.description || "—"}
                       </td>
-                      <td className="p-2 border border-black whitespace-normal break-words min-w-[100px]">
+                      <td className="p-2 border border-black min-w-[100px]">
                         {acc.specialty || "—"}
                       </td>
-                      <td className="p-2 border border-black whitespace-normal break-words font-bold min-w-[120px]">
+                      <td className="p-2 border border-black font-bold min-w-[120px]">
                         {acc.name || "—"}
                       </td>
                       <td className="p-2 border border-black font-mono text-center">
