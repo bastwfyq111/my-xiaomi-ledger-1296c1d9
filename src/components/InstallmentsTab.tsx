@@ -1057,6 +1057,9 @@ export default function InstallmentsTab() {
         width: auto !important;
         border-collapse: collapse;
         border: 1pt solid #000;
+        white-space: nowrap;
+  font-size: clamp(10px, 4cqw, 16px); /* يتدرج حجم الخط بين 10px و 16px حسب حجم الخلية */
+        
       }
       th, td {
         padding: 0 !important;
