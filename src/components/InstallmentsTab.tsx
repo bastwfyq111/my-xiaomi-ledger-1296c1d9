@@ -753,11 +753,9 @@ const exportToPDF = (year: number) => {
             ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
           </tr>
         </thead>
-        <tfoot>
-          ${generateTotalRow()}
-        </tfoot>
         <tbody>
           ${generateTableRows()}
+          ${generateTotalRow()}
         </tbody>
       </table>
     `;
