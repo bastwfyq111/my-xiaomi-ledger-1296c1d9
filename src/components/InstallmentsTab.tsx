@@ -1393,7 +1393,7 @@ const exportToPDF = (year: number) => {
                 onClick={() => exportToPDF(2025)}
                 className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-bold shadow hover:bg-red-200 transition-colors flex items-center gap-1"
               >
-                <FileText className="w-3.5 h-3.5" /> PDF
+                <FileText className="w-3.5 h-3.5" /> الأقساط/تفصيلي
               </button>
             </div>
 
@@ -1411,6 +1411,7 @@ const exportToPDF = (year: number) => {
               fileName="اقساط-2025"
               numericKeys={["fees", "totalPaid", "remaining"]}
               onClear={() => clearInstallments("2025")}
+              printLabel="الأقساط/إجمالي"
             />
           </div>
         </div>
@@ -1679,7 +1680,7 @@ const exportToPDF = (year: number) => {
                 onClick={() => exportToPDF(2026)}
                 className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-bold shadow hover:bg-red-200 transition-colors flex items-center gap-1"
               >
-                <FileText className="w-3.5 h-3.5" /> PDF
+                <FileText className="w-3.5 h-3.5" /> الأقساط/تفصيلي
               </button>
             </div>
 
@@ -1706,6 +1707,7 @@ const exportToPDF = (year: number) => {
               fileName="اقساط-2026"
               numericKeys={["prevDue", "fees", "totalPaid", "remaining"]}
               onClear={() => clearInstallments()}
+              printLabel="الأقساط/إجمالي"
             />
           </div>
         </div>
