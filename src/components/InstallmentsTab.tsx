@@ -631,7 +631,7 @@ const exportToPDF = (year: number) => {
         (rows || []).reduce((s: number, r: any) => s + cleanNumber(fn(r)), 0);
       const monthTotal = (m: string) => sum((r) => r.payments?.[m]);
 
-      const leftColSpan = 4; // م + الاسم + الدفعة + المساق
+      const leftColSpan = year === 2025 ? 4 : 5; // للـ 2026 لدينا عمود إضافي (مدور/المتبقي من 2025)
       const cellsArr: string[] = [];
       const push = (v: any, extra = "") =>
         cellsArr.push(`<td${extra ? ` style="${extra}"` : ""}>${v}</td>`);
