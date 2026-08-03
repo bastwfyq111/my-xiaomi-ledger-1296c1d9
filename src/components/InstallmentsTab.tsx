@@ -626,32 +626,43 @@ const exportToPDF = (year: number) => {
 
     // دالة توليد صف الإجمالي المتوافق تماماً مع headers (يشمل الأشهر والأعمدة المضافة)
     const generateTotalRow = () => {
+      // الأعمدة المدموجة: م + الاسم + الدفعة + المساق (4 في كلا العامين)
+      const leftColSpan = 4;
+      let cells = "";
+      let cellCount = leftColSpan;
+
+      const push = (html: string) => {
+        cells += html;
+        cellCount += 1;
+      };
+
       if (year === 2025) {
-        // ندمج أول 4 أعمدة لعرض "الإجمالي" ثم نضع القيم المتسلسلة لباقي الأعمدة
-        const leftColSpan = 4;
-        const feesCell = `<td>${fmt(totals2025.fees)}</td>`;
-        const monthsCells = monthsList
-          .map((m) => `<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`)
-          .join("");
-        const paidCell = `<td>${fmt(totals2025.paid)}</td>`;
-        const remainingCell = `<td>${fmt(totals2025.remaining)}</td>`;
-        return `<tr class="total-row"><td colspan="${leftColSpan}">الإجمالي</td>${feesCell}${monthsCells}${paidCell}${remainingCell}</tr>`;
+        push(`<td>${fmt(totals2025.fees)}</td>`);
+        monthsList.forEach((m) =>
+          push(`<td>${totals2025.months[m] > 0 ? fmt(totals2025.months[m]) : "—"}</td>`)
+        );
+        push(`<td>${fmt(totals2025.paid)}</td>`);
+        push(`<td>${fmt(totals2025.remaining)}</td>`);
       } else {
-        // ندمج أول 5 أعمدة لعرض "الإجمالي" ثم نضع القيم لباقي الأعمدة بما في ذلك الأعمدة الإضافية كعناصر مكانية
-        const leftColSpan = 5;
-        const prevDueCell = `<td>${fmt(totals2026.prevDue)}</td>`;
-        const feesCell = `<td>${fmt(totals2026.fees)}</td>`;
-        const monthsCells = monthsList
-          .map((m) => `<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`)
-          .join("");
-        const extraColsPlaceholders = extraCols.map(() => `<td>—</td>`).join("");
-        const paidCell = `<td>${fmt(totals2026.paid)}</td>`;
-        const remainingCell = `<td>${fmt(totals2026.remaining)}</td>`;
-        // أخيراً عمود الحالة (قد نتركه فارغاً)
-        const statusCell = `<td></td>`;
-        return `<tr class="total-row"><td colspan="${leftColSpan}">الإجمالي</td>${prevDueCell}${feesCell}${monthsCells}${extraColsPlaceholders}${paidCell}${remainingCell}${statusCell}</tr>`;
+        push(`<td>${fmt(totals2026.prevDue)}</td>`);
+        push(`<td>${fmt(totals2026.fees)}</td>`);
+        monthsList.forEach((m) =>
+          push(`<td>${totals2026.months[m] > 0 ? fmt(totals2026.months[m]) : "—"}</td>`)
+        );
+        extraCols.forEach(() => push(`<td>—</td>`));
+        push(`<td>${fmt(totals2026.paid)}</td>`);
+        push(`<td>${fmt(totals2026.remaining)}</td>`);
+        push(`<td></td>`); // عمود الحالة
       }
+
+      // ضمان تطابق عدد الخلايا مع عدد الرؤوس (يمنع انزياح الأعمدة)
+      while (cellCount < headers.length) {
+        push(`<td></td>`);
+      }
+
+      return `<tr class="total-row"><td colspan="${leftColSpan}">الإجمالي</td>${cells}</tr>`;
     };
+
 
     const reportCss = `
       @page { size: A4 landscape; margin: 8mm 6mm; }
