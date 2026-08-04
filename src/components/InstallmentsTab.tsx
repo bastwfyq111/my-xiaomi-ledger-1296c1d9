@@ -851,10 +851,11 @@ export default function InstallmentsTab() {
         .min(avgColWidthMm,
           minColWidthMm * 1.6);
       
-      const fontSizePx = Math.max(5.5,
-        Math.min(10,
-          effectiveColWidthMm * 1.15
+      const fontSizePx = Math.max(8,
+        Math.min(13,
+          effectiveColWidthMm * 1.6
           ));
+
       const headerFontSizePx =
         fontSizePx + 0.5;
       
@@ -1052,25 +1053,26 @@ export default function InstallmentsTab() {
       .doc-header h1 { font-size: 15px; font-weight: 800; margin: 0; }
       .doc-header p { margin: 2px 0 0; font-size: 9.5px; font-weight: 600; }
 
-      .table-wrap { width: 100%; display: flex; justify-content: center; transform-origin: top center; }
+      .table-wrap { width: 100%; transform-origin: top center; }
       table {
         font-size: ${fontSizePx.toFixed(2)}px;
         table-layout: auto !important;
-        width: auto !important;
+        width: 100% !important;
         max-width: none !important;
         margin: 0 auto;
         border-collapse: collapse;
         border: 1pt solid #000;
       }
       th, td {
-        padding: 1px 4px !important;
+        padding: 2px 5px !important;
         border: 0.5pt solid #000;
         white-space: nowrap !important;
         overflow: visible !important;
         text-overflow: clip !important;
         text-align: center;
-        line-height: 1.15;
+        line-height: 1.2;
       }
+
       .wrap { white-space: nowrap !important; }
       td { font-weight: 800; }
       th {
@@ -1122,23 +1124,25 @@ export default function InstallmentsTab() {
             var tbl = document.getElementById('reportTable');
             if (!wrap || !tbl) return;
             wrap.style.transform = 'none';
+            wrap.style.height = '';
             var avail = wrap.parentElement ? wrap.parentElement.clientWidth : wrap.clientWidth;
             var w = tbl.scrollWidth;
             if (!avail || !w) return;
-            var s = Math.min(1, avail / w);
-            if (s < 1) {
+            var s = avail / w;
+            if (s > 1) s = Math.min(s, 1.6);
+            if (Math.abs(s - 1) > 0.02) {
               wrap.style.transform = 'scale(' + s.toFixed(4) + ')';
               wrap.style.height = (tbl.scrollHeight * s) + 'px';
-            } else {
-              wrap.style.height = '';
             }
           }
           if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit).catch(fit); }
           window.addEventListener('load', fit);
+          window.addEventListener('resize', fit);
           window.addEventListener('beforeprint', fit);
           setTimeout(fit, 400);
         })();
       </script>
+
     `;
 
       
