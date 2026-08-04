@@ -81,21 +81,24 @@ export default function TabActions({
           border-bottom: 1.5pt solid #b8860b;
           padding-bottom: 4px;
         }
+        .table-wrap { width: 100%; display: flex; justify-content: center; transform-origin: top center; }
         table {
-          width: 100%;
+          width: auto;
+          max-width: none;
+          margin: 0 auto;
           border-collapse: collapse;
-          table-layout: fixed;
+          table-layout: auto;
           font-size: 10px;
         }
         th, td {
           border: 0.75pt solid #000;
-          padding: 2.5px 3px;
+          padding: 2.5px 5px;
           text-align: center;
           white-space: nowrap;
           color: #000 !important;
           font-weight: 700;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          overflow: visible;
+          text-overflow: clip;
         }
         thead th {
           background: #f5deb3 !important;
@@ -111,7 +114,8 @@ export default function TabActions({
           color: #000 !important;
           font-weight: 700;
         }
-        .idx { width: 28px; text-align: center; color: #000 !important; font-weight: 700; }
+        .idx { text-align: center; color: #000 !important; font-weight: 700; }
+
         .total-row td {
           background: #fef3c7 !important;
           font-weight: 800;
