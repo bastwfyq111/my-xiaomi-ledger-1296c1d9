@@ -173,14 +173,30 @@ export default function TabActions({
     w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head>${head}</head><body>
       <h1>${escapeHtml(title)}</h1>
       <div class="sub">المجلس اليمني للاختصاصات الطبية - صعدة • ${today} • عدد السجلات: ${rows.length}</div>
-      <table><thead>${head2}</thead><tbody>${body2}${totalRow}</tbody></table>
+      <div class="table-wrap" id="tableWrap"><table id="printTable"><thead>${head2}</thead><tbody>${body2}${totalRow}</tbody></table></div>
       <script>
-        window.onload = () => {
-          setTimeout(() => {
-            window.print();
-          }, 300);
+        function fitTable() {
+          var wrap = document.getElementById('tableWrap');
+          var tbl = document.getElementById('printTable');
+          if (!wrap || !tbl) return;
+          wrap.style.transform = 'none';
+          wrap.style.height = '';
+          var avail = wrap.parentElement ? wrap.parentElement.clientWidth : wrap.clientWidth;
+          var w = tbl.scrollWidth;
+          if (!avail || !w) return;
+          var s = Math.min(1, avail / w);
+          if (s < 1) {
+            wrap.style.transform = 'scale(' + s.toFixed(4) + ')';
+            wrap.style.height = (tbl.scrollHeight * s) + 'px';
+          }
+        }
+        window.addEventListener('beforeprint', fitTable);
+        window.onload = function () {
+          fitTable();
+          setTimeout(function () { fitTable(); window.print(); }, 400);
         };
       </script>
+
     </body></html>`);
     w.document.close();
   };
