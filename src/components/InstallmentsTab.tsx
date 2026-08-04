@@ -851,10 +851,11 @@ export default function InstallmentsTab() {
         .min(avgColWidthMm,
           minColWidthMm * 1.6);
       
-      const fontSizePx = Math.max(5.5,
-        Math.min(10,
-          effectiveColWidthMm * 1.15
+      const fontSizePx = Math.max(8,
+        Math.min(13,
+          effectiveColWidthMm * 1.6
           ));
+
       const headerFontSizePx =
         fontSizePx + 0.5;
       
