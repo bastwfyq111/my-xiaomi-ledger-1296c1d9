@@ -1052,34 +1052,27 @@ export default function InstallmentsTab() {
       .doc-header h1 { font-size: 15px; font-weight: 800; margin: 0; }
       .doc-header p { margin: 2px 0 0; font-size: 9.5px; font-weight: 600; }
 
+      .table-wrap { width: 100%; display: flex; justify-content: center; transform-origin: top center; }
       table {
         font-size: ${fontSizePx.toFixed(2)}px;
-        table-layout:fixed!important;
-        width:100%!important;
+        table-layout: auto !important;
+        width: auto !important;
+        max-width: none !important;
+        margin: 0 auto;
         border-collapse: collapse;
         border: 1pt solid #000;
-        white-space: nowrap;
-  font-size: clamp(10px, 4cqw, 16px); /* يتدرج حجم الخط بين 10px و 16px حسب حجم الخلية */
-        
       }
       th, td {
-        padding: 0 !important;
+        padding: 1px 4px !important;
         border: 0.5pt solid #000;
-        white-space:normal;
-        overflow:ellipsis ;
-        text-overflow:ellipsis;
-        text-align: center;
-        line-height: 1;
-      }
-      .wrap {
         white-space: nowrap !important;
-        padding: 0px 0px !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        text-align: center;
+        line-height: 1.15;
       }
-      td { font-weight: 1000;
-      white-space: nowrap;
-  font-size: clamp(10px, 4cqw, 16px); /* يتدرج حجم الخط بين 10px و 16px حسب حجم الخلية */
-        
-      }
+      .wrap { white-space: nowrap !important; }
+      td { font-weight: 800; }
       th {
         background: #f5deb3 !important;
         font-size: ${headerFontSizePx.toFixed(2)}px;
@@ -1091,16 +1084,17 @@ export default function InstallmentsTab() {
       .total-row td {
         background: #fde68a !important;
         font-weight: 1000;
-        white-space: normal !important;
+        white-space: nowrap !important;
         border-top: 1.2pt solid #000;
       }
 
       @media print {
-        th, td { white-space: nowrap; padding: 0 !important; }
+        th, td { white-space: nowrap !important; }
         tr { page-break-inside: avoid; }
         .wrap { white-space: nowrap !important; }
       }
     `;
+
       
       const body = `
       <div class="doc-header">
@@ -1108,7 +1102,8 @@ export default function InstallmentsTab() {
         <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
         <p>تاريخ التقرير: ${date}</p>
       </div>
-      <table>
+      <div class="table-wrap" id="tableWrap">
+      <table id="reportTable">
         <thead>
           <tr>
             ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
@@ -1119,7 +1114,33 @@ export default function InstallmentsTab() {
           ${generateTotalRow()}
         </tbody>
       </table>
+      </div>
+      <script>
+        (function () {
+          function fit() {
+            var wrap = document.getElementById('tableWrap');
+            var tbl = document.getElementById('reportTable');
+            if (!wrap || !tbl) return;
+            wrap.style.transform = 'none';
+            var avail = wrap.parentElement ? wrap.parentElement.clientWidth : wrap.clientWidth;
+            var w = tbl.scrollWidth;
+            if (!avail || !w) return;
+            var s = Math.min(1, avail / w);
+            if (s < 1) {
+              wrap.style.transform = 'scale(' + s.toFixed(4) + ')';
+              wrap.style.height = (tbl.scrollHeight * s) + 'px';
+            } else {
+              wrap.style.height = '';
+            }
+          }
+          if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit).catch(fit); }
+          window.addEventListener('load', fit);
+          window.addEventListener('beforeprint', fit);
+          setTimeout(fit, 400);
+        })();
+      </script>
     `;
+
       
       const ok = openPrintDocument({
         title: `تقرير_الأقساط_والمدفوعات_${year}`,
