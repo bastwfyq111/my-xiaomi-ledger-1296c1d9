@@ -1102,7 +1102,8 @@ export default function InstallmentsTab() {
         <p>تقرير الأقساط والمدفوعات - العام ${year}م</p>
         <p>تاريخ التقرير: ${date}</p>
       </div>
-      <table>
+      <div class="table-wrap" id="tableWrap">
+      <table id="reportTable">
         <thead>
           <tr>
             ${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}
@@ -1113,7 +1114,33 @@ export default function InstallmentsTab() {
           ${generateTotalRow()}
         </tbody>
       </table>
+      </div>
+      <script>
+        (function () {
+          function fit() {
+            var wrap = document.getElementById('tableWrap');
+            var tbl = document.getElementById('reportTable');
+            if (!wrap || !tbl) return;
+            wrap.style.transform = 'none';
+            var avail = wrap.parentElement ? wrap.parentElement.clientWidth : wrap.clientWidth;
+            var w = tbl.scrollWidth;
+            if (!avail || !w) return;
+            var s = Math.min(1, avail / w);
+            if (s < 1) {
+              wrap.style.transform = 'scale(' + s.toFixed(4) + ')';
+              wrap.style.height = (tbl.scrollHeight * s) + 'px';
+            } else {
+              wrap.style.height = '';
+            }
+          }
+          if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit).catch(fit); }
+          window.addEventListener('load', fit);
+          window.addEventListener('beforeprint', fit);
+          setTimeout(fit, 400);
+        })();
+      </script>
     `;
+
       
       const ok = openPrintDocument({
         title: `تقرير_الأقساط_والمدفوعات_${year}`,
