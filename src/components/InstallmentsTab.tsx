@@ -1053,25 +1053,26 @@ export default function InstallmentsTab() {
       .doc-header h1 { font-size: 15px; font-weight: 800; margin: 0; }
       .doc-header p { margin: 2px 0 0; font-size: 9.5px; font-weight: 600; }
 
-      .table-wrap { width: 100%; display: flex; justify-content: center; transform-origin: top center; }
+      .table-wrap { width: 100%; transform-origin: top center; }
       table {
         font-size: ${fontSizePx.toFixed(2)}px;
         table-layout: auto !important;
-        width: auto !important;
+        width: 100% !important;
         max-width: none !important;
         margin: 0 auto;
         border-collapse: collapse;
         border: 1pt solid #000;
       }
       th, td {
-        padding: 1px 4px !important;
+        padding: 2px 5px !important;
         border: 0.5pt solid #000;
         white-space: nowrap !important;
         overflow: visible !important;
         text-overflow: clip !important;
         text-align: center;
-        line-height: 1.15;
+        line-height: 1.2;
       }
+
       .wrap { white-space: nowrap !important; }
       td { font-weight: 800; }
       th {
