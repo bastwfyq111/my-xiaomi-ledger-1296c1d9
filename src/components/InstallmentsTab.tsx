@@ -1124,23 +1124,25 @@ export default function InstallmentsTab() {
             var tbl = document.getElementById('reportTable');
             if (!wrap || !tbl) return;
             wrap.style.transform = 'none';
+            wrap.style.height = '';
             var avail = wrap.parentElement ? wrap.parentElement.clientWidth : wrap.clientWidth;
             var w = tbl.scrollWidth;
             if (!avail || !w) return;
-            var s = Math.min(1, avail / w);
-            if (s < 1) {
+            var s = avail / w;
+            if (s > 1) s = Math.min(s, 1.6);
+            if (Math.abs(s - 1) > 0.02) {
               wrap.style.transform = 'scale(' + s.toFixed(4) + ')';
               wrap.style.height = (tbl.scrollHeight * s) + 'px';
-            } else {
-              wrap.style.height = '';
             }
           }
           if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit).catch(fit); }
           window.addEventListener('load', fit);
+          window.addEventListener('resize', fit);
           window.addEventListener('beforeprint', fit);
           setTimeout(fit, 400);
         })();
       </script>
+
     `;
 
       
